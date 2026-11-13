@@ -1,0 +1,218 @@
+{
+  "project": "Clinic-Appointment-Management",
+  "version": "1.0.0",
+  "lastUpdated": "2026-11-13",
+  "modules": [
+    {
+      "id": "MOD-01",
+      "name": "Project Scaffolding & Specifications",
+      "priority": "P0",
+      "status": "COMPLETED",
+      "features": [
+        {
+          "id": "FEAT-001",
+          "name": "Architecture, Database & API Specifications",
+          "priority": "P0",
+          "status": "COMPLETED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-002",
+          "name": "Architecture Decision Records (ADRs)",
+          "priority": "P0",
+          "status": "COMPLETED",
+          "complexity": "Low"
+        },
+        {
+          "id": "FEAT-003",
+          "name": "Agent Rules and Specialized Skills Scaffolding",
+          "priority": "P0",
+          "status": "COMPLETED",
+          "complexity": "Medium"
+        }
+      ]
+    },
+    {
+      "id": "MOD-02",
+      "name": "Authentication & Authorization (RBAC)",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "features": [
+        {
+          "id": "FEAT-004",
+          "name": "User Registration & JWT Login",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-005",
+          "name": "Token Rotation & Refresh Token Cookie",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-006",
+          "name": "Role-Based Access Control (Admin, Doctor, Receptionist, Patient)",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        }
+      ]
+    },
+    {
+      "id": "MOD-03",
+      "name": "Specialties & Doctor Profile Management",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "features": [
+        {
+          "id": "FEAT-007",
+          "name": "Specialty CRUD and Listing",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Low"
+        },
+        {
+          "id": "FEAT-008",
+          "name": "Doctor Directory with Specialty & Keyword Filter",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-009",
+          "name": "Doctor Shift Schedule Configuration",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-010",
+          "name": "Doctor Unavailability / Leave Registration",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Low"
+        }
+      ]
+    },
+    {
+      "id": "MOD-04",
+      "name": "Appointment Booking Engine & Slots",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "features": [
+        {
+          "id": "FEAT-011",
+          "name": "Real-time Available Slots Calculation",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "High"
+        },
+        {
+          "id": "FEAT-012",
+          "name": "Guest Booking Flow (Without Account)",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "High"
+        },
+        {
+          "id": "FEAT-013",
+          "name": "Authenticated Patient Booking Flow",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-014",
+          "name": "Concurrency Control & Anti-Double Booking",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "complexity": "High"
+        },
+        {
+          "id": "FEAT-015",
+          "name": "Appointment Code Generator & Public Lookup",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Low"
+        }
+      ]
+    },
+    {
+      "id": "MOD-05",
+      "name": "Receptionist Check-in & Queuing",
+      "priority": "P1",
+      "status": "NOT_STARTED",
+      "features": [
+        {
+          "id": "FEAT-016",
+          "name": "Daily Reception Queue View",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-017",
+          "name": "One-click Check-in for Arriving Patients",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Low"
+        },
+        {
+          "id": "FEAT-018",
+          "name": "Walk-in Urgent Booking at Reception",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        }
+      ]
+    },
+    {
+      "id": "MOD-06",
+      "name": "Doctor Workspace",
+      "priority": "P1",
+      "status": "NOT_STARTED",
+      "features": [
+        {
+          "id": "FEAT-019",
+          "name": "Daily Patient Queue for Logged-in Doctor",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-020",
+          "name": "Consultation Complete & Clinical Notes Summary",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        }
+      ]
+    },
+    {
+      "id": "MOD-07",
+      "name": "Notifications & Automation",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "features": [
+        {
+          "id": "FEAT-021",
+          "name": "Email Confirmation & Reminder Delivery",
+          "priority": "P2",
+          "status": "NOT_STARTED",
+          "complexity": "Medium"
+        },
+        {
+          "id": "FEAT-022",
+          "name": "Automated End-of-Day No-Show Status Updater",
+          "priority": "P2",
+          "status": "NOT_STARTED",
+          "complexity": "Low"
+        }
+      ]
+    }
+  ]
+}
+
