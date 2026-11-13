@@ -1,8 +1,8 @@
 # Project Progress Tracker (Theo dõi Tiến độ Dự án)
 
 > **Cập nhật lần cuối:** 2026-11-13  
-> **Trạng thái tổng thể:** Giai đoạn 0 (Khởi tạo Khung & Đặc tả Kỹ thuật) - Hoàn thành 100%  
-> **Tổng tiến độ toàn dự án:** ~15% (Đã hoàn thiện tài liệu nền tảng, thiết kế CSDL, quy tắc nghiệp vụ và bộ kỹ năng)
+> **Trạng thái tổng thể:** Giai đoạn 0 (Khởi tạo Khung & Đồng bộ Đặc tả SRS v1.2 Baseline) - Hoàn thành 100%  
+> **Tổng tiến độ toàn dự án:** ~15% (Đã hoàn thiện tài liệu nền tảng, thiết kế CSDL, quy tắc nghiệp vụ, API, Backlog và bộ kỹ năng)
 
 ---
 
@@ -10,37 +10,28 @@
 
 | Giai đoạn | Nội dung trọng tâm | Trạng thái | Tiến độ |
 | :--- | :--- | :--- | :--- |
-| **Phase 0** | Khung kiến trúc, Đặc tả SRS, CSDL, API, Quy tắc nghiệp vụ | ✅ COMPLETED | 100% |
+| **Phase 0** | Khung kiến trúc, Đặc tả SRS v1.2, CSDL, API, Quy tắc nghiệp vụ & Backlog | ✅ COMPLETED | 100% |
 | **Phase 1** | Database Schema, EF Core, PostgreSQL Docker, Seed Data | ⏳ PENDING | 0% |
 | **Phase 2** | Auth JWT, Quản lý Chuyên khoa, Bác sĩ & Tính Slot | ⏳ PENDING | 0% |
-| **Phase 3** | Động cơ Đặt lịch, Khách vãng lai & Chống trùng lặp (Concurrency) | ⏳ PENDING | 0% |
-| **Phase 4** | Frontend React: Booking Wizard, Tra cứu, Patient Portal | ⏳ PENDING | 0% |
-| **Phase 5** | Staff/Lễ tân Portal (Check-in) & Bác sĩ Workspace | ⏳ PENDING | 0% |
-| **Phase 6** | Testing toàn diện (xUnit, Testcontainers, E2E) & Dockerization | ⏳ PENDING | 0% |
+| **Phase 3** | Động cơ Đặt lịch, Khách vãng lai, OTP & Chống trùng lặp (Concurrency) | ⏳ PENDING | 0% |
+| **Phase 4** | Frontend React: Booking Wizard, Tra cứu OTP, Reschedule, Patient Portal | ⏳ PENDING | 0% |
+| **Phase 5** | Staff/Lễ tân Portal (Duyệt Đổi lịch, Check-in) & Bác sĩ Workspace | ⏳ PENDING | 0% |
+| **Phase 6** | Testing toàn diện (xUnit, Testcontainers, Playwright E2E) & Dockerization | ⏳ PENDING | 0% |
 
 ---
 
 ## ✅ Các hạng mục đã hoàn thành (Recent Achievements)
 
-1. **Bộ khung thư mục chuẩn mực:**
-   - Cấu trúc đầy đủ các thư mục `docs/`, `planning/`, `.agents/`, `backend/`, `frontend/`.
-   - File `.gitignore` toàn diện cho cả hệ sinh thái .NET và React.
-2. **Hệ thống tài liệu kỹ thuật chi tiết:**
-   - [docs/SPEC.md](../docs/SPEC.md): Đặc tả yêu cầu chức năng & phi chức năng.
-   - [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md): Kiến trúc Clean Architecture cho .NET và React.
-   - [docs/DATABASE_DESIGN.md](../docs/DATABASE_DESIGN.md): Thiết kế bảng dữ liệu PostgreSQL, ERD và Index.
-   - [docs/API_SPECIFICATION.md](../docs/API_SPECIFICATION.md): Đặc tả chuẩn RESTful API và các endpoints.
-   - [docs/BUSINESS_RULES.md](../docs/BUSINESS_RULES.md): Quy tắc đặt lịch, chia slot và chống trùng lặp.
-   - [docs/SECURITY.md](../docs/SECURITY.md): Chính sách bảo mật dữ liệu y tế và xác thực JWT.
-   - [docs/TESTING_STRATEGY.md](../docs/TESTING_STRATEGY.md): Chiến lược kiểm thử tự động phân tầng.
-   - [docs/DEVELOPMENT_PLAN.md](../docs/DEVELOPMENT_PLAN.md): Lộ trình từng bước triển khai.
-3. **Quyết định kiến trúc (ADRs):**
-   - [ADR 0001](../docs/adr/0001-frontend-backend-separation.md): Tách biệt Frontend React & Backend Web API.
-   - [ADR 0002](../docs/adr/0002-database-postgresql.md): Sử dụng PostgreSQL với EF Core.
-   - [ADR 0003](../docs/adr/0003-guest-booking.md): Hỗ trợ đặt lịch khám cho khách vãng lai.
-4. **Bộ quy chuẩn & Kỹ năng AI (Agent Rules & Skills):**
-   - Hoàn thiện 4 bộ quy chuẩn coding: `project-rules.md`, `backend-rules.md`, `frontend-rules.md`, `database-rules.md`.
-   - Hoàn thiện 7 tài liệu kỹ năng chuyên biệt trong `.agents/skills/`.
+1. **Bộ khung thư mục & Tệp cấu hình:**
+   - Hoàn chỉnh `.gitignore`, `.env`, `.env.example`, `README.md`, `AGENTS.md`.
+2. **Đồng bộ hóa toàn diện tài liệu theo SRS v1.2 Baseline:**
+   - [docs/SPEC.md](../docs/SPEC.md): Baseline nghiệp vụ chuẩn phiên bản 1.2 (13/11/2026).
+   - [docs/BUSINESS_RULES.md](../docs/BUSINESS_RULES.md): Cập nhật công thức hoàn tiền mốc 60 phút (100% / 50%), quy trình đổi lịch phê duyệt bởi lễ tân (bảo toàn slot cũ đến khi duyệt), quy tắc định danh không auto-merge.
+   - [docs/DATABASE_DESIGN.md](../docs/DATABASE_DESIGN.md): Bổ sung thực thể `services`, `reschedule_requests`, `refunds`, `otp_challenges`, bảo mật PII bằng mã hóa và HMAC hash.
+   - [docs/API_SPECIFICATION.md](../docs/API_SPECIFICATION.md): Bổ sung endpoints OTP (`LOOKUP`, `RESCHEDULE`, `CANCEL`), quy trình duyệt đổi lịch, hủy lịch tự động không cần lễ tân duyệt.
+   - [docs/TESTING_STRATEGY.md](../docs/TESTING_STRATEGY.md): Bổ sung test boundaries tính hoàn phí, test transaction đổi lịch, test concurrency zero double-booking.
+   - [planning/feature_list.json](../planning/feature_list.json) & [planning/backlog.md](../planning/backlog.md): Tái cấu trúc 10 modules và 13 user stories chi tiết kèm Acceptance Criteria.
+   - [.agents/skills/clinic-business-logic/SKILL.md](../.agents/skills/clinic-business-logic/SKILL.md): Cập nhật code mẫu `RefundCalculator`, `AppointmentStateMachine`, và logic đối sánh hồ sơ bệnh nhân.
 
 ---
 
@@ -48,6 +39,5 @@
 
 1. Tạo thư mục và cấu trúc Solution ASP.NET Core Clean Architecture trong `backend/`.
 2. Tạo file `docker-compose.yml` cho PostgreSQL 16 cục bộ.
-3. Cài đặt các gói NuGet EF Core & Npgsql, viết cấu hình DbContext.
-4. Chạy lệnh Add-Migration đầu tiên để khởi tạo schema CSDL.
-
+3. Cài đặt các gói NuGet EF Core & Npgsql, cấu hình DbContext và Fluent API configurations.
+4. Chạy lệnh Add-Migration đầu tiên để khởi tạo schema CSDL chuẩn xác.

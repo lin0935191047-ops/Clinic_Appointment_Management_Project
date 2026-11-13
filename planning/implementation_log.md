@@ -64,3 +64,38 @@ Cập nhật tệp [docs/SPEC.md](file:///d:/Clinic_Appointment_Management_Proje
 - **Quản lý Định danh & Chống trùng (Section 8):** Phân biệt định danh mạnh vs yếu; không auto-merge hồ sơ chỉ dựa trên Họ tên + Ngày sinh/Năm sinh; mã hóa định danh nhạy cảm (CCCD, BHYT, PID) và sử dụng Keyed HMAC cho exact lookup.
 - **Trạng thái (Section 9):** Chuẩn hóa trạng thái của Appointment, RescheduleRequest và Refund.
 - **Tiêu chí nghiệm thu (Section 11) & Danh mục 12 điểm TBD (Section 12).**
+
+---
+
+## [2026-11-13] - Đồng bộ hóa Toàn diện Hệ thống Tệp theo SPEC v1.2 Baseline
+
+### 1. Bối cảnh & Yêu cầu
+Thực hiện rà soát và cập nhật đồng bộ toàn bộ tài liệu kỹ thuật, thiết kế CSDL, đặc tả API, quy tắc nghiệp vụ, backlog tính năng và kỹ năng AI theo đúng tài liệu chuẩn [docs/SPEC.md](file:///d:/Clinic_Appointment_Management_Project/docs/SPEC.md) (SRS v1.2 Baseline), loại bỏ mọi điểm sai lệch.
+
+### 2. Các tệp đã được cập nhật đồng bộ
+1. **[docs/BUSINESS_RULES.md](file:///d:/Clinic_Appointment_Management_Project/docs/BUSINESS_RULES.md):**
+   - Cập nhật chính sách hủy & hoàn phí mốc 60 phút: $\ge 60$ phút hoàn 100% (phí hủy 0%), $< 60$ phút hoàn 50% (phí hủy 50%), bệnh nhân tự hủy không cần lễ tân duyệt.
+   - Cập nhật quy trình đổi lịch: Bệnh nhân gửi yêu cầu, lễ tân duyệt; slot cũ được giữ nguyên đến khi duyệt; kiểm tra slot mới trong transaction.
+   - Cập nhật quy tắc hồ sơ bệnh nhân: Bắt buộc `FullName` + (`DateOfBirth` hoặc `BirthYear`); trùng Họ tên + Ngày sinh chỉ tạo candidate, tuyệt đối không auto-merge.
+   - Chuẩn hóa trạng thái lịch hẹn: `PendingConfirmation`, `Confirmed`, `CheckedIn`, `InProgress`, `Completed`, `Cancelled`, `NoShow`.
+2. **[docs/DATABASE_DESIGN.md](file:///d:/Clinic_Appointment_Management_Project/docs/DATABASE_DESIGN.md):**
+   - ERD và Data Dictionary cập nhật các bảng mới: `services`, `reschedule_requests`, `refunds`, `otp_challenges`.
+   - Bảng `patients` bổ sung `birth_year`, check constraint, các trường mã hóa và hash `Keyed HMAC` cho CCCD, Hộ chiếu, BHYT, PID.
+   - Bảng `appointments` cập nhật `booking_code`, snapshot dịch vụ (`service_name_snapshot`, `service_duration_snapshot`, `service_price_snapshot`), `paid_amount`, `cancellation_accepted_at`.
+   - Partial unique indexes chống double-booking và giới hạn single pending reschedule.
+3. **[docs/API_SPECIFICATION.md](file:///d:/Clinic_Appointment_Management_Project/docs/API_SPECIFICATION.md):**
+   - Bổ sung nhóm endpoint OTP: `POST /api/v1/otp/send`, `POST /api/v1/otp/verify`.
+   - Bổ sung nhóm endpoint Reschedule Workflow: gửi yêu cầu đổi lịch, lễ tân duyệt/từ chối.
+   - Cập nhật endpoint Guest booking khởi tạo ở `PendingConfirmation`, tra cứu qua OTP token ẩn PII, hủy lịch tự động tính hoàn phí.
+4. **[docs/TESTING_STRATEGY.md](file:///d:/Clinic_Appointment_Management_Project/docs/TESTING_STRATEGY.md):**
+   - Bổ sung boundary unit tests cho công thức hoàn phí (61m, 60m, 59m, 0m).
+   - Bổ sung test kiểm tra tính toàn vẹn slot khi duyệt đổi lịch và cách ly dữ liệu giữa các bệnh nhân.
+5. **[.agents/skills/clinic-business-logic/SKILL.md](file:///d:/Clinic_Appointment_Management_Project/.agents/skills/clinic-business-logic/SKILL.md):**
+   - Code mẫu chuẩn cho `RefundCalculator`, `AppointmentStateMachine`, và logic đối sánh không auto-merge.
+6. **[planning/feature_list.json](file:///d:/Clinic_Appointment_Management_Project/planning/feature_list.json) & [planning/backlog.md](file:///d:/Clinic_Appointment_Management_Project/planning/backlog.md):**
+   - Cập nhật phiên bản lên 1.2.0, phân rã 10 modules và 13 user stories chi tiết kèm Acceptance Criteria.
+7. **[planning/progress.md](file:///d:/Clinic_Appointment_Management_Project/planning/progress.md):**
+   - Cập nhật tiến độ hoàn thành Phase 0 với sự đồng bộ 100%.
+
+### 3. Đánh giá & Kết luận
+Toàn bộ hệ thống tài liệu và quy chuẩn đã đạt độ nhất quán 100% với [docs/SPEC.md](file:///d:/Clinic_Appointment_Management_Project/docs/SPEC.md). Sẵn sàng bắt đầu Phase 1 triển khai mã nguồn Backend.

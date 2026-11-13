@@ -1,71 +1,147 @@
 # Business Rules Specification (Quy tắc Nghiệp vụ)
-
-## 1. Quy tắc Thời gian Đặt lịch (Booking Windows)
-
-- **BR-TIME-01 (Thời hạn đặt trước tối đa):** Bệnh nhân chỉ được phép đặt lịch trước tối đa **30 ngày** so với ngày hiện tại.
-- **BR-TIME-02 (Thời hạn đặt trước tối thiểu):** Lịch hẹn trực tuyến phải được đặt trước giờ khám thực tế tối thiểu **02 giờ**. Không cho phép đặt lịch cho khung giờ đã qua trong quá khứ hoặc cận giờ khám dưới 2 tiếng (trừ trường hợp lễ tân tạo lịch Walk-in tại quầy).
-- **BR-TIME-03 (Giới hạn số lượng lịch hoạt động):** Mỗi số điện thoại / tài khoản bệnh nhân chỉ được phép có tối đa **02 lịch hẹn ở trạng thái Chưa hoàn tất (`PENDING` hoặc `CONFIRMED`)** trong cùng một ngày.
+> **Đồng bộ với:** [docs/SPEC.md](SPEC.md) (Phiên bản SRS 1.2 Baseline)
 
 ---
 
-## 2. Quy tắc Chia Slot & Chống Trùng Lịch (Slot Calculation & Anti-Collision)
+## 1. Quy tắc Thời gian & Khung giờ Khám (Booking Windows & Slots)
 
-- **BR-SLOT-01 (Định nghĩa Khung giờ khám):**
-  - Khung giờ khám của bác sĩ được chia đều theo tham số `slot_duration_minutes` (mặc định: 30 phút).
-  - Ví dụ: Ca làm việc từ 08:00 đến 11:30 với slot 30 phút sẽ tạo ra: `08:00 - 08:30`, `08:30 - 09:00`, `09:00 - 09:30`, `09:30 - 10:00`, `10:00 - 10:30`, `10:30 - 11:00`, `11:00 - 11:30`.
-- **BR-SLOT-02 (Loại trừ khung giờ không khả dụng):**
-  - Khung giờ rơi vào khoảng thời gian Bác sĩ đăng ký nghỉ phép (`doctor_unavailabilities`) sẽ không hiển thị trên giao diện người dùng.
-- **BR-SLOT-03 (Chống Trùng Lặp Tuyệt Đối - Zero Double Booking):**
+- **BR-TIME-01 (Thời hạn đặt trước):** Lịch hẹn khám chỉ được đặt trước tối đa theo cấu hình phòng khám (mặc định 30 ngày) và không được đặt trong quá khứ hoặc trong ngày nghỉ / giờ bận của bác sĩ.
+- **BR-TIME-02 (Thời lượng ca khám & Sinh slot):**
+  - Khung giờ khám của bác sĩ được sinh tự động dựa trên thời lượng dịch vụ hoặc ca trực định kỳ (`slot_duration_minutes`).
+  - Hệ thống tự động loại trừ các khoảng thời gian nghỉ phép / công tác / bận đột xuất của bác sĩ (`doctor_unavailabilities`).
+- **BR-TIME-03 (Chống Trùng Lặp Tuyệt Đối - Zero Double Booking):**
   - Một slot của bác sĩ tại một thời điểm chỉ tiếp nhận duy nhất **01 bệnh nhân**.
-  - Kiểm tra trạng thái slot khả dụng tại thời điểm trước khi chốt đơn. Trong lúc ghi nhận dữ liệu vào CSDL, giao dịch phải được thực hiện với cơ chế khóa hoặc kiểm tra Unique Index để đảm bảo tính toàn vẹn (ACID).
+  - Kiểm tra tính khả dụng của slot ngay tại thời điểm ghi dữ liệu (Atomic check trong CSDL Transaction kết hợp Unique Constraint). Hai request gửi đồng thời cho cùng một bác sĩ trong cùng một slot không bao giờ được phép cùng thành công.
 
 ---
 
-## 3. Quy tắc Khách vãng lai (Guest Booking Rules)
+## 2. Quy tắc Hồ sơ Bệnh nhân & Quản lý Định danh (Patient Identity & Duplicate Prevention)
 
-- **BR-GUEST-01 (Dữ liệu bắt buộc):** Khách vãng lai bắt buộc phải cung cấp đầy đủ:
-  - Họ và tên (tối thiểu 2 từ, không chứa ký tự đặc biệt).
-  - Số điện thoại hợp lệ (chuẩn số điện thoại di động Việt Nam: 10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09).
-  - Ngày sinh (dùng để định danh và phân biệt hồ sơ).
-- **BR-GUEST-02 (Xác thực thông tin):**
-  - Lịch hẹn của khách vãng lai sau khi tạo có thể ở trạng thái `PENDING` nếu yêu cầu xác nhận qua OTP/Email.
-  - Sau khi mã xác nhận được nhập thành công trong vòng 10 phút, lịch hẹn tự động chuyển sang `CONFIRMED`.
-  - Nếu sau 10 phút không xác nhận, slot sẽ tự động được giải phóng để người khác có thể đặt.
+- **BR-ID-01 (Hồ sơ Patient độc lập User):**
+  - Bệnh nhân vãng lai có hồ sơ `Patient` với `UserId = NULL`.
+  - Không tự động tạo tài khoản `User` khi đặt lịch vãng lai.
+- **BR-ID-02 (Thông tin nhận diện bắt buộc):**
+  - Mỗi hồ sơ bắt buộc phải có `FullName` (Họ và tên).
+  - Bắt buộc có ít nhất một trong hai trường: `DateOfBirth` (ngày sinh) hoặc `BirthYear` (năm sinh).
+  - Số điện thoại liên hệ phải được lưu trữ; số điện thoại dùng để nhận mã OTP phải được xác minh.
+- **BR-ID-03 (Quy tắc Đối sánh & Chống trùng lặp):**
+  - Chuẩn hóa định danh (loại bỏ ký tự phân cách, chuẩn hóa chữ hoa/thường).
+  - Trùng khớp chính xác (Exact match) theo định danh mạnh đã xác minh (CCCD, Hộ chiếu, BHYT, PID) là tín hiệu mạnh nhất; nếu có xung đột phải chuyển kiểm tra thủ công (Manual review).
+  - Trùng khớp Họ tên + Ngày sinh/Năm sinh (`FullName` + `DOB`/`BirthYear`) **chỉ tạo ra hồ sơ ứng viên nghi trùng (Candidate Duplicate)**; **tuyệt đối không tự động gộp hồ sơ (No Auto-merge)**.
+  - Nếu không có match chắc chắn, tạo hồ sơ `Patient` mới và có thể gắn cờ nghi ngờ trùng lặp.
+  - Chỉ nhân viên được phân quyền mới được gộp hồ sơ; bắt buộc ghi nhận `Actor`, `Timestamp`, `Reason` và `Audit Trail`.
+- **BR-ID-04 (Bảo vệ Định danh Nhạy cảm):**
+  - CCCD, Hộ chiếu, Mã BHYT, PID bắt buộc phải mã hóa khi lưu trữ trong CSDL và che một phần (Masking) khi hiển thị.
+  - Sử dụng mã băm có khóa bí mật (`Keyed HMAC`) của giá trị chuẩn hóa để tra cứu chính xác (`Exact Lookup`). Tuyệt đối không dùng Plain SHA-256 cho định danh có không gian giá trị dễ đoán.
 
 ---
 
-## 4. Ma trận Chuyển trạng thái Lịch hẹn (Lifecycle State Machine)
+## 3. Quy tắc Đặt lịch & Mã lịch hẹn (Guest Booking & Booking Code)
 
-| Trạng thái hiện tại | Trạng thái mới | Tác nhân cho phép | Điều kiện tiên quyết |
-| :--- | :--- | :--- | :--- |
-| `PENDING` | `CONFIRMED` | System / Receptionist | Xác thực OTP thành công hoặc Lễ tân duyệt |
-| `PENDING` | `CANCELLED` | System / Patient | Hết hạn xác thực OTP hoặc người dùng hủy |
-| `CONFIRMED` | `CHECKED_IN` | Receptionist | Bệnh nhân có mặt tại phòng khám vào ngày hẹn |
-| `CONFIRMED` | `CANCELLED` | Patient / Staff | Hủy trước giờ khám tối thiểu 04 tiếng |
-| `CONFIRMED` | `NO_SHOW` | System / Staff | Hết ngày khám mà bệnh nhân không đến check-in |
-| `CHECKED_IN` | `IN_PROGRESS` | Doctor | Bác sĩ gọi bệnh nhân vào phòng khám |
-| `IN_PROGRESS` | `COMPLETED` | Doctor | Bác sĩ kết thúc thăm khám và ghi chú tóm tắt |
+- **BR-BOOK-01 (Đặt lịch vãng lai không tài khoản):** Guest được phép đặt lịch trực tiếp mà không cần JWT token hoặc phiên đăng nhập.
+- **BR-BOOK-02 (Snapshot Dịch vụ):** Tại thời điểm đặt lịch, hệ thống bắt buộc chụp lại bản ghi (Snapshot) gồm: Tên dịch vụ, Thời lượng dịch vụ, và Giá dịch vụ niêm yết lúc đặt (`ServiceSnapshot`). Mọi biến động giá sau đó không làm thay đổi giá trị đã chốt trên lịch hẹn.
+- **BR-BOOK-03 (Mã Đặt lịch - BookingCode):**
+  - Hệ thống tự động sinh `BookingCode` duy nhất trên toàn hệ thống, khó đoán và tuyệt đối không chứa thông tin định danh cá nhân (PII).
+  - Định dạng chuẩn: `APT-YYYYMMDD-XXXX` (với `XXXX` là chuỗi ngẫu nhiên không trùng lặp).
+
+---
+
+## 4. Quy tắc Xác thực OTP (OTP Verification Rules)
+
+- **BR-OTP-01 (Mục đích OTP):**
+  - Mã OTP chỉ áp dụng cho 3 mục đích cụ thể: Tra cứu (`LOOKUP`), Đổi lịch (`RESCHEDULE`), Hủy lịch (`CANCEL`).
+  - Booking ban đầu của Guest không bắt buộc OTP (theo Baseline TBD-02).
+- **BR-OTP-02 (Bảo vệ Mã OTP):**
+  - Mã OTP là dùng 1 lần (Single-use), gắn chặt với số điện thoại, mã booking, mục đích (`Purpose`) và phiên thử thách (`Challenge`).
+  - Có thời hạn hiệu lực (Expiry, mặc định 5 phút), giới hạn số lần nhập sai (tối đa 5 lần) và giới hạn tần suất gửi lại (Resend cooldown tối thiểu 60 giây).
+- **BR-OTP-03 (Phạm vi Quyền hạn tạm thời):**
+  - Xác thực OTP thành công chỉ cấp quyền tạm thời giới hạn theo đúng mã booking và mục đích đã chọn.
+  - Tra cứu bằng OTP không hiển thị toàn bộ bệnh án chi tiết hay định danh đầy đủ ra ngoài màn hình công khai.
+
+---
+
+## 5. Quy tắc Đổi lịch khám (Reschedule Workflow)
+
+- **BR-RESCHED-01 (Yêu cầu Đổi lịch):**
+  - Bệnh nhân (Guest qua OTP hoặc Patient đăng nhập) có thể gửi yêu cầu đề xuất ngày/giờ mới cho lịch hẹn đang có hiệu lực.
+  - Trạng thái yêu cầu: `PendingReview` -> `Approved` / `Rejected` / `Cancelled` / `Expired`.
+  - Mỗi lịch hẹn tại một thời điểm chỉ được phép có tối đa một yêu cầu đổi lịch ở trạng thái `PendingReview`.
+- **BR-RESCHED-02 (Bảo toàn Slot cũ):**
+  - **Lịch cũ và slot cũ vẫn được giữ nguyên vẹn** và tiếp tục chiếm giữ slot cho đến khi yêu cầu đổi lịch được lễ tân phê duyệt thành công.
+- **BR-RESCHED-03 (Phê duyệt của Lễ tân):**
+  - Lễ tân có quyền duyệt (`Approved`) hoặc từ chối (`Rejected`), bắt buộc ghi nhận lý do, người xử lý và thời điểm xử lý.
+  - Khi duyệt, Backend bắt buộc kiểm tra lại tính khả dụng của slot mới trong Transaction. Nếu slot mới không còn trống, hệ thống không cho phép đổi và giữ nguyên lịch cũ.
+
+---
+
+## 6. Chính sách Hủy lịch & Hoàn phí (Cancellation & Refund Policy)
+
+- **BR-CANCEL-01 (Quyền tự hủy):**
+  - Guest (sau OTP) hoặc Patient đăng nhập có thể chủ động hủy lịch trước giờ khám bắt đầu.
+  - **Không cần nhân viên lễ tân duyệt** yêu cầu hủy do bệnh nhân gửi.
+- **BR-CANCEL-02 (Thời điểm hủy):**
+  - Thời điểm hủy được xác định theo dấu thời gian máy chủ (Server timestamp - UTC `CancellationAcceptedAt`). Tuyệt đối không dùng đồng hồ của Client.
+- **BR-CANCEL-03 (Công thức Hoàn phí Chuẩn):**
+  $$\text{minutesBeforeAppointment} = (\text{StartAt} - \text{CancellationAcceptedAt}).\text{TotalMinutes}$$
+  
+  | Mốc thời gian | Phí hủy (trên phí dịch vụ) | Tỷ lệ hoàn (trên số tiền đã thanh toán) |
+  | :--- | :--- | :--- |
+  | $\text{minutesBeforeAppointment} \ge 60$ | **0%** | **100%** |
+  | $0 < \text{minutesBeforeAppointment} < 60$ | **50%** | **50%** |
+  | $\text{minutesBeforeAppointment} \le 0$ | *Không áp dụng tự hủy* | *Không áp dụng tự hoàn tiền* |
+
+- **BR-CANCEL-04 (Nguyên tắc tính toán):**
+  - Đúng mốc 60 phút được tính thuộc nhóm **hoàn 100%**.
+  - Toàn bộ phép tính tỷ lệ và số tiền hoàn phí phải do **Backend quyết định**, không nhận tham số tỷ lệ/tiền từ Frontend.
+  - Số tiền hoàn dự kiến: $\text{ExpectedRefundAmount} = \text{PaidServiceAmount} \times \text{RefundRate}$.
+  - Nếu lịch hẹn chưa thanh toán: $\text{ExpectedRefundAmount} = 0$.
+  - Sau giờ hẹn bắt đầu, bệnh nhân không thể tự hủy; xử lý qua Lễ tân hoặc hệ thống ghi nhận `NoShow`.
+
+---
+
+## 7. Máy Trạng thái Vòng đời Lịch hẹn (State Machine Transitions)
+
+### 7.1 Lịch hẹn (Appointment Status)
+- `PendingConfirmation`: Chờ lễ tân xác nhận sau khi đặt.
+- `Confirmed`: Đã được lễ tân xác nhận.
+- `CheckedIn`: Bệnh nhân đã có mặt tại quầy check-in.
+- `InProgress`: Bác sĩ đang tiến hành khám.
+- `Completed`: Bác sĩ hoàn tất ca khám và ghi nhận kết luận.
+- `Cancelled`: Bị hủy bởi người bệnh hoặc phòng khám.
+- `NoShow`: Bệnh nhân không đến khám.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING: Đặt hẹn (Guest/Patient)
-    PENDING --> CONFIRMED: Xác thực thành công
-    PENDING --> CANCELLED: Quá hạn xác thực / Hủy
-    CONFIRMED --> CHECKED_IN: Bệnh nhân đến quầy check-in
-    CONFIRMED --> CANCELLED: Hủy lịch (trước >= 4h)
-    CONFIRMED --> NO_SHOW: Quá ngày không đến khám
-    CHECKED_IN --> IN_PROGRESS: Bác sĩ bắt đầu khám
-    IN_PROGRESS --> COMPLETED: Khám hoàn tất
-    CANCELLED --> [*]
-    NO_SHOW --> [*]
-    COMPLETED --> [*]
+    [*] --> PendingConfirmation: Guest / Patient đặt lịch
+    PendingConfirmation --> Confirmed: Lễ tân duyệt
+    PendingConfirmation --> Cancelled: Người bệnh hủy (trước giờ khám)
+    Confirmed --> CheckedIn: Bệnh nhân đến quầy check-in
+    Confirmed --> Cancelled: Người bệnh hủy (trước giờ khám)
+    Confirmed --> NoShow: Hết ca khám không đến check-in
+    CheckedIn --> InProgress: Bác sĩ bắt đầu khám
+    InProgress --> Completed: Bác sĩ hoàn thành ca khám
+    Cancelled --> [*]
+    NoShow --> [*]
+    Completed --> [*]
 ```
 
----
+### 7.2 Yêu cầu Đổi lịch (Reschedule Request Status)
+```mermaid
+stateDiagram-v2
+    [*] --> PendingReview: Bệnh nhân gửi yêu cầu đổi lịch
+    PendingReview --> Approved: Lễ tân duyệt & slot mới khả dụng
+    PendingReview --> Rejected: Lễ tân từ chối
+    PendingReview --> Cancelled: Bệnh nhân chủ động hủy yêu cầu
+    PendingReview --> Expired: Quá hạn xử lý
+    Approved --> [*]
+    Rejected --> [*]
+    Cancelled --> [*]
+    Expired --> [*]
+```
 
-## 5. Chính sách Hủy & Dời lịch (Cancellation & Reschedule Policy)
-
-- **BR-CANCEL-01 (Thời hạn hủy lịch):** Bệnh nhân có thể chủ động hủy lịch trên hệ thống trước giờ khám tối thiểu **04 tiếng**.
-- **BR-CANCEL-02 (Hủy gấp qua Hotline):** Trong vòng dưới 04 tiếng, bệnh nhân phải liên hệ trực tiếp lễ tân qua số điện thoại hỗ trợ của phòng khám để xử lý.
-- **BR-CANCEL-03 (Chính sách xử phạt No-Show):** Tài khoản hoặc số điện thoại có từ **03 lần No-Show trong vòng 30 ngày** sẽ bị tạm khóa tính năng đặt lịch trực tuyến trong 14 ngày.
-
+### 7.3 Hoàn tiền (Refund Status)
+- `NotApplicable`: Không hoàn phí (chưa đóng phí hoặc phí hủy 100%).
+- `Pending`: Đã tạo bản ghi hoàn phí, chờ xử lý.
+- `Processing`: Đang trong tiến trình chuyển khoản hoàn tiền.
+- `Succeeded`: Hoàn tiền thành công.
+- `Failed`: Hoàn tiền thất bại (cần đối soát kỹ thuật).
