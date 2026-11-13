@@ -42,3 +42,25 @@ Khởi tạo toàn bộ bộ khung chuẩn cho dự án **Clinic Appointment Man
 - Đã khởi tạo `.env` (cấu hình môi trường dev cục bộ) và `.env.example` (bản mẫu biến môi trường chuẩn).
 - Sẵn sàng chuyển giao cho Giai đoạn 1: Khởi tạo Solution .NET 8 Web API và thiết lập Docker PostgreSQL.
 
+
+---
+
+## [2026-11-13] - Cập nhật Đặc tả Yêu cầu Phần mềm SRS v1.2 Baseline (docs/SPEC.md)
+
+### 1. Bối cảnh & Yêu cầu
+Cập nhật tệp [docs/SPEC.md](file:///d:/Clinic_Appointment_Management_Project/docs/SPEC.md) lên phiên bản **1.2 (Baseline nghiệp vụ theo các quyết định đã xác nhận)**:
+- Nguồn yêu cầu sản phẩm chính thống cho toàn bộ dự án.
+- Tôn trọng nguyên tắc TBD: nội dung TBD chưa chốt, không tự biến TBD thành yêu cầu bắt buộc.
+
+### 2. Nội dung thay đổi cốt lõi
+- **Phạm vi (Scope):** Xác định rõ 12 nhóm In-scope và danh mục Out-of-scope (không có Telemedicine, không liên thông BHYT/Bệnh viện quốc gia, không native app; cổng thanh toán tự động là TBD).
+- **Actors:** 5 đối tượng (Guest, Patient, Receptionist, Doctor, Admin) với quy tắc bắt buộc: Kiểm tra Authorization luôn ở Backend.
+- **Yêu cầu chức năng (FR-001 đến FR-067):**
+  - Quản lý hồ sơ `Patient` độc lập `User` (cho phép `UserId = NULL`).
+  - Xác thực OTP chỉ áp dụng cho Tra cứu (`LOOKUP`), Đổi lịch (`RESCHEDULE`), Hủy lịch (`CANCEL`).
+  - Sinh mã `BookingCode` duy nhất, khó đoán, không lộ PII.
+  - Quy trình Đổi lịch (Reschedule): Bệnh nhân gửi yêu cầu, Receptionist duyệt/từ chối; giữ nguyên slot cũ đến khi duyệt thành công và kiểm tra slot mới trong Transaction.
+  - Chính sách Hủy lịch & Hoàn phí: Bệnh nhân tự hủy không cần duyệt; mốc $\ge$ 60 phút hoàn 100% (phí hủy 0%), mốc < 60 phút hoàn 50% (phí hủy 50%).
+- **Quản lý Định danh & Chống trùng (Section 8):** Phân biệt định danh mạnh vs yếu; không auto-merge hồ sơ chỉ dựa trên Họ tên + Ngày sinh/Năm sinh; mã hóa định danh nhạy cảm (CCCD, BHYT, PID) và sử dụng Keyed HMAC cho exact lookup.
+- **Trạng thái (Section 9):** Chuẩn hóa trạng thái của Appointment, RescheduleRequest và Refund.
+- **Tiêu chí nghiệm thu (Section 11) & Danh mục 12 điểm TBD (Section 12).**
