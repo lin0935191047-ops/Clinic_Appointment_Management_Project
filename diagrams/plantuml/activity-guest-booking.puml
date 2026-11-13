@@ -1,0 +1,38 @@
+@startuml
+|Guest|
+start
+:Open public booking page;
+:Choose specialty, doctor, service;
+:Choose date and available slot;
+:Enter full name, DOB or birth year, phone;
+|System|
+:Validate required fields;
+if (Identity fields valid?) then (yes)
+ :Search Patient candidates;
+ if (Strong verified match?) then (yes)
+  :Evaluate verified Patient candidate;
+ else (no / uncertain)
+  :Create Patient or flag possible duplicate;
+  note right: Name + DOB/year alone must not auto-merge.
+ endif
+ :Recheck schedule and slot in transaction;
+ if (Slot available?) then (yes)
+  :Create Appointment and snapshots;
+  :Generate unique BookingCode;
+  :Commit transaction;
+  |Guest|
+  :Show booking confirmation;
+  stop
+ else (no)
+  :Return conflict 409;
+  |Guest|
+  :Choose another slot;
+  stop
+ endif
+else (no)
+ :Return validation errors;
+ |Guest|
+ :Correct patient information;
+ stop
+endif
+@enduml

@@ -1,0 +1,85 @@
+erDiagram
+  PATIENTS ||--o{ APPOINTMENTS : books
+  PATIENT_CONTACTS ||--o{ APPOINTMENTS : booking_contact
+  DOCTORS ||--o{ APPOINTMENTS : assigned
+  SERVICES ||--o{ APPOINTMENTS : service
+  APPOINTMENTS ||--o{ APPOINTMENT_HISTORIES : records
+  APPOINTMENTS ||--o{ RESCHEDULE_REQUESTS : requests
+  APPOINTMENTS ||--o| APPOINTMENT_CANCELLATIONS : cancellation
+  APPOINTMENTS ||--o{ PAYMENTS : paid_by
+  CANCELLATION_POLICY_VERSIONS ||--o{ APPOINTMENT_CANCELLATIONS : policy
+  APPOINTMENT_CANCELLATIONS ||--o{ REFUNDS : generates
+  PAYMENTS ||--o{ REFUNDS : refunded_from
+  DOCTORS ||--o{ CONSULTATIONS : performs
+  APPOINTMENTS ||--o| CONSULTATIONS : results
+
+  PATIENTS {
+    uuid id PK
+    varchar patient_code UK
+    varchar full_name
+  }
+  DOCTORS {
+    uuid id PK
+    varchar doctor_code UK
+  }
+  SERVICES {
+    uuid id PK
+    varchar name
+    integer duration_minutes
+    numeric price
+  }
+  APPOINTMENTS {
+    uuid id PK
+    varchar booking_code UK
+    uuid patient_id FK
+    uuid doctor_id FK
+    uuid service_id FK
+    timestamptz start_at
+    timestamptz end_at
+    varchar status
+  }
+  APPOINTMENT_HISTORIES {
+    uuid id PK
+    uuid appointment_id FK
+    varchar from_status
+    varchar to_status
+    varchar actor_type
+  }
+  RESCHEDULE_REQUESTS {
+    uuid id PK
+    uuid appointment_id FK
+    timestamptz proposed_start_at
+    timestamptz proposed_end_at
+    varchar status
+  }
+  CANCELLATION_POLICY_VERSIONS {
+    uuid id PK
+    varchar version UK
+    integer threshold_minutes
+  }
+  APPOINTMENT_CANCELLATIONS {
+    uuid id PK
+    uuid appointment_id FK,UK
+    uuid policy_version_id FK
+    bigint seconds_before_start
+    numeric expected_refund_amount
+  }
+  PAYMENTS {
+    uuid id PK
+    uuid appointment_id FK
+    numeric amount
+    varchar status
+  }
+  REFUNDS {
+    uuid id PK
+    uuid appointment_cancellation_id FK
+    uuid payment_id FK
+    numeric amount
+    varchar status
+  }
+  CONSULTATIONS {
+    uuid id PK
+    uuid appointment_id FK,UK
+    uuid doctor_id FK
+    text diagnosis
+  }

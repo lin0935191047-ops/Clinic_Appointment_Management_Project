@@ -1,0 +1,29 @@
+@startuml
+|Receptionist|
+start
+:Find confirmed appointment;
+:Verify patient;
+:Check-in;
+|System|
+:Set status CheckedIn;
+|Doctor|
+:Open assigned appointment;
+if (Assigned doctor and valid status?) then (yes)
+ :Start consultation;
+ |System|
+ :Set status InProgress;
+ |Doctor|
+ :Record symptoms and examination;
+ :Record diagnosis and conclusion;
+ :Save consultation;
+ :Complete consultation;
+ |System|
+ :Set status Completed;
+ :Write history and audit;
+ stop
+else (no)
+ |System|
+ :Reject unauthorized/invalid transition;
+ stop
+endif
+@enduml

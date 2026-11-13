@@ -1,0 +1,65 @@
+erDiagram
+  APPOINTMENTS ||--o{ OTP_CHALLENGES : protected_by
+  PATIENTS ||--o{ OTP_CHALLENGES : owner
+  PATIENT_CONTACTS ||--o{ OTP_CHALLENGES : destination
+  OTP_CHALLENGES ||--o| OTP_VERIFICATION_GRANTS : issues
+  APPOINTMENTS ||--o{ NOTIFICATIONS : triggers
+  PATIENTS ||--o{ NOTIFICATIONS : receives
+  USERS ||--o{ AUDIT_LOGS : acts
+
+  APPOINTMENTS {
+    uuid id PK
+    varchar booking_code UK
+  }
+  PATIENT_CONTACTS {
+    uuid id PK
+    varchar contact_type
+    bytea value_hmac
+  }
+  OTP_CHALLENGES {
+    uuid id PK
+    uuid appointment_id FK
+    uuid patient_id FK
+    uuid patient_contact_id FK
+    varchar purpose
+    bytea otp_verifier_hmac
+    timestamptz expires_at
+  }
+  OTP_VERIFICATION_GRANTS {
+    uuid id PK
+    uuid challenge_id FK,UK
+    uuid appointment_id FK
+    varchar purpose
+    bytea grant_token_hash UK
+    timestamptz expires_at
+  }
+  NOTIFICATIONS {
+    uuid id PK
+    uuid patient_id FK
+    uuid appointment_id FK
+    varchar channel
+    varchar status
+  }
+  PATIENTS {
+    uuid id PK
+    varchar patient_code UK
+  }
+  USERS {
+    uuid id PK
+    varchar email_normalized UK
+  }
+  AUDIT_LOGS {
+    uuid id PK
+    uuid actor_user_id FK
+    varchar action
+    varchar entity_type
+    uuid entity_id
+    jsonb metadata_redacted
+  }
+  IDEMPOTENCY_RECORDS {
+    uuid id PK
+    varchar scope
+    bytea key_hash
+    bytea request_hash
+    uuid resource_id
+  }

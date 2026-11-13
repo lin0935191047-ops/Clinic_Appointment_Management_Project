@@ -1,50 +1,56 @@
-# Security & Data Protection Specification
+# SECURITY & PRIVACY BASELINE
 
-## 1. Cơ chế Xác thực & Phân quyền (Authentication & Authorization)
+## Data classification
+- Public: specialties, public doctor profiles, service descriptions, clinic contact.
+- Internal: schedule rules, queue, operational reports.
+- Personal: name, birth date/year, phone, email, address, identifiers.
+- Sensitive health: symptoms, consultation notes, diagnosis.
+- Secrets: password hashes, signing keys, DB credentials, OTP material, provider tokens.
 
-### 1.1 Quản lý Phiên & Token
-- **Access Token:** Định dạng JSON Web Token (JWT) có thời hạn sống ngắn (**15 - 30 phút**), mang thông tin cơ bản: `UserId`, `Role`, `Email`.
-- **Refresh Token:** Mã ngẫu nhiên cryptographically secure, lưu trữ trong bảng CSDL hoặc Redis, thời hạn 7 - 30 ngày, cơ chế **Token Rotation** (mỗi lần refresh sẽ sinh mã mới và hủy mã cũ).
-- **Lưu trữ phía Client:** Khuyến nghị lưu Refresh Token trong Cookie dạng `HttpOnly`, `Secure`, `SameSite=Strict` để phòng chống đánh cắp qua tấn công XSS.
+## Authentication and authorization
+- Backend enforces authentication, role and resource ownership.
+- Patient chỉ xem hồ sơ/lịch của mình; query/service phải kiểm tra ownership.
+- Doctor chỉ xem lịch được phân công và dữ liệu cần cho chăm sóc.
+- Receptionist chỉ có operational access; không mặc nhiên xem/chỉnh Consultation.
+- Admin theo least privilege; audit truy cập dữ liệu nhạy cảm.
+- Guest chỉ vào public endpoints hoặc dùng OTP-derived scoped grant.
 
-### 1.2 Phân quyền theo vai trò (Role-Based Access Control - RBAC)
-Hệ thống xác định 4 vai trò chính:
-- `ADMIN`: Toàn quyền quản trị danh mục, bác sĩ, lịch trình, người dùng, xem báo cáo toàn hệ thống.
-- `DOCTOR`: Truy cập lịch làm việc cá nhân, xem danh sách bệnh nhân khám của mình, cập nhật chẩn đoán/kết quả khám.
-- `RECEPTIONIST`: Xem hàng đợi khám trong ngày, thực hiện check-in, tạo lịch hẹn tại quầy (walk-in), liên hệ bệnh nhân.
-- `PATIENT`: Xem lịch sử khám của bản thân, quản lý thông tin cá nhân, đặt lịch và hủy lịch của chính mình.
+## OTP
+- Dùng cryptographically secure random generator.
+- Lưu keyed hash, không lưu plaintext.
+- Bind challenge với phone, booking, purpose, expiry.
+- One-time; TTL ngắn; max attempts; resend cooldown; per-IP/per-phone throttle.
+- Generic responses để tránh booking enumeration.
+- OTP/grant không được log.
+- Grant chỉ được phép thao tác theo purpose đã verify.
 
----
+## Patient data
+- Encrypt identity documents/identifiers at rest; key ngoài DB/repo.
+- Mask identifier khi hiển thị/log.
+- Dùng HMAC normalized identifier để lookup; có kế hoạch key rotation.
+- Không auto-merge chỉ dựa name + birth date/year.
+- Audit access, edits, merges.
+- Không đưa diagnosis/symptoms/identifier vào SMS/email.
 
-## 2. Bảo vệ Dữ liệu Y tế & Thông tin Cá nhân (Data Privacy)
+## API security
+- HTTPS production; DTO allowlist; server validation.
+- Dùng EF Core/parameterized SQL; tránh raw SQL nối chuỗi input.
+- Rate limit public booking, OTP, lookup.
+- CORS allowlist; no stack trace/secrets to client.
+- Chống IDOR bằng resource-level checks.
+- CSRF strategy phụ thuộc cách lưu token/cookie.
 
-1. **Mã hóa khi lưu trữ và truyền tải (Encryption):**
-   - **In-Transit:** Toàn bộ giao tiếp giữa Client và Server bắt buộc sử dụng HTTPS với TLS 1.3 / TLS 1.2.
-   - **At-Rest:** Mật khẩu người dùng được băm một chiều bằng thuật toán an toàn (`Argon2id` hoặc `BCrypt` work factor >= 12).
-2. **Quyền riêng tư Dữ liệu Bệnh nhân (Principle of Least Privilege):**
-   - Bác sĩ chỉ được phép đọc hồ sơ y tế / lý do khám của những bệnh nhân có lịch hẹn với chính bác sĩ đó.
-   - Lễ tân chỉ được xem thông tin hành chính (Họ tên, SĐT, Mã hẹn, Giờ khám), không có quyền can thiệp vào chẩn đoán chi tiết chuyên sâu của bác sĩ.
-3. **Nhật ký Giám sát (Audit Logging):**
-   - Ghi log vết kiểm toán đối với mọi hành vi sửa đổi trạng thái lịch hẹn, hủy lịch, xem thông tin nhạy cảm.
-   - Bản ghi audit bao gồm: `UserId`, `Action`, `EntityName`, `EntityId`, `IPAddress`, `Timestamp`.
+## Secrets and operations
+- .NET User Secrets cho local hoặc environment/secret manager.
+- Không commit `.env`, appsettings secret, password.
+- Rotate keys nếu compromise; redact logs.
+- Backup mã hóa và có restore drill.
 
----
-
-## 3. Phòng chống các lỗ hổng Web phổ biến (OWASP Top 10)
-
-| Nguy cơ | Giải pháp phòng vệ trong hệ thống |
-| :--- | :--- |
-| **SQL Injection** | Sử dụng hoàn toàn ORM Entity Framework Core với Parameterized Queries và LINQ. Tuyệt đối không ghép chuỗi SQL thuần. |
-| **Cross-Site Scripting (XSS)** | React tự động escape HTML khi render. Kết hợp thiết lập HTTP Header `Content-Security-Policy (CSP)`. |
-| **Cross-Site Request Forgery (CSRF)** | Sử dụng cơ chế Cookie `SameSite=Strict`/`Lax` và Anti-Forgery Token cho các endpoint nhạy cảm. |
-| **Brute Force & DoS** | Áp dụng ASP.NET Core Rate Limiting Middleware: giới hạn tối đa 5 lần thử đăng nhập/phút theo IP; giới hạn tạo lịch vãng lai 10 request/giờ. |
-| **Broken Object Level Auth (BOLA / IDOR)** | Mọi câu truy vấn dữ liệu chi tiết của Patient hoặc Doctor đều phải kiểm tra quyền sở hữu (`patient.UserId == currentUserId`). |
-
----
-
-## 4. Quản lý Bí mật & Biến môi trường (Secrets Management)
-
-- **Không bao giờ commit file chứa thông tin nhạy cảm:** `.env`, `appsettings.Production.json`, connection strings chứa password vào Git.
-- **Môi trường phát triển cục bộ:** Dùng .NET `dotnet user-secrets` và file `.env.local` của React.
-- **Môi trường triển khai Production:** Nạp biến môi trường thông qua Docker Secrets, Azure Key Vault hoặc GitHub Repository Secrets.
-
+## Security tests
+- Booking code alone cannot lookup.
+- OTP purpose mismatch/expired/reused/over-attempt fails.
+- Patient A cannot access Patient B by changing UUID.
+- Doctor cannot access unassigned appointment.
+- Receptionist cannot edit consultation without permission.
+- Public DTO cannot set status/refund/role/PatientId.
+- Concurrent booking cannot double-book.

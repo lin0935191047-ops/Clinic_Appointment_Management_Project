@@ -1,0 +1,23 @@
+@startuml
+|Guest|
+start
+:Enter BookingCode and phone;
+:Request OTP for LOOKUP;
+|System|
+:Apply rate limit;
+:Create OTP challenge;
+:Send OTP via SMS adapter;
+|Guest|
+:Enter OTP;
+|System|
+:Verify purpose, expiry and attempts;
+if (Valid?) then (yes)
+ :Consume OTP once;
+ :Issue short-lived LOOKUP grant;
+ :Return minimal appointment summary;
+ stop
+else (no)
+ :Reject with generic response;
+ stop
+endif
+@enduml

@@ -1,0 +1,59 @@
+erDiagram
+  SPECIALTIES ||--o{ DOCTOR_SPECIALTIES : has
+  DOCTORS ||--o{ DOCTOR_SPECIALTIES : practices
+  SPECIALTIES ||--o{ SERVICES : offers
+  DOCTORS ||--o{ DOCTOR_SERVICES : provides
+  SERVICES ||--o{ DOCTOR_SERVICES : assigned
+  DOCTORS ||--o{ DOCTOR_WORKING_RULES : works
+  DOCTORS ||--o{ DOCTOR_TIME_OFFS : unavailable
+  DOCTORS ||--o{ DOCTOR_SCHEDULE_BLOCKS : blocked
+
+  SPECIALTIES {
+    uuid id PK
+    varchar code UK
+    varchar name
+    varchar slug UK
+  }
+  DOCTORS {
+    uuid id PK
+    uuid user_id FK
+    varchar doctor_code UK
+  }
+  DOCTOR_SPECIALTIES {
+    uuid doctor_id PK,FK
+    uuid specialty_id PK,FK
+    boolean is_primary
+  }
+  SERVICES {
+    uuid id PK
+    uuid specialty_id FK
+    varchar code UK
+    integer duration_minutes
+    numeric price
+  }
+  DOCTOR_SERVICES {
+    uuid doctor_id PK,FK
+    uuid service_id PK,FK
+    integer duration_minutes_override
+    numeric price_override
+  }
+  DOCTOR_WORKING_RULES {
+    uuid id PK
+    uuid doctor_id FK
+    smallint day_of_week
+    time start_local_time
+    time end_local_time
+  }
+  DOCTOR_TIME_OFFS {
+    uuid id PK
+    uuid doctor_id FK
+    timestamptz start_at
+    timestamptz end_at
+  }
+  DOCTOR_SCHEDULE_BLOCKS {
+    uuid id PK
+    uuid doctor_id FK
+    timestamptz start_at
+    timestamptz end_at
+    varchar block_type
+  }

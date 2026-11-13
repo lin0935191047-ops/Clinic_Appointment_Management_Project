@@ -1,0 +1,403 @@
+{
+  "project": "Clinic Appointment Management System",
+  "package_version": "2.1-db-design-erd-v1.2",
+  "generated_on": "2026-11-13",
+  "status": "Documentation and logical design only; no application source, database or migrations created",
+  "file_count": 78,
+  "database_tables_in_logical_design": 30,
+  "skills": 7,
+  "rules": 5,
+  "features": 55,
+  "files": [
+    {
+      "path": ".agents/rules/00-project-invariants.md",
+      "size_bytes": 725,
+      "sha256": "5e6b607da4f77474ae62d84f8123356f3c933da7b60cabef0cbc2713bcb29992"
+    },
+    {
+      "path": ".agents/rules/backend-csharp.md",
+      "size_bytes": 661,
+      "sha256": "d6c9bf8451b7d75d5b16e00e8351c445ea7b88e0379226f0b3352a1f2a60080b"
+    },
+    {
+      "path": ".agents/rules/database-postgresql.md",
+      "size_bytes": 738,
+      "sha256": "6c1b7bd783233cf5b2754cec8b62bb364f701620f91b62722ae98ba7a8306ef8"
+    },
+    {
+      "path": ".agents/rules/docs-and-feature-tracking.md",
+      "size_bytes": 622,
+      "sha256": "e61f238641e766c6643fbe69985f0691924df1505e68cb378d290934fe1cfbc8"
+    },
+    {
+      "path": ".agents/rules/frontend-react.md",
+      "size_bytes": 665,
+      "sha256": "97e572eb2b10768f7484f8ae1f44545ce4301a821041da2c36a8a9a7e0f31feb"
+    },
+    {
+      "path": ".agents/skills/clinic-business-logic/SKILL.md",
+      "size_bytes": 1875,
+      "sha256": "a3f49fc6b3a937a3f4beb7f3c4bb7b28783be6675397e1a084fe03e1cd248e41"
+    },
+    {
+      "path": ".agents/skills/documentation-sync/SKILL.md",
+      "size_bytes": 1035,
+      "sha256": "9cb21b4ef3a7f37e5faaff989bcee49f8334332d8b2c05a02f6f07d8781509f4"
+    },
+    {
+      "path": ".agents/skills/dotnet-backend/SKILL.md",
+      "size_bytes": 1598,
+      "sha256": "e7a47128a66cdd297ff05119a223d0c9ed9802e3256c89e1d95297672e05172d"
+    },
+    {
+      "path": ".agents/skills/efcore-postgresql/SKILL.md",
+      "size_bytes": 2009,
+      "sha256": "16b7c71736a0352e2acb602959d54231334ce19c7a42522aa28863a496362017"
+    },
+    {
+      "path": ".agents/skills/project-planning/SKILL.md",
+      "size_bytes": 1385,
+      "sha256": "45862c5d94facbf74a2e01828c1e9299a2d08b020c983618c8eea401b30219b1"
+    },
+    {
+      "path": ".agents/skills/react-frontend/SKILL.md",
+      "size_bytes": 1470,
+      "sha256": "c9b2a95955db937340356b6845a8c5fe1534ca79561d5ae4a89a690dcb2b044d"
+    },
+    {
+      "path": ".agents/skills/testing-qa/SKILL.md",
+      "size_bytes": 1442,
+      "sha256": "3d4dc0b6ab107818506c78c981d1ffd8a3151a77d902b2297ddd90d5e0283bc3"
+    },
+    {
+      "path": ".editorconfig",
+      "size_bytes": 264,
+      "sha256": "0f59255dfa44c375bffaaf1c35060e3c6778e4609c735fbec3e9eaac3369573f"
+    },
+    {
+      "path": ".gitignore",
+      "size_bytes": 310,
+      "sha256": "7aa67420b0b7023e952af29d12addc26a862be47d49f691cb8f751d41bf6eda9"
+    },
+    {
+      "path": "AGENTS.md",
+      "size_bytes": 4178,
+      "sha256": "698db985aede599afff39e687bc07f56d95a4e51419a94c2d7312a5b08297383"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 3267,
+      "sha256": "43a53df31d07edb5f41e62dd331d0095053fa7cff57d78823b5bbc7ef52f0ec0"
+    },
+    {
+      "path": "backend/.gitkeep",
+      "size_bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "database/README.md",
+      "size_bytes": 453,
+      "sha256": "fe5bd0228d39faddec225978160cedbbb4cfddc3e772c2326e296c6c89944896"
+    },
+    {
+      "path": "database/reference/constraints-reference.sql",
+      "size_bytes": 6818,
+      "sha256": "6e185eecb30b4300da0828f31d39b767c6477639fb6914ca00e5879217398ae9"
+    },
+    {
+      "path": "diagrams/ERD_01_IDENTITY.png",
+      "size_bytes": 193325,
+      "sha256": "d9cd3270a5ffcb1580a6f28576739ec682ffe385fca2c3fc82444a18020d0238"
+    },
+    {
+      "path": "diagrams/ERD_02_CATALOG_SCHEDULING.png",
+      "size_bytes": 150871,
+      "sha256": "950eee0a020ff010e5e67f58b19b30a8dda0aa98dee59605948cc98363caec79"
+    },
+    {
+      "path": "diagrams/ERD_03_APPOINTMENTS_FINANCE.png",
+      "size_bytes": 213893,
+      "sha256": "d831f46389aef2a0c1ccc50ebe2fb385b6a5ddb428c434f3b0b05d76f2bd8cd1"
+    },
+    {
+      "path": "diagrams/ERD_04_OTP_OPERATIONS.png",
+      "size_bytes": 223052,
+      "sha256": "e5484e1c115ddff26b531350bc8918f1900816f1aff074c81170376842df2b5e"
+    },
+    {
+      "path": "diagrams/ERD_04_OTP_OPERATIONS.svg",
+      "size_bytes": 14366,
+      "sha256": "20629c903ae6d4cb14968af04c007021a0d692f53d50314ab57800f488afc740"
+    },
+    {
+      "path": "diagrams/ERD_OVERVIEW.png",
+      "size_bytes": 441816,
+      "sha256": "b9f02d70c2e0822c357be291733aea1a295b6c746b709d8c233630a2123cf01b"
+    },
+    {
+      "path": "diagrams/ERD_OVERVIEW.svg",
+      "size_bytes": 44789,
+      "sha256": "1038852328839f590dcca6f6cacfb4867c0b8e2f91f5329b5be70efdc59f9dcd"
+    },
+    {
+      "path": "diagrams/README.md",
+      "size_bytes": 781,
+      "sha256": "d4d514d8527ce99c60ca2c9a039007b21c6e8d7c1d86cf983a766efe7febc79d"
+    },
+    {
+      "path": "diagrams/mermaid/README.md",
+      "size_bytes": 278,
+      "sha256": "61c76165396f11697de6650bc2b8f592b31f37c95ecbc59d2f07738fe9a7eba1"
+    },
+    {
+      "path": "diagrams/mermaid/erd-appointments-finance.mmd",
+      "size_bytes": 2007,
+      "sha256": "d21a18d9592b0531d2e9ac548793465e51a6cb3e8d446560f2a927d106114970"
+    },
+    {
+      "path": "diagrams/mermaid/erd-catalog-scheduling.mmd",
+      "size_bytes": 1304,
+      "sha256": "e9922c3e01ac7460d6a9c56e364a5920653a72f03efb05456b01c79d01121a5a"
+    },
+    {
+      "path": "diagrams/mermaid/erd-identity.mmd",
+      "size_bytes": 1495,
+      "sha256": "72044f547df806811a46339a31444499c4ef79a10038227cf013235eebc54e27"
+    },
+    {
+      "path": "diagrams/mermaid/erd-otp-operations.mmd",
+      "size_bytes": 1383,
+      "sha256": "e6c7e2d4fae9f44cd4ec3e3e033b978254edb823ae7f917fe2315a13a62ed757"
+    },
+    {
+      "path": "diagrams/plantuml/activity-cancellation-refund.puml",
+      "size_bytes": 656,
+      "sha256": "d4198b052ecadb269141036920d7da8cfe533e2701641440dc1d8f0bbdf5a932"
+    },
+    {
+      "path": "diagrams/plantuml/activity-doctor-consultation.puml",
+      "size_bytes": 539,
+      "sha256": "fc7e265c9aed64f80198f23898c99c28d68f9552f776fbce554d7d4af951b66f"
+    },
+    {
+      "path": "diagrams/plantuml/activity-guest-booking.puml",
+      "size_bytes": 878,
+      "sha256": "b6b2b46c52ed11a884003173e2013f6d6ef6f238c13cfceff76b2ad0bb3d7d12"
+    },
+    {
+      "path": "diagrams/plantuml/activity-otp-lookup.puml",
+      "size_bytes": 407,
+      "sha256": "ba9a40da60886b89746d305fb54622d1fb332bedb07fa8873e324a7b5fe0191b"
+    },
+    {
+      "path": "diagrams/plantuml/activity-reschedule-approval.puml",
+      "size_bytes": 664,
+      "sha256": "f778148b81a8e38f7395e9b09e65a3d098a3a13edb41a587820bab606198c00d"
+    },
+    {
+      "path": "diagrams/plantuml/erd-overview.puml",
+      "size_bytes": 1842,
+      "sha256": "41a3df1bdfb4ad221278396e43fad39ae6e31c7a76ea12869c6cb1027f37a19d"
+    },
+    {
+      "path": "diagrams/plantuml/use-case-overview.puml",
+      "size_bytes": 1274,
+      "sha256": "71aab60c50b6f78eceae43f2953f0e90131c08d9eebe1f39557e6f322bf871c6"
+    },
+    {
+      "path": "docs/ACTIVITY_DIAGRAMS.md",
+      "size_bytes": 1286,
+      "sha256": "946c8fe8db9dfbb4b276457e80d7d21182b3a04a2d0c772af2131ee547f3d14b"
+    },
+    {
+      "path": "docs/API_SPECIFICATION.md",
+      "size_bytes": 5033,
+      "sha256": "08ca96567d6b6543fd8a4db12be81f77517295239adb0d30f43223d5797c5c99"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "size_bytes": 7499,
+      "sha256": "ac73489c910d35a667ad94bf51d95638441bf929d651530bfb344e8e62cf76e1"
+    },
+    {
+      "path": "docs/BUSINESS_RULES.md",
+      "size_bytes": 4044,
+      "sha256": "5538048e6e7dd538d7ed6e2798ce06fcb01e80981ac52aa099111fd2ba329f78"
+    },
+    {
+      "path": "docs/CONFIGURATION_TEMPLATE.md",
+      "size_bytes": 497,
+      "sha256": "2279884a4ac110a6ed4dde7408d41f1be3652fea91dc0f169dd5d6bc78757162"
+    },
+    {
+      "path": "docs/DATABASE_DESIGN.md",
+      "size_bytes": 38494,
+      "sha256": "5c7d385a33477f7dead5af77eff22aa00e8cf0615604184d705e6881065bdf2f"
+    },
+    {
+      "path": "docs/DATABASE_DESIGN_CHANGELOG.md",
+      "size_bytes": 888,
+      "sha256": "0fe1c18f62f76019462a94ec09ede9b92f559582ed3f3a83c598938d9c2d6b2e"
+    },
+    {
+      "path": "docs/DATABASE_IMPLEMENTATION_READINESS.md",
+      "size_bytes": 1241,
+      "sha256": "809d9324e60f8763d423b4bbf85facd1e8829c183e47eb49805e297de1c104f7"
+    },
+    {
+      "path": "docs/DATABASE_REVIEW_CHECKLIST.md",
+      "size_bytes": 4096,
+      "sha256": "23d1cee2dc7726be78572521ffd56e3d13c693b4d2123b825a39ee3089c66211"
+    },
+    {
+      "path": "docs/DATA_DICTIONARY.md",
+      "size_bytes": 30620,
+      "sha256": "ee79987604c996248995c5fe47be722291dfdd238c37c4e316bd6828dae221f7"
+    },
+    {
+      "path": "docs/DEVELOPMENT_PLAN.md",
+      "size_bytes": 1798,
+      "sha256": "6c957f1561ee5d3bbb76c0d6e732ff5495be77e001ca678e939cc52724a321df"
+    },
+    {
+      "path": "docs/ERD.md",
+      "size_bytes": 8841,
+      "sha256": "8cdf5b155d1d085faa2f2d0baeb737f3afb3578b0f4ebfa993304235541c42ed"
+    },
+    {
+      "path": "docs/HARNESS_AUDIT_TEMPLATE.md",
+      "size_bytes": 878,
+      "sha256": "a0e9009a1f3414b0f366a78956f46c2e2ec318b79e5d0222080bbad8a3454fe0"
+    },
+    {
+      "path": "docs/POSTMAN_TEST_CHECKLIST.md",
+      "size_bytes": 1019,
+      "sha256": "35def29bbc13d7b514a7f43b638da3647b29f1aca56435cfbb8b79a15c82ade7"
+    },
+    {
+      "path": "docs/REQUIREMENTS_TRACEABILITY.md",
+      "size_bytes": 1311,
+      "sha256": "4ddbc194eb6ee4821a6e252b4ce8bb5ab4db729442c038ccea96392c4ec3c528"
+    },
+    {
+      "path": "docs/SECURITY.md",
+      "size_bytes": 2616,
+      "sha256": "c16915835a1917cd1743d675cabbfc4a7b3bec01d8480e05f03877de4fe80a67"
+    },
+    {
+      "path": "docs/SPEC.md",
+      "size_bytes": 16578,
+      "sha256": "00759bef2603430f056a1a1af4c7af79b10fe277178387ec9563b511a824011d"
+    },
+    {
+      "path": "docs/START_HERE.md",
+      "size_bytes": 2093,
+      "sha256": "69d110039ab7115c8f751a1bf4e56689cc48fab627474e35a3f9e155849da4a2"
+    },
+    {
+      "path": "docs/TESTING_STRATEGY.md",
+      "size_bytes": 3282,
+      "sha256": "57f6140d52d24cac37d6297fd3370f04a8364ba828e01b9d730776f265f45958"
+    },
+    {
+      "path": "docs/USE_CASE_SPECIFICATION.md",
+      "size_bytes": 4050,
+      "sha256": "416221932f1f5ee079196c5f6238bdfd67c5ce91c4bbbd6fec53d2e3178b0859"
+    },
+    {
+      "path": "docs/adr/0001-modular-monolith.md",
+      "size_bytes": 387,
+      "sha256": "74e0ce7dd1073f24b9462e141acaca1b1926afc4e88effff0fe412fee5ac722b"
+    },
+    {
+      "path": "docs/adr/0002-guest-booking.md",
+      "size_bytes": 284,
+      "sha256": "d4faf0d28bb9a6685ccd13276dc28313abdea492f120a8c5fdd99be82b804c4b"
+    },
+    {
+      "path": "docs/adr/0003-reschedule-approval.md",
+      "size_bytes": 333,
+      "sha256": "2e31e4374f233db5bb572e9f5c2cb351be67ccf85d7215c260392ddaeb7c9156"
+    },
+    {
+      "path": "docs/adr/0004-cancellation-refund-policy.md",
+      "size_bytes": 508,
+      "sha256": "719f1a53dc343c3117ef893a4c87131a52fd9b56780caf8f7a73bfb5cc13ddfe"
+    },
+    {
+      "path": "docs/adr/0005-patient-identity-resolution.md",
+      "size_bytes": 436,
+      "sha256": "e6f204b0cc58e1ab6b0e8706c014f289fa033ed59b733d298c073708c559f388"
+    },
+    {
+      "path": "docs/adr/0006-postgresql-overlap-constraint.md",
+      "size_bytes": 1205,
+      "sha256": "ed216c261422ebc90054672128cb656cb77a32b3f7f3799c1b40bcda09a698af"
+    },
+    {
+      "path": "docs/adr/0008-patient-identity-storage.md",
+      "size_bytes": 966,
+      "sha256": "fdc24ace4a7eeaaa5471cafc78a45238b974c8cef71492cc45941e6fae77563a"
+    },
+    {
+      "path": "docs/adr/0009-reschedule-slot-transaction.md",
+      "size_bytes": 808,
+      "sha256": "2ffd7d58a1eb8e436311eda8d5fbc3bf7ae22e31a6acb63aa73046f19062e83e"
+    },
+    {
+      "path": "docs/adr/0011-cross-table-scope-integrity.md",
+      "size_bytes": 944,
+      "sha256": "6341651c7b420ef7d405a55a84e690a94501db21dec8c7911525f81f10cba9fc"
+    },
+    {
+      "path": "frontend/.gitkeep",
+      "size_bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "planning/backlog.md",
+      "size_bytes": 1067,
+      "sha256": "ea587893a8e936385d9e757688dbe3558b24ecebb7c66eabdebead9c01be44a0"
+    },
+    {
+      "path": "planning/feature_list.json",
+      "size_bytes": 29709,
+      "sha256": "c9bb268aada74d772d7ad26d8cc366e976ce3b1d659e1ef50ebd3738ec19dd75"
+    },
+    {
+      "path": "planning/feature_schema.json",
+      "size_bytes": 1949,
+      "sha256": "899f44386d7a1f5d5a82760ad991bf4b45cf4a3e5b40ad9bdaea179f731c4025"
+    },
+    {
+      "path": "planning/implementation_log.md",
+      "size_bytes": 430,
+      "sha256": "9ddf8f35e946996f378c45161922b8c04c1636e2407164d6bd1e0fcc1871dcb3"
+    },
+    {
+      "path": "planning/progress.md",
+      "size_bytes": 1390,
+      "sha256": "bfc5571cd34bcc83e05f9a99258ee367a2335c64a250eef631693f4d7610cbe7"
+    },
+    {
+      "path": "prompts/01-harness-audit.md",
+      "size_bytes": 528,
+      "sha256": "639349d2330fe8987211746123f6ffcfc457fd71ab188cbb5760e1ec1b32a07a"
+    },
+    {
+      "path": "prompts/02-database-design-review.md",
+      "size_bytes": 701,
+      "sha256": "bcba77e295d6c5d4d3af166fafa2f7f82c4a9f00cdddbe1dcb890bdd3078dbc7"
+    },
+    {
+      "path": "prompts/03-implement-one-feature.md",
+      "size_bytes": 665,
+      "sha256": "8a2e06d009da91e854334ead4f9828be551a51db9e158c14da2610ed4d4616cd"
+    },
+    {
+      "path": "prompts/04-documentation-sync.md",
+      "size_bytes": 418,
+      "sha256": "dc7a65c73a4845a83e4c7f2587714dd7fbd39001c0571ba8576d51ecce212db4"
+    }
+  ]
+}

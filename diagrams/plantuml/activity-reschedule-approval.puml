@@ -1,0 +1,32 @@
+@startuml
+|Guest / Patient|
+start
+:Request RESCHEDULE OTP;
+:Verify OTP;
+:Choose proposed new slot;
+|System|
+:Validate grant and proposed slot;
+:Create PendingReview request;
+note right: Old appointment keeps its slot; proposed slot is not reserved yet.
+|Receptionist|
+:Review request;
+if (Approve?) then (yes)
+ |System|
+ :Recheck new slot in transaction;
+ if (Slot available?) then (yes)
+  :Update appointment and history;
+  :Mark request Approved;
+  :Commit;
+  stop
+ else (no)
+  :Keep old appointment unchanged;
+  :Reject/expire request with reason;
+  stop
+ endif
+else (no)
+ |System|
+ :Mark request Rejected;
+ :Keep old appointment unchanged;
+ stop
+endif
+@enduml

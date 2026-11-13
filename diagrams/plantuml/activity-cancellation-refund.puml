@@ -1,0 +1,29 @@
+@startuml
+|Guest / Patient|
+start
+:Request CANCEL OTP;
+:Verify OTP;
+:Submit cancellation request;
+|System|
+:Capture server timestamp;
+if (Appointment start is in future?) then (yes)
+ :Calculate minutes before start;
+ if (Minutes >= 60?) then (yes)
+  :Refund rate = 100%;
+  :Cancellation fee = 0%;
+ else (no)
+  :Refund rate = 50%;
+  :Cancellation fee = 50%;
+ endif
+ :Calculate expected refund from paid service fee;
+ :Create cancellation/refund records;
+ :Set Appointment = Cancelled;
+ :Commit and release slot;
+ :Set refund processing status;
+ stop
+else (no)
+ :Deny patient self-cancellation;
+ :Route to Receptionist / NoShow workflow;
+ stop
+endif
+@enduml

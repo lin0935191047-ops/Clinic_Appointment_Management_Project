@@ -1,318 +1,1085 @@
 {
-  "project": "Clinic-Appointment-Management",
-  "version": "1.2.0",
-  "lastUpdated": "2026-11-13",
-  "modules": [
+  "schema_version": "1.0.0",
+  "project": "Clinic Appointment Management System",
+  "baseline_documents": [
+    "docs/SPEC.md",
+    "docs/BUSINESS_RULES.md",
+    "docs/ARCHITECTURE.md",
+    "docs/DATABASE_DESIGN.md",
+    "docs/API_SPECIFICATION.md"
+  ],
+  "status_definitions": {
+    "not_started": "Chưa triển khai",
+    "in_progress": "Đang triển khai",
+    "blocked": "Bị chặn bởi dependency/TBD/blocker",
+    "needs_review": "Đã triển khai nhưng cần review/kiểm thử",
+    "completed": "Acceptance criteria đạt và có test_evidence thực tế"
+  },
+  "priority_definitions": {
+    "critical": "Bắt buộc cho luồng cốt lõi, bảo mật hoặc integrity",
+    "high": "Quan trọng cho vận hành v1",
+    "medium": "Cần có nhưng sau luồng cốt lõi",
+    "low": "Nice-to-have đã phê duyệt"
+  },
+  "features": [
     {
-      "id": "MOD-01",
-      "name": "Project Scaffolding & Specifications (SRS v1.2)",
-      "priority": "P0",
-      "status": "COMPLETED",
-      "features": [
-        {
-          "id": "FEAT-001",
-          "name": "Architecture, Database & API Specifications Baseline",
-          "priority": "P0",
-          "status": "COMPLETED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-002",
-          "name": "Architecture Decision Records (ADRs 0001, 0002, 0003)",
-          "priority": "P0",
-          "status": "COMPLETED",
-          "complexity": "Low"
-        },
-        {
-          "id": "FEAT-003",
-          "name": "Agent Rules and Specialized Skills Scaffolding",
-          "priority": "P0",
-          "status": "COMPLETED",
-          "complexity": "Medium"
-        }
+      "id": "FEAT-001",
+      "name": "Repository and Harness baseline",
+      "module": "Harness",
+      "description": "Thiết lập tài liệu, Antigravity rules/skills và feature tracking.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "AGENTS.md và tài liệu bắt buộc tồn tại",
+        "Antigravity nhận diện workspace Skills/Rules",
+        "feature_list.json parse hợp lệ",
+        "Harness audit không còn blocker"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-002",
+      "name": "SRS and workflow baseline",
+      "module": "Analysis",
+      "description": "Chốt SRS, actors, use cases, activity và TBD.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-001"
+      ],
+      "acceptance_criteria": [
+        "SPEC v1.2 được duyệt",
+        "Business Rules nhất quán OTP/reschedule/refund/identity",
+        "Use Case và Activity diagrams được review"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-003",
+      "name": "Architecture and API design",
+      "module": "Design",
+      "description": "Chốt kiến trúc, layer boundaries và API contract.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-002"
+      ],
+      "acceptance_criteria": [
+        "ARCHITECTURE được duyệt",
+        "API spec mô tả public/auth/staff endpoints",
+        "ADR cho quyết định lớn được ghi"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-004",
+      "name": "Database design",
+      "module": "Database",
+      "description": "Thiết kế ERD, data dictionary, entities, keys, constraints, indexes, identity matching, OTP/reschedule/refund persistence và no-overlap strategy.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-003"
+      ],
+      "acceptance_criteria": [
+        "DATABASE_DESIGN.md v1.2 và DATA_DICTIONARY.md được owner review",
+        "ERD được cung cấp theo domain và các quan hệ được kiểm tra",
+        "Patient.UserId nullable; FullName + DateOfBirth hoặc BirthYear được ràng buộc",
+        "Patient contacts tách khỏi CCCD/passport/BHYT/PID identifiers",
+        "Không auto-merge chỉ dựa trên tên + ngày sinh/năm sinh",
+        "OTP challenges và scoped verification grants được mô hình hóa",
+        "Reschedule request giữ lịch cũ đến khi Receptionist approve",
+        "Cancellation policy lưu snapshot: >=60 phút hoàn 100%, <60 phút trước giờ hẹn hoàn 50%",
+        "Payments/refunds và TBD về partial/unpaid payment được mô tả",
+        "PostgreSQL exclusion constraint và race-condition tests được thiết kế",
+        "DATABASE_REVIEW_CHECKLIST.md đạt các mục bắt buộc trước migration",
+        "Composite foreign keys bảo đảm Patient/contact/booking/doctor/service/OTP scope nhất quán",
+        "Refund record liên kết tới payment nguồn; scoped OTP grant không dùng chéo booking"
+      ],
+      "test_evidence": [],
+      "notes": [
+        "Database Design v1.2 là logical draft; chưa tạo DB hoặc EF Core Migration.",
+        "Xem docs/ERD.md, docs/DATA_DICTIONARY.md, docs/DATABASE_REVIEW_CHECKLIST.md.",
+        "Các TBD về partial payment, reschedule conflict, identity verification và retention phải được review."
       ]
     },
     {
-      "id": "MOD-02",
-      "name": "Patient Profile & Identity Resolution",
-      "priority": "P0",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-004",
-          "name": "Independent Patient Profile (UserId = NULL supported)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-005",
-          "name": "FullName + DOB or BirthYear Mandatory Validation",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Low"
-        },
-        {
-          "id": "FEAT-006",
-          "name": "Encrypted PII Storage & Keyed HMAC Exact Search",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        },
-        {
-          "id": "FEAT-007",
-          "name": "Candidate Duplicate Detection (Strictly No Auto-Merge)",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        },
-        {
-          "id": "FEAT-008",
-          "name": "Manual Profile Merge with Audit Trail",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        }
-      ]
+      "id": "FEAT-005",
+      "name": "Development environment",
+      "module": "Foundation",
+      "description": "Chuẩn bị .NET SDK, Node, PostgreSQL, TablePlus.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-003"
+      ],
+      "acceptance_criteria": [
+        "Tool versions ghi vào README",
+        "PowerShell runbook chạy trên Windows",
+        "Không commit credentials"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-03",
-      "name": "Authentication & RBAC (Optional for Patient)",
-      "priority": "P0",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-009",
-          "name": "Optional Patient Registration & System Login",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-010",
-          "name": "Role-Based Access Control (Admin, Doctor, Receptionist, Patient)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-011",
-          "name": "Backend-Enforced Authorization on All Endpoints",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        }
-      ]
+      "id": "FEAT-006",
+      "name": "ASP.NET Core API bootstrap",
+      "module": "Backend",
+      "description": "Khởi tạo Web API và conventions.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-005"
+      ],
+      "acceptance_criteria": [
+        "API chạy local",
+        "Health endpoint hoạt động",
+        "Swagger trong Development",
+        "Global exception handling"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-04",
-      "name": "Specialties, Doctors & Services Catalog",
-      "priority": "P0",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-012",
-          "name": "Public Clinic Info & Specialty Catalog (FR-001, FR-002)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Low"
-        },
-        {
-          "id": "FEAT-013",
-          "name": "Doctor Directory with Profiles (FR-003)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-014",
-          "name": "Services Catalog with Duration and Pricing (FR-004)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Low"
-        },
-        {
-          "id": "FEAT-015",
-          "name": "Doctor Shift Schedules & Leaves Management (FR-052, FR-053)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        }
-      ]
+      "id": "FEAT-007",
+      "name": "React app bootstrap",
+      "module": "Frontend",
+      "description": "Khởi tạo React SPA/router/layout.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-005"
+      ],
+      "acceptance_criteria": [
+        "Frontend chạy local",
+        "Router cấu hình",
+        "Build/lint pass"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-05",
-      "name": "Appointment Booking Engine (Guest & Patient)",
-      "priority": "P0",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-016",
-          "name": "Available Slots Calculation Engine (FR-005, FR-054)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        },
-        {
-          "id": "FEAT-017",
-          "name": "Guest Booking Flow without Account (FR-018 to FR-022)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        },
-        {
-          "id": "FEAT-018",
-          "name": "Unique Unguessable BookingCode Generation (FR-023)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Low"
-        },
-        {
-          "id": "FEAT-019",
-          "name": "Service Snapshot at Booking Creation (FR-024)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Low"
-        },
-        {
-          "id": "FEAT-020",
-          "name": "Atomic Concurrency Control & Anti-Double Booking",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        }
-      ]
+      "id": "FEAT-008",
+      "name": "PostgreSQL and EF Core connection",
+      "module": "Database",
+      "description": "Cấu hình Npgsql, EF Core, DbContext.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-006",
+        "FEAT-004"
+      ],
+      "acceptance_criteria": [
+        "Kết nối DB qua secret/config ngoài source",
+        "DbContext DI",
+        "Không có secret trong Git"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-06",
-      "name": "OTP Management & Public Lookup",
-      "priority": "P0",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-021",
-          "name": "Scoped Single-Use OTP (LOOKUP, RESCHEDULE, CANCEL) (FR-026 - FR-028)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        },
-        {
-          "id": "FEAT-022",
-          "name": "Public Lookup via BookingCode + OTP without Full PII Exposure (FR-030)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        }
-      ]
+      "id": "FEAT-009",
+      "name": "Initial migrations and seed",
+      "module": "Database",
+      "description": "Tạo migration nền và seed roles.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-008"
+      ],
+      "acceptance_criteria": [
+        "Migration chạy trên DB sạch",
+        "Seed idempotent",
+        "Upgrade/rollback guidance"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-07",
-      "name": "Reschedule Workflow",
-      "priority": "P0",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-023",
-          "name": "Reschedule Request Submission (Patient/Guest) (FR-036 - FR-038)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-024",
-          "name": "Old Slot Preservation During PendingReview (FR-040, FR-042)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        },
-        {
-          "id": "FEAT-025",
-          "name": "Receptionist Review (Approve/Reject) with Slot Re-check (FR-039, FR-041)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        }
-      ]
+      "id": "FEAT-010",
+      "name": "Users and roles",
+      "module": "Identity",
+      "description": "Mô hình Users/Roles.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-009"
+      ],
+      "acceptance_criteria": [
+        "Roles ADMIN/DOCTOR/RECEPTIONIST/PATIENT",
+        "Role assignment theo policy"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-08",
-      "name": "Cancellation & 60-Minute Refund Policy",
-      "priority": "P0",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-026",
-          "name": "Patient Self-Cancellation Before Start Time without Staff Approval (FR-043, FR-044)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-027",
-          "name": "Server Timestamp Boundary Refund Engine (100% at >=60m, 50% at <60m) (FR-045 - FR-048)",
-          "priority": "P0",
-          "status": "NOT_STARTED",
-          "complexity": "High"
-        },
-        {
-          "id": "FEAT-028",
-          "name": "Refund Record Tracking (NotApplicable, Pending, Processing, etc.) (FR-051)",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        }
-      ]
+      "id": "FEAT-011",
+      "name": "Patient profile",
+      "module": "Patient",
+      "description": "Patient độc lập User và required identity fields.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-009"
+      ],
+      "acceptance_criteria": [
+        "UserId nullable unique",
+        "FullName bắt buộc",
+        "DOB hoặc BirthYear bắt buộc",
+        "Validation test"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-09",
-      "name": "Reception & Doctor Portals",
-      "priority": "P1",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-029",
-          "name": "Receptionist Daily Queue & Appointment Confirmation (FR-032, FR-058)",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-030",
-          "name": "One-click Patient Check-in (FR-057)",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "Low"
-        },
-        {
-          "id": "FEAT-031",
-          "name": "Doctor Consultation & Clinical Notes Recording (FR-059 - FR-062)",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        }
-      ]
+      "id": "FEAT-012",
+      "name": "Patient identifier encryption and lookup",
+      "module": "Patient Security",
+      "description": "Quản lý CCCD/passport/BHYT/PID/phone.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-011"
+      ],
+      "acceptance_criteria": [
+        "Sensitive identifier encrypted",
+        "HMAC index không plain hash",
+        "Không log raw identifier",
+        "Verified strong ID duplicate handling"
+      ],
+      "test_evidence": [],
+      "notes": []
     },
     {
-      "id": "MOD-09-B",
-      "name": "Admin Dashboard & Audit Logging",
-      "priority": "P1",
-      "status": "NOT_STARTED",
-      "features": [
-        {
-          "id": "FEAT-032",
-          "name": "Admin Statistics Dashboard & Reports (FR-065, FR-067)",
-          "priority": "P2",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        },
-        {
-          "id": "FEAT-033",
-          "name": "System Audit Logging for State Transitions & PII Access (FR-017)",
-          "priority": "P1",
-          "status": "NOT_STARTED",
-          "complexity": "Medium"
-        }
-      ]
+      "id": "FEAT-013",
+      "name": "Patient duplicate detection/review",
+      "module": "Patient",
+      "description": "Candidate matching và manual review.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-012"
+      ],
+      "acceptance_criteria": [
+        "Name + DOB/year không auto-merge",
+        "Shared/conflicting phone an toàn",
+        "Merge/reject có audit"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-014",
+      "name": "Authentication and password management",
+      "module": "Identity",
+      "description": "Đăng ký/login/logout/password reset tùy chọn.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-010"
+      ],
+      "acceptance_criteria": [
+        "Password hash bằng hasher chuyên dụng",
+        "Login/token flow test",
+        "Guest booking không cần auth"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-015",
+      "name": "Role/resource authorization",
+      "module": "Security",
+      "description": "Enforce role và ownership.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-014"
+      ],
+      "acceptance_criteria": [
+        "Patient chỉ xem own data",
+        "Doctor chỉ xem assigned appointments",
+        "API tests 401/403/IDOR pass"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-016",
+      "name": "Specialty management",
+      "module": "Catalog",
+      "description": "Admin CRUD specialty.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-010"
+      ],
+      "acceptance_criteria": [
+        "CRUD/active status",
+        "Slug unique",
+        "Public chỉ hiện active"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-017",
+      "name": "Doctor management",
+      "module": "Catalog",
+      "description": "Quản lý hồ sơ bác sĩ và staff account.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-010",
+        "FEAT-016"
+      ],
+      "acceptance_criteria": [
+        "Doctor profile linked User",
+        "Public DTO không lộ private data",
+        "Deactivate giữ lịch sử"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-018",
+      "name": "Service management",
+      "module": "Catalog",
+      "description": "CRUD dịch vụ/thời lượng/giá.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-016"
+      ],
+      "acceptance_criteria": [
+        "Duration > 0",
+        "Price >= 0",
+        "Currency VND default",
+        "Appointment snapshots"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-019",
+      "name": "Doctor working rules",
+      "module": "Scheduling",
+      "description": "Lịch làm việc định kỳ và hiệu lực.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-017"
+      ],
+      "acceptance_criteria": [
+        "Start < End",
+        "Effective date range",
+        "Timezone consistent"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-020",
+      "name": "Doctor time off and breaks",
+      "module": "Scheduling",
+      "description": "Ngày nghỉ, giờ nghỉ, thời gian bận.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-019"
+      ],
+      "acceptance_criteria": [
+        "Không book overlap time off",
+        "Schedule change không âm thầm xóa appointments"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-021",
+      "name": "Availability calculation",
+      "module": "Scheduling",
+      "description": "Tính khung giờ khả dụng.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-018",
+        "FEAT-019",
+        "FEAT-020"
+      ],
+      "acceptance_criteria": [
+        "Không hiển thị ngoài lịch",
+        "Loại trừ break/time off/active appointments",
+        "Không lộ patient info"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-022",
+      "name": "PostgreSQL no-overlap constraint",
+      "module": "Scheduling Integrity",
+      "description": "DB-level no-overlap constraint per doctor.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-008",
+        "FEAT-021"
+      ],
+      "acceptance_criteria": [
+        "Constraint migration applied",
+        "Concurrent same-slot only one succeeds",
+        "Conflict maps to 409"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-023",
+      "name": "Guest booking API",
+      "module": "Appointment",
+      "description": "Tạo lịch công khai không JWT.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-011",
+        "FEAT-018",
+        "FEAT-021",
+        "FEAT-022"
+      ],
+      "acceptance_criteria": [
+        "POST succeeds without token",
+        "Patient may have no User",
+        "Unique random BookingCode",
+        "Price/duration snapshots",
+        "Transaction rollback tested"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-024",
+      "name": "Booking idempotency and abuse protection",
+      "module": "Security",
+      "description": "Chống retry duplicates và abuse.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-023"
+      ],
+      "acceptance_criteria": [
+        "Idempotency key avoids duplicate booking",
+        "Rate limits applied",
+        "Generic safe errors"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-025",
+      "name": "OTP challenge service",
+      "module": "OTP",
+      "description": "OTP purpose-bound + SMS abstraction.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-006",
+        "FEAT-011"
+      ],
+      "acceptance_criteria": [
+        "OTP hash only",
+        "Purpose/booking/phone/expiry bind",
+        "Attempts/resend limits",
+        "No OTP in logs"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-026",
+      "name": "OTP scoped access grant",
+      "module": "OTP",
+      "description": "Cấp grant tạm sau OTP verify.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-025"
+      ],
+      "acceptance_criteria": [
+        "Grant bound booking and purpose",
+        "Expiry and one-time/revocation behavior",
+        "Not a User JWT"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-027",
+      "name": "Appointment lookup",
+      "module": "Appointment",
+      "description": "Guest lookup với BookingCode + OTP.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-023",
+        "FEAT-026"
+      ],
+      "acceptance_criteria": [
+        "Không lookup chỉ bằng code",
+        "Summary tối thiểu",
+        "Không trả consultation/raw PII"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-028",
+      "name": "Appointment confirmation",
+      "module": "Reception",
+      "description": "Receptionist xác nhận PendingConfirmation.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-023",
+        "FEAT-015"
+      ],
+      "acceptance_criteria": [
+        "Only Receptionist",
+        "Invalid state rejected",
+        "History/audit recorded"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-029",
+      "name": "Reschedule request submission",
+      "module": "Reschedule",
+      "description": "Tạo yêu cầu đổi lịch sau OTP.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-026",
+        "FEAT-021",
+        "FEAT-023"
+      ],
+      "acceptance_criteria": [
+        "Guest OTP RESCHEDULE required",
+        "PendingReview state",
+        "Old slot held",
+        "One pending request"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-030",
+      "name": "Reschedule approval/rejection",
+      "module": "Reschedule",
+      "description": "Receptionist duyệt/từ chối và recheck slot.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-029",
+        "FEAT-015",
+        "FEAT-022"
+      ],
+      "acceptance_criteria": [
+        "Only Receptionist can review",
+        "Reject leaves old appointment",
+        "Approve transactionally",
+        "Conflict leaves old schedule unchanged"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-031",
+      "name": "Cancellation policy calculation",
+      "module": "Cancellation",
+      "description": "Tính refund policy với server clock.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-023"
+      ],
+      "acceptance_criteria": [
+        "61 min = 100%",
+        "60 min = 100%",
+        "59 min = 50%",
+        "At/after start denied",
+        "Unit tests pass"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-032",
+      "name": "Guest cancellation workflow",
+      "module": "Cancellation",
+      "description": "Guest hủy sau OTP, không cần receptionist approval.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-026",
+        "FEAT-031"
+      ],
+      "acceptance_criteria": [
+        "CANCEL OTP required",
+        "Self-cancel before StartAt",
+        "Appointment Cancelled",
+        "Slot released transactionally"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-033",
+      "name": "Payment and refund tracking",
+      "module": "Finance",
+      "description": "Lưu payment/refund calculation và processing status.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-031",
+        "FEAT-032"
+      ],
+      "acceptance_criteria": [
+        "Fee snapshot used",
+        "Policy version/rate/amount stored",
+        "Pending not shown as Succeeded",
+        "No fake gateway integration"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-034",
+      "name": "Cancellation audit/history",
+      "module": "Audit",
+      "description": "Lưu actor/time/reason/refund decision.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-032"
+      ],
+      "acceptance_criteria": [
+        "Audit recorded",
+        "No raw PII/OTP",
+        "Audit tests"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-035",
+      "name": "Reception patient management",
+      "module": "Reception",
+      "description": "Tìm/tạo/sửa hồ sơ và xử lý suspected duplicates.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-011",
+        "FEAT-015"
+      ],
+      "acceptance_criteria": [
+        "Role guard",
+        "Merge case audited",
+        "No auto-merge by name+DOB"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-036",
+      "name": "Patient check-in",
+      "module": "Reception",
+      "description": "Receptionist check-in.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-028"
+      ],
+      "acceptance_criteria": [
+        "Confirmed to CheckedIn",
+        "Actor/time recorded",
+        "Invalid state denied"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-037",
+      "name": "Reception queue",
+      "module": "Reception",
+      "description": "Queue theo doctor/day.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-036"
+      ],
+      "acceptance_criteria": [
+        "Filter/sort works",
+        "Data access limited"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-038",
+      "name": "Doctor assigned appointments",
+      "module": "Doctor",
+      "description": "Doctor xem ca được phân công.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-017",
+        "FEAT-036",
+        "FEAT-015"
+      ],
+      "acceptance_criteria": [
+        "Assigned doctor only",
+        "Minimum patient data",
+        "Pagination/date filter"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-039",
+      "name": "Consultation start and record",
+      "module": "Consultation",
+      "description": "Doctor bắt đầu và ghi kết quả.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-038"
+      ],
+      "acceptance_criteria": [
+        "CheckedIn to InProgress",
+        "Consultation protected",
+        "Required field validation"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-040",
+      "name": "Consultation completion",
+      "module": "Consultation",
+      "description": "Doctor hoàn thành khám.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-039"
+      ],
+      "acceptance_criteria": [
+        "InProgress to Completed",
+        "History recorded",
+        "Only assigned doctor/authorized role"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-041",
+      "name": "Notification abstraction",
+      "module": "Notification",
+      "description": "Adapter/outbox cho SMS/email/in-app.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-006"
+      ],
+      "acceptance_criteria": [
+        "Dev stub works without provider",
+        "Delivery failure recorded",
+        "No diagnosis/identifier in message"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-042",
+      "name": "Appointment notifications",
+      "module": "Notification",
+      "description": "Thông báo booking/confirm/reschedule/cancel.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-023",
+        "FEAT-028",
+        "FEAT-030",
+        "FEAT-032",
+        "FEAT-041"
+      ],
+      "acceptance_criteria": [
+        "No duplicate event notification",
+        "Delivery status",
+        "Minimal content"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-043",
+      "name": "Admin dashboard/reporting",
+      "module": "Reporting",
+      "description": "Báo cáo quản trị.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-028",
+        "FEAT-032",
+        "FEAT-040"
+      ],
+      "acceptance_criteria": [
+        "Date/status/doctor/specialty filters",
+        "Numbers reconcile"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-044",
+      "name": "Doctor dashboard",
+      "module": "Reporting",
+      "description": "Dashboard bác sĩ.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-038",
+        "FEAT-040"
+      ],
+      "acceptance_criteria": [
+        "Today schedule",
+        "Assigned scope enforced"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-045",
+      "name": "Frontend public booking and lookup",
+      "module": "Frontend",
+      "description": "React guest flow + API integration.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-007",
+        "FEAT-023",
+        "FEAT-027"
+      ],
+      "acceptance_criteria": [
+        "No auth redirect",
+        "Loading/error/success states",
+        "Client and server validation"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-046",
+      "name": "Reception frontend",
+      "module": "Frontend",
+      "description": "UI lễ tân.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-007",
+        "FEAT-030",
+        "FEAT-036"
+      ],
+      "acceptance_criteria": [
+        "Approve/reject reschedule",
+        "Confirm/check-in",
+        "Routes and API role checks"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-047",
+      "name": "Doctor frontend",
+      "module": "Frontend",
+      "description": "UI bác sĩ.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-007",
+        "FEAT-040"
+      ],
+      "acceptance_criteria": [
+        "Assigned schedule",
+        "Consultation workflow",
+        "Protected views"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-048",
+      "name": "Admin frontend",
+      "module": "Frontend",
+      "description": "UI admin.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-007",
+        "FEAT-017",
+        "FEAT-018",
+        "FEAT-019"
+      ],
+      "acceptance_criteria": [
+        "CRUD catalog/schedule",
+        "Dashboard and filters"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-049",
+      "name": "Backend unit tests",
+      "module": "QA",
+      "description": "Unit tests domain/application.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-031",
+        "FEAT-039"
+      ],
+      "acceptance_criteria": [
+        "Refund boundaries",
+        "State transitions",
+        "Identity matcher"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-050",
+      "name": "PostgreSQL integration tests",
+      "module": "QA",
+      "description": "Test transactions/constraints/migrations.",
+      "priority": "critical",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-022",
+        "FEAT-023",
+        "FEAT-030",
+        "FEAT-032"
+      ],
+      "acceptance_criteria": [
+        "Real PostgreSQL tests",
+        "No-overlap proven",
+        "Rollback proven"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-051",
+      "name": "API authorization and OTP tests",
+      "module": "QA",
+      "description": "API tests OTP/IDOR/roles.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-015",
+        "FEAT-027",
+        "FEAT-030",
+        "FEAT-032"
+      ],
+      "acceptance_criteria": [
+        "Guest OTP flow",
+        "401/403/409/429",
+        "No sensitive output"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-052",
+      "name": "Frontend component and E2E tests",
+      "module": "QA",
+      "description": "Test forms and journeys.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-045",
+        "FEAT-046",
+        "FEAT-047",
+        "FEAT-048"
+      ],
+      "acceptance_criteria": [
+        "Guest booking",
+        "Reschedule approval",
+        "Refund boundary display"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-053",
+      "name": "Logging, audit and health checks",
+      "module": "Operations",
+      "description": "Structured logs, correlation, health.",
+      "priority": "high",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-006",
+        "FEAT-008"
+      ],
+      "acceptance_criteria": [
+        "PII redaction",
+        "DB health check",
+        "No secrets in logs"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-054",
+      "name": "Deployment and environment configuration",
+      "module": "Deployment",
+      "description": "Deployment runbook and environment.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-050",
+        "FEAT-051",
+        "FEAT-052",
+        "FEAT-053"
+      ],
+      "acceptance_criteria": [
+        "No secrets in repo",
+        "HTTPS in target env",
+        "Backup/restore guide"
+      ],
+      "test_evidence": [],
+      "notes": []
+    },
+    {
+      "id": "FEAT-055",
+      "name": "Final documentation and handover",
+      "module": "Documentation",
+      "description": "README/API/diagrams/operation guide.",
+      "priority": "medium",
+      "status": "not_started",
+      "dependencies": [
+        "FEAT-054"
+      ],
+      "acceptance_criteria": [
+        "Install/run commands verified",
+        "Feature evidence complete",
+        "Known limitations/TBD documented"
+      ],
+      "test_evidence": [],
+      "notes": []
     }
   ]
 }

@@ -1,79 +1,77 @@
-# Testing Strategy (Chiến lược Kiểm thử)
+# TESTING STRATEGY
 
-> **Đồng bộ với:** [docs/SPEC.md](SPEC.md) (Phiên bản SRS 1.2 Baseline & Tiêu chí nghiệm thu)
+## 1. Test levels
+- Unit: refund calculation, identity matching, appointment state transitions, validators.
+- Integration: ASP.NET Core + EF Core + PostgreSQL migration/transaction/constraint.
+- API contract: Swagger/OpenAPI, Postman.
+- Frontend component: form, validation, loading/error, navigation.
+- E2E: critical user journeys.
+- Security: OTP, role/resource access, IDOR, rate limit, redaction.
+- Concurrency: simultaneous booking/reschedule.
 
----
+## 2. Mandatory test matrix
 
-## 1. Kim tự tháp Kiểm thử (Testing Pyramid)
+### Guest booking
+1. Guest booking succeeds without JWT.
+2. Missing FullName rejected.
+3. Missing both DateOfBirth and BirthYear rejected.
+4. Missing/invalid phone rejected.
+5. Inactive doctor/service rejected.
+6. Past or outside schedule slot rejected.
+7. Two simultaneous overlapping requests: only one succeeds.
+8. Same idempotency key retry does not duplicate booking.
 
-Hệ thống áp dụng chiến lược kiểm thử phân tầng với tiêu chí kiểm thử dựa trên bằng chứng thực tế (Test Evidence First):
+### Patient identity
+1. Exact verified national ID/passport/BHYT/PID match gives strong candidate.
+2. Name + DOB only flags candidate, no auto-merge.
+3. Same household phone with different patient profiles does not auto-merge.
+4. Conflicting strong identifiers require manual review.
+5. BirthYear alone with FullName is accepted.
+6. Missing both DOB and BirthYear is rejected.
 
-```text
-       /\
-      /  \      E2E Tests (10%) - Playwright (Luồng Guest Booking, OTP, Reception Check-in)
-     /----\
-    /      \    Integration Tests (20%) - WebApplicationFactory + Testcontainers PostgreSQL
-   /--------\
-  /          \  Unit Tests (70%) - xUnit, FluentAssertions, Moq, Vitest
- /------------\
-```
+### OTP
+1. Correct OTP/purpose/booking/phone grants access.
+2. Wrong, expired, reused OTP fails.
+3. Purpose mismatch fails.
+4. Generic response avoids booking enumeration.
+5. Rate limit returns 429.
+6. Grant cannot be reused for another booking/purpose.
 
----
+### Reschedule
+1. Valid RESCHEDULE grant creates PendingReview.
+2. Old appointment remains on old slot while pending.
+3. Receptionist reject leaves old appointment unchanged.
+4. Receptionist approve with free slot updates transactionally.
+5. Proposed slot occupied before approval: approval fails and old appointment unchanged.
+6. Only one pending request per appointment.
+7. Non-Receptionist cannot approve/reject.
 
-## 2. Kiểm thử Backend (.NET / C#)
+### Cancellation/refund boundaries
+Dùng controllable server clock/fixed test time:
+- 61 phút: 100% refund, 0% cancellation fee.
+- 60 phút: 100% refund, 0% cancellation fee.
+- 59 phút: 50% refund, 50% cancellation fee.
+- 1 giây trước: 50% refund, 50% cancellation fee.
+- At/after StartAt: patient self-cancel denied.
+- Unpaid service: refund amount = 0; không giả lập payment/refund.
+- Full payment: refund đúng 100% hoặc 50% snapshot fee.
+- Provider/manual refund Pending không được thể hiện là Succeeded.
 
-### 2.1 Unit Tests (`ClinicAppointment.Domain.Tests` & `Application.Tests`)
-- **Bộ kiểm thử Hoàn tiền theo Mốc thời gian (Refund Calculation Boundary Tests):**
-  - Mốc 61 phút trước ca khám: Hoàn tiền 100%, phí hủy 0%.
-  - Đúng mốc 60 phút: Hoàn tiền 100%, phí hủy 0%.
-  - Mốc 59 phút: Hoàn tiền 50%, phí hủy 50%.
-  - Mốc 0 phút hoặc đã qua giờ khám: Từ chối luồng tự hủy của bệnh nhân.
-- **Bộ kiểm thử Xác thực Hồ sơ Bệnh nhân (Patient Identity Validation):**
-  - Có `FullName` + `DateOfBirth` hợp lệ -> Pass.
-  - Có `FullName` + `BirthYear` hợp lệ -> Pass.
-  - Thiếu cả `DateOfBirth` và `BirthYear` -> Bắn lỗi validation.
-  - Đối sánh `FullName + DOB` chỉ gắn cờ nghi trùng (`is_possible_duplicate = true`), **tuyệt đối không tự động gộp (No Auto-merge)**.
-- **Bộ kiểm thử Máy trạng thái & Bảo toàn Slot khi Đổi lịch (Reschedule State Machine):**
-  - Trạng thái yêu cầu đổi lịch: `PendingReview` -> `Approved` / `Rejected`.
-  - Trong lúc `PendingReview`, lịch cũ và slot cũ không bị thay đổi hoặc giải phóng.
-- **Bộ kiểm thử Cơ chế OTP (OTP Lifecycle Tests):**
-  - Kiểm tra đúng `purpose` (`LOOKUP`, `RESCHEDULE`, `CANCEL`). Mã sinh cho `LOOKUP` không được dùng để `CANCEL`.
-  - Kiểm tra giới hạn 5 lần nhập sai và mã hết hạn sau 5 phút.
+### Consultation/security
+- Receptionist check-in valid appointment.
+- Assigned Doctor only starts/completes appointment.
+- Patient cannot access another Patient's Consultation.
+- PII/OTP/password not present in logs.
 
-### 2.2 Integration Tests (`ClinicAppointment.Api.IntegrationTests`)
-- **Môi trường:** `WebApplicationFactory` kết hợp `Testcontainers.PostgreSql` trên Docker.
-- **Ca kiểm thử Chống trùng lịch (Zero Double-Booking Concurrency Test - Bắt buộc):**
-  - Giả lập 10 requests gửi đồng thời đến endpoint `POST /api/v1/appointments/guest` để đặt cùng một bác sĩ trong cùng một slot `09:00 - 09:30`.
-  - **Kỳ vọng:** Đúng 1 request thành công (`201 Created`), 9 requests còn lại nhận `409 Conflict`.
-- **Ca kiểm thử Phê duyệt Đổi lịch trong Transaction (Reschedule Atomic Approval):**
-  - Lễ tân duyệt yêu cầu đổi lịch sang slot mới: slot mới được gán cho lịch hẹn, slot cũ được giải phóng thành trạng thái trống.
-  - Giả lập trường hợp slot mới đã bị một ca khám khác chiếm trong lúc chờ duyệt -> Lễ tân duyệt thất bại và slot cũ của lịch hẹn vẫn được bảo toàn nguyên vẹn.
-- **Ca kiểm thử Cách ly Dữ liệu (Patient Data Isolation):**
-  - Bệnh nhân A đăng nhập không thể truy vấn hoặc can thiệp vào hồ sơ, lịch hẹn của Bệnh nhân B (trả về `403 Forbidden` hoặc `404 Not Found`).
+## 3. Evidence
+Feature completed phải cite test file + test name + command/output summary hoặc manual test record có thể tái hiện. Không bịa pass evidence.
 
----
+## 4. Suggested tooling
+Backend: xUnit + ASP.NET Core integration testing + PostgreSQL real/test container. Frontend: Vitest + React Testing Library; E2E runner TBD. API: Swagger/Postman.
 
-## 3. Kiểm thử Frontend (React.js)
-
-### 3.1 Component & Form Tests (Vitest + React Testing Library)
-- **Guest Booking Wizard:**
-  - Kiểm tra validate form bệnh nhân: Họ tên, số điện thoại đúng chuẩn Việt Nam, ngày sinh hoặc năm sinh.
-  - Hiển thị thông tin snapshot giá dịch vụ và thời lượng trước khi xác nhận đặt lịch.
-- **OTP Dialog & Lookup Flow:**
-  - Nhập mã OTP, đếm ngược thời gian resend (60s), thông báo lỗi khi nhập sai hoặc hết hạn.
-
-### 3.2 End-to-End Tests (Playwright)
-1. **E2E Luồng Khách vãng lai & Tra cứu OTP:**
-   - Guest đặt lịch thành công -> Nhận `BookingCode` -> Mở trang tra cứu -> Yêu cầu OTP -> Nhập OTP -> Xem thông tin tóm tắt lịch hẹn.
-2. **E2E Luồng Hủy lịch Tự động:**
-   - Lịch hẹn trước 2 tiếng -> Guest bấm Hủy qua OTP -> Hệ thống hiển thị số tiền hoàn 100% -> Trạng thái đổi thành `Cancelled` mà không cần lễ tân duyệt.
-3. **E2E Luồng Lễ tân Check-in:**
-   - Lễ tân đăng nhập -> Vào hàng đợi ngày -> Tìm kiếm theo `BookingCode` -> Bấm Check-in -> Trạng thái đổi thành `CheckedIn`.
-
----
-
-## 4. Bằng chứng Kiểm thử & Tiêu chuẩn Bàn giao (Test Evidence Delivery)
-
-- Toàn bộ tính năng chỉ được đánh dấu `COMPLETED` trong `planning/feature_list.json` khi có kết quả test thực tế pass 100%.
-- Không cho phép bỏ qua test hoặc dùng dummy test không có assert.
-- Báo cáo coverage đạt tối thiểu 80% cho Domain Models, Business Rules và Use Case Handlers.
+## 5. Exit criteria
+- Critical tests pass; no unresolved critical/high security defect.
+- Migration tested from clean DB and upgrade path.
+- Concurrency proves no double booking.
+- Refund 61/60/59-minute tests pass.
+- Evidence linked to FEAT IDs.

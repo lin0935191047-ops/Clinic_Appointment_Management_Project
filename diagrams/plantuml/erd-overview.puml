@@ -1,0 +1,66 @@
+@startuml
+' Logical high-level ERD. See docs/DATABASE_DESIGN.md for full attributes.
+hide methods
+hide stereotypes
+skinparam linetype ortho
+entity Roles
+entity Users
+entity UserRoles
+entity Patients
+entity PatientContacts
+entity PatientIdentifiers
+entity Doctors
+entity Specialties
+entity DoctorSpecialties
+entity Services
+entity DoctorServices
+entity DoctorWorkingRules
+entity DoctorTimeOffs
+entity DoctorScheduleBlocks
+entity Appointments
+entity AppointmentHistories
+entity RescheduleRequests
+entity CancellationPolicyVersions
+entity AppointmentCancellations
+entity Payments
+entity Refunds
+entity OtpChallenges
+entity OtpVerificationGrants
+entity Notifications
+entity Consultations
+entity AuditLogs
+entity IdempotencyRecords
+Roles ||--o{ UserRoles
+Users ||--o{ UserRoles
+Users ||--o| Patients : optional
+Users ||--|| Doctors
+Patients ||--o{ PatientContacts
+Patients ||--o{ PatientIdentifiers
+Specialties ||--o{ DoctorSpecialties
+Doctors ||--o{ DoctorSpecialties
+Specialties ||--o{ Services
+Doctors ||--o{ DoctorServices
+Services ||--o{ DoctorServices
+Doctors ||--o{ DoctorWorkingRules
+Doctors ||--o{ DoctorTimeOffs
+Doctors ||--o{ DoctorScheduleBlocks
+Patients ||--o{ Appointments
+Doctors ||--o{ Appointments
+Services ||--o{ Appointments
+PatientContacts ||--o{ Appointments : booking_contact
+Appointments ||--o{ AppointmentHistories
+Appointments ||--o{ RescheduleRequests
+Appointments ||--o| AppointmentCancellations
+CancellationPolicyVersions ||--o{ AppointmentCancellations
+Appointments ||--o{ Payments
+AppointmentCancellations ||--o{ Refunds
+Payments ||--o{ Refunds
+Appointments ||--o{ OtpChallenges
+PatientContacts ||--o{ OtpChallenges
+OtpChallenges ||--o| OtpVerificationGrants
+Appointments ||--o| Consultations
+Doctors ||--o{ Consultations
+Appointments ||--o{ Notifications
+Patients ||--o{ Notifications
+Users ||--o{ AuditLogs
+@enduml

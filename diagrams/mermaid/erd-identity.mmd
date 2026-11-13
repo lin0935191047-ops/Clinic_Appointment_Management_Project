@@ -1,0 +1,67 @@
+erDiagram
+  ROLES ||--o{ USER_ROLES : assigns
+  USERS ||--o{ USER_ROLES : has
+  USERS ||--o| PATIENTS : optional_profile
+  USERS ||--o| DOCTORS : doctor_account
+  USERS ||--o{ REFRESH_TOKENS : owns
+  PATIENTS ||--o{ PATIENT_CONTACTS : has
+  PATIENTS ||--o{ PATIENT_IDENTIFIERS : has
+  PATIENTS ||--o{ PATIENT_IDENTITY_REVIEW_CASES : subject
+  USERS ||--o{ PATIENT_IDENTITY_REVIEW_CASES : reviews
+
+  ROLES {
+    uuid id PK
+    varchar code UK
+    varchar name
+  }
+  USERS {
+    uuid id PK
+    varchar email_normalized UK
+    text password_hash
+    boolean is_active
+  }
+  USER_ROLES {
+    uuid user_id PK,FK
+    uuid role_id PK,FK
+  }
+  PATIENTS {
+    uuid id PK
+    uuid user_id FK "nullable, unique when not null"
+    varchar patient_code UK
+    varchar full_name
+    date date_of_birth "nullable"
+    smallint birth_year "nullable"
+    varchar record_status
+  }
+  PATIENT_CONTACTS {
+    uuid id PK
+    uuid patient_id FK
+    varchar contact_type
+    bytea value_ciphertext
+    bytea value_hmac
+    boolean is_verified
+  }
+  PATIENT_IDENTIFIERS {
+    uuid id PK
+    uuid patient_id FK
+    varchar identifier_type
+    bytea normalized_value_hmac
+    varchar verification_status
+  }
+  DOCTORS {
+    uuid id PK
+    uuid user_id FK
+    varchar doctor_code UK
+  }
+  REFRESH_TOKENS {
+    uuid id PK
+    uuid user_id FK
+    bytea token_hash UK
+  }
+  PATIENT_IDENTITY_REVIEW_CASES {
+    uuid id PK
+    uuid patient_id FK
+    uuid candidate_patient_id FK
+    varchar match_reason
+    varchar status
+  }
