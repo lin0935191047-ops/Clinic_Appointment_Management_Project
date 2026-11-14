@@ -270,7 +270,7 @@
       "module": "Patient",
       "description": "Patient độc lập User và required identity fields.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-009"
       ],
@@ -280,7 +280,14 @@
         "DOB hoặc BirthYear bắt buộc",
         "Validation test"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Patient.UserId nullable; PatientConfiguration cấu hình partial unique index HasFilter(\"user_id IS NOT NULL\")",
+        "FullName bắt buộc và sinh NormalizedFullName chuẩn hóa (in hoa, rút gọn khoảng trắng)",
+        "Ràng buộc bắt buộc có DateOfBirth hoặc BirthYear và kiểm tra năm sinh khớp năm của DateOfBirth (ck_patients_dob_or_birth_year và ck_patients_birth_year_matches_dob)",
+        "Thực thi cơ chế Candidate Duplicate Detection (Strictly NO Auto-merge) đánh dấu REVIEW_REQUIRED và IsPossibleDuplicate khi trùng họ tên chuẩn hóa và năm sinh",
+        "Triển khai Application CQRS: CreatePatientCommand, CreatePatientCommandValidator, GetPatientByIdQuery, GetPatientByCodeQuery, PatientsController",
+        "Bộ kiểm thử xUnit tự động tại PatientProfileTests.cs và PatientValidationTests.cs: 18/18 test cases ĐẠT 100% (tổng 39/39 tests toàn solution PASS)"
+      ],
       "notes": []
     },
     {

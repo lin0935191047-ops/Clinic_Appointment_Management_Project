@@ -139,3 +139,44 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln" --no-build` (Thành công: 21 Passed, 0 Failed)
 - Acceptance criteria evidence:
   - Toàn bộ tiêu chí từ FEAT-001 đến FEAT-010 đã được kiểm tra, đáp ứng và có bằng chứng xác thực thực tế.
+
+### 2026-11-14 — FEAT-011 — Patient Profile (Independent from User, Required Identity Fields & Candidate Detection)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Cập nhật thực thể `Patient` trong `ClinicAppointment.Domain/Entities/Patient.cs`:
+    - `UserId` nullable unique hỗ trợ Guest Booking không cần tài khoản.
+    - `FullName` bắt buộc và tự động tạo `NormalizedFullName` (in hoa, chuẩn hóa khoảng trắng).
+    - `DateOfBirth` hoặc `BirthYear` bắt buộc tại mức Domain và kiểm tra năm sinh khớp nhau nếu cả 2 cùng có mặt.
+    - Cung cấp phương thức `LinkToUser(Guid userId)` bảo vệ liên kết 1-1 an toàn.
+  - Cập nhật `PatientConfiguration.cs` trong `ClinicAppointment.Infrastructure`:
+    - Khởi tạo Check Constraint `ck_patients_dob_or_birth_year` và `ck_patients_birth_year_matches_dob`.
+    - Cấu hình Partial Unique Index cho `user_id` (`user_id IS NOT NULL`).
+    - Cấu hình Index cho `NormalizedFullName` và `PhoneNumber`.
+  - Triển khai tầng Application theo mô hình CQRS:
+    - DTO: `PatientDto`.
+    - Command: `CreatePatientCommand`.
+    - Validator: `CreatePatientCommandValidator` (FluentValidation) kiểm tra tính hợp lệ của FullName, Phone, DOB, BirthYear.
+    - Handler: `CreatePatientCommandHandler` thực thi logic rà soát chống gộp tự động (Strictly NO Auto-merge) — khi phát hiện trùng họ tên chuẩn hóa và năm sinh, tự động đánh dấu `IsPossibleDuplicate = true` và `RecordStatus = "REVIEW_REQUIRED"` để Lễ tân/Quản trị viên xử lý thủ công.
+    - Query: `GetPatientByIdQuery`, `GetPatientByCodeQuery`.
+    - Controller: `PatientsController` cung cấp API endpoints `POST /api/v1/patients`, `GET /api/v1/patients/{id}`, `GET /api/v1/patients/code/{code}`.
+  - Kiểm thử xUnit tự động:
+    - Xây dựng 18 test cases mới trong `PatientProfileTests.cs`.
+    - Toàn bộ 39/39 unit test cases của Solution đều PASS 100%.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/Patient.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/PatientConfiguration.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/DTOs/PatientDto.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/CreatePatientCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/CreatePatientCommandValidator.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/CreatePatientCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Queries/PatientQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/PatientsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/PatientProfileTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln" --no-restore` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln" --no-build` (Thành công: 39 Passed, 0 Failed)
+- Acceptance criteria evidence:
+  - FEAT-011 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
