@@ -476,3 +476,118 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-017 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-018 — Service Management (CRUD Dịch vụ, Thời lượng, Giá, Appointment Snapshots & Public Catalog)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entity `Service`:
+    - Bổ sung `Service.Create(specialtyId, code, name, durationMinutes, price, currency, description, isActive)`.
+    - Ràng buộc Invariant: `DurationMinutes > 0`, `Price >= 0`, `Currency` mặc định "VND".
+    - Bổ sung `Service.Update(specialtyId, name, durationMinutes, price, description, isActive)` và `Service.SetStatus(isActive)`.
+  - CQRS Commands & Handlers (`ClinicAppointment.Application.Features.Services.Commands`):
+    - `CreateServiceCommand`: Kiểm tra mã `Code` duy nhất toàn hệ thống, kiểm tra `SpecialtyId` hợp lệ và đang hoạt động (`IsActive == true`), tạo dịch vụ mới.
+    - `UpdateServiceCommand`: Kiểm tra dịch vụ tồn tại, chuyên khoa đích hợp lệ và cập nhật chi tiết.
+    - `SetServiceStatusCommand`: Cập nhật cờ kích hoạt `IsActive`.
+    - `DeleteServiceCommand`: Kiểm tra phụ thuộc lịch khám `Appointments`; nếu đã có ca khám sử dụng dịch vụ thì tự động chuyển sang Inactive (soft delete) nhằm bảo toàn tính toàn vẹn dữ liệu và snapshot lịch sử y tế; nếu chưa có ca khám thì xóa vật lý an toàn.
+  - CQRS Queries & Handlers (`ClinicAppointment.Application.Features.Services.Queries`):
+    - `GetActiveServicesQuery`: Phục vụ Public Catalog (FR-004), chỉ trả về các dịch vụ `IsActive == true` và chuyên khoa cha của chúng cũng `IsActive == true`. Hỗ trợ lọc theo `SpecialtyId` hoặc `SpecialtySlug`.
+    - `GetServiceByIdQuery`: Xem chi tiết dịch vụ.
+    - `GetAllServicesQuery`: Phục vụ quản lý nội bộ, hỗ trợ lọc theo chuyên khoa và trạng thái hoạt động.
+  - FluentValidation:
+    - `CreateServiceRequestValidator`: Xác thực `Code` và `Name` bắt buộc, `DurationMinutes > 0`, `Price >= 0`.
+    - `UpdateServiceRequestValidator`: Xác thực các giá trị cập nhật.
+  - Web API Controllers (`ClinicAppointment.Api`):
+    - `ServicesController` (`/api/v1/services`): `[AllowAnonymous]` phục vụ công khai cho Guest và Patient tra cứu bảng giá và dịch vụ khám.
+    - `AdminServicesController` (`/api/v1/admin/services`): `[Authorize(Policy = "StaffOnly")]` cho truy vấn nội bộ và `[Authorize(Policy = "AdminOnly")]` cho các thao tác mutation (Tạo, Sửa, Đổi trạng thái, Xóa).
+  - Bộ kiểm thử tự động xUnit (`ServiceManagementTests.cs`):
+    - 11 test cases kiểm tra: Tạo dịch vụ thành công, validation `DurationMinutes <= 0` và `Price < 0` ở Entity & FluentValidation, chống trùng lặp `Code`, từ chối tạo dịch vụ cho chuyên khoa Inactive, Public catalog chỉ trả về dịch vụ active của chuyên khoa active, lọc theo `SpecialtySlug`, cập nhật dịch vụ, đổi trạng thái hoạt động, xóa an toàn (hard delete khi chưa có ca khám, soft delete khi đã có ca khám).
+    - Toàn bộ 127/127 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch giải pháp:
+    - Backend: `dotnet build` hoàn tất với 0 Warning(s), 0 Error(s).
+    - Frontend: `npm run build` hoàn tất trong 4.94s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/CatalogAndScheduling.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Services/DTOs/ServiceDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Services/Validators/ServiceValidators.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Services/Commands/ServiceCommands.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Services/Queries/ServiceQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/ServicesController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AdminServicesController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ServiceManagementTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet test "backend/ClinicAppointment.sln"` (Thành công: 127 Passed, 0 Failed, 0 Skipped)
+  - `dotnet build "backend/ClinicAppointment.sln" --no-incremental` (Thành công: 0 Warnings, 0 Errors)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-018 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-019 — Doctor Working Rules (Lịch làm việc định kỳ, Khung giờ, Khoảng ngày hiệu lực & Chống trùng ca)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entity `DoctorSchedule`:
+    - Thêm các trường `EffectiveFrom` (DateOnly) và `EffectiveTo` (DateOnly?).
+    - Ràng buộc Invariants:
+      - `DayOfWeek` từ 1 (Thứ Hai) đến 7 (Chủ Nhật) theo chuẩn ISO 8601.
+      - `StartTime < EndTime` (TimeOnly, biểu diễn giờ địa phương phòng khám).
+      - `EffectiveFrom <= EffectiveTo` khi `EffectiveTo` có giá trị.
+      - `SlotDurationMinutes > 0`.
+    - Factory methods: `DoctorSchedule.Create(...)`, `Update(...)`, `SetStatus(...)`.
+  - Cơ sở dữ liệu và EF Core:
+    - Bổ sung cấu hình `DoctorScheduleConfiguration` trong `CatalogConfigurations.cs` ánh xạ bảng `doctor_schedules`, gắn index kết hợp `(doctor_id, day_of_week, is_active)` và các Check Constraints (`chk_doctor_schedules_day_of_week`, `chk_doctor_schedules_time_order`, `chk_doctor_schedules_effective_date_order`).
+    - Tạo migration EF Core `20261114075500_AddDoctorScheduleEffectiveDates.cs` và designer.
+  - CQRS Commands & Handlers (`ClinicAppointment.Application.Features.Schedules.Commands`):
+    - `CreateDoctorScheduleCommand`: Kiểm tra bác sĩ phụ trách tồn tại và đang hoạt động (`IsActive == true`); thuật toán kiểm tra chống chồng lấn ca (No-overlap) dựa trên giao khoảng ngày hiệu lực và giao khung giờ khám của cùng một bác sĩ trong cùng ngày trong tuần; lưu bản ghi mới.
+    - `UpdateDoctorScheduleCommand`: Kiểm tra chống chồng lấn với các ca khác của cùng bác sĩ trước khi cập nhật.
+    - `SetDoctorScheduleStatusCommand`: Kiểm tra an toàn trước khi kích hoạt lại ca làm việc để tránh xung đột với các ca đang active khác.
+    - `DeleteDoctorScheduleCommand`: Xóa ca làm việc định kỳ.
+  - CQRS Queries & Handlers (`ClinicAppointment.Application.Features.Schedules.Queries`):
+    - `GetDoctorSchedulesQuery`: Lấy danh sách lịch làm việc của bác sĩ cho quản lý nội bộ, hỗ trợ lọc theo ngày hiệu lực `EffectiveDate` và trạng thái `IsActive`.
+    - `GetDoctorScheduleByIdQuery`: Lấy thông tin chi tiết một ca làm việc.
+    - `GetPublicDoctorSchedulesQuery`: Lấy danh sách lịch làm việc hàng tuần công khai của bác sĩ đang hoạt động và chuyên khoa đang hoạt động, phục vụ bệnh nhân tham khảo khi đặt lịch.
+  - FluentValidation:
+    - `CreateDoctorScheduleRequestValidator` và `UpdateDoctorScheduleRequestValidator`.
+  - Web API Controllers (`ClinicAppointment.Api`):
+    - `AdminDoctorSchedulesController` (`/api/v1/admin/doctor-schedules`): `[Authorize(Policy = "StaffOnly")]` cho xem danh sách và `[Authorize(Policy = "AdminOnly")]` cho các thao tác tạo mới, sửa, bật tắt, xóa.
+    - `DoctorSchedulesController` (`/api/v1/doctors/{doctorId}/schedules`): `[AllowAnonymous]` phục vụ công khai cho khách và bệnh nhân.
+  - Bộ kiểm thử tự động xUnit (`DoctorWorkingRulesTests.cs`):
+    - 12 test cases bao phủ toàn diện:
+      1. Tạo ca thành công với đầy đủ dữ liệu hợp lệ.
+      2. Validator từ chối khi `StartTime >= EndTime`.
+      3. Validator từ chối khi `DayOfWeek` ngoài khoảng 1..7 hoặc `EffectiveTo < EffectiveFrom`.
+      4. Domain Entity invariants ném ngoại lệ khi vi phạm.
+      5. Từ chối tạo lịch cho bác sĩ không tồn tại hoặc đang inactive.
+      6. Chống trùng lấn (No-overlap): Bị từ chối khi 2 ca cùng thứ Hai có ngày hiệu lực và khung giờ giao nhau.
+      7. Chấp nhận ca sáng (08:00 - 12:00) và ca chiều (13:30 - 17:30) trong cùng một ngày.
+      8. Chấp nhận 2 ca cùng giờ nhưng có khoảng ngày hiệu lực không giao nhau (6 tháng đầu năm và 6 tháng cuối năm).
+      9. Cập nhật ca gây xung đột giờ làm việc bị từ chối.
+      10. Bật lại trạng thái ca inactive bị từ chối nếu xung đột với ca active đang chạy.
+      11. Tra cứu lọc theo ngày hiệu lực chính xác.
+      12. Lịch công khai chỉ hiển thị bác sĩ active và chuyên khoa active.
+    - Toàn bộ 139/139 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 4.98s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/CatalogAndScheduling.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/CatalogConfigurations.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114075500_AddDoctorScheduleEffectiveDates.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114075500_AddDoctorScheduleEffectiveDates.Designer.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Schedules/DTOs/DoctorScheduleDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Schedules/Validators/DoctorScheduleValidators.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Schedules/Commands/DoctorScheduleCommands.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Schedules/Queries/DoctorScheduleQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AdminDoctorSchedulesController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorSchedulesController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/DoctorWorkingRulesTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet test "backend/ClinicAppointment.sln"` (Thành công: 139 Passed, 0 Failed, 0 Skipped)
+  - `dotnet build "backend/ClinicAppointment.sln" --no-incremental` (Thành công: 0 Warnings, 0 Errors)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-019 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

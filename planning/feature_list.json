@@ -456,7 +456,7 @@
       "module": "Catalog",
       "description": "CRUD dịch vụ/thời lượng/giá.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-016"
       ],
@@ -466,7 +466,16 @@
         "Currency VND default",
         "Appointment snapshots"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Validation Duration > 0 và Price >= 0: Kiểm tra chặt chẽ cả ở cấp độ Domain Entity (Service.Create ném ArgumentException khi duration <= 0 hoặc price < 0) và FluentValidation (CreateServiceRequestValidator / UpdateServiceRequestValidator)",
+        "Mặc định Currency VND: Thiết lập giá trị mặc định là 'VND' cho mọi dịch vụ mới",
+        "Ràng buộc duy nhất mã dịch vụ (Unique Service Code): Chống trùng lặp mã dịch vụ toàn hệ thống, tự động chuẩn hóa chữ in hoa không khoảng trắng thừa",
+        "Kiểm tra chuyên khoa liên kết: Chuyên khoa phải tồn tại và đang hoạt động (IsActive == true) mới cho phép tạo dịch vụ",
+        "Public Catalog Service view (FR-004 Invariant): GetActiveServicesQuery chỉ hiển thị các dịch vụ IsActive == true và chuyên khoa cha của chúng cũng IsActive == true; hỗ trợ lọc theo SpecialtyId hoặc SpecialtySlug",
+        "Bảo toàn Appointment snapshots: Khi dịch vụ đã có ca khám trong hệ thống (Appointments), hành động DeleteServiceCommand sẽ chuyển sang Inactive (soft delete) thay vì xóa vật lý nhằm bảo toàn tính toàn vẹn dữ liệu và snapshot giá/thời lượng",
+        "RESTful API Controllers: ServicesController (công khai cho Guest & Patient xem và lọc) và AdminServicesController (phân quyền StaffOnly xem nội bộ và AdminOnly thực hiện thêm/sửa/đổi trạng thái/xóa)",
+        "Bộ kiểm thử tự động tại ServiceManagementTests.cs: 11/11 test cases ĐẠT 100% (tổng 127/127 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {
@@ -475,7 +484,7 @@
       "module": "Scheduling",
       "description": "Lịch làm việc định kỳ và hiệu lực.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-017"
       ],
@@ -484,7 +493,20 @@
         "Effective date range",
         "Timezone consistent"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Validation StartTime < EndTime: Kiểm tra bắt buộc cả ở cấp Domain Entity (DoctorSchedule.Create) và FluentValidation (CreateDoctorScheduleRequestValidator / UpdateDoctorScheduleRequestValidator)",
+        "Validation DayOfWeek ISO 8601: Kiểm tra thứ trong tuần phải từ 1 (Thứ Hai) đến 7 (Chủ Nhật)",
+        "Khoảng ngày hiệu lực (Effective date range): Bắt buộc EffectiveFrom <= EffectiveTo khi EffectiveTo có giá trị; hỗ trợ ca làm việc không giới hạn thời gian (EffectiveTo null)",
+        "Kiểm tra tính nhất quán múi giờ (Timezone consistent): Khung giờ ca lưu bằng TimeOnly (giờ địa phương Asia/Ho_Chi_Minh), khoảng hiệu lực lưu DateOnly, timestamps lưu UTC theo quy định trong AGENTS.md",
+        "Ngăn chặn triệt để chồng lấn ca (No-overlap constraint): Kiểm tra xung đột giữa các ca của cùng bác sĩ: nếu trùng DayOfWeek và khoảng ngày hiệu lực giao nhau thì khung giờ (StartTime..EndTime) không được giao nhau",
+        "Cho phép phân ca sáng/chiều cùng ngày: Các ca không giao nhau trong cùng ngày (như 08:00 - 12:00 và 13:30 - 17:30) được chấp nhận thành công",
+        "Cho phép cùng khung giờ nhưng khác chu kỳ hiệu lực: Hai ca cùng giờ khám nhưng có khoảng ngày hiệu lực độc lập không giao nhau (như 6 tháng đầu năm và 6 tháng cuối năm) được chấp nhận hợp lệ",
+        "Bảo vệ khi kích hoạt lại trạng thái: SetDoctorScheduleStatusCommand kiểm tra chống xung đột trước khi cho phép bật lại trạng thái IsActive của một ca",
+        "Tra cứu theo ngày hiệu lực: GetDoctorSchedulesQuery lọc chính xác các ca có hiệu lực tại một ngày cụ thể (EffectiveFrom <= date <= EffectiveTo)",
+        "Public Doctor Schedule view: GetPublicDoctorSchedulesQuery chỉ hiển thị lịch của các bác sĩ đang hoạt động và thuộc chuyên khoa đang hoạt động, phục vụ bệnh nhân tham khảo",
+        "API Controllers: AdminDoctorSchedulesController phân quyền StaffOnly/AdminOnly và DoctorSchedulesController công khai",
+        "Bộ kiểm thử tự động tại DoctorWorkingRulesTests.cs: 12/12 test cases ĐẠT 100% (tổng 139/139 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

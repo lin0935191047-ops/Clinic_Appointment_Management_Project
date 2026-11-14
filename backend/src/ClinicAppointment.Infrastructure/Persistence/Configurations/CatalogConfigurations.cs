@@ -91,3 +91,33 @@ public class RefundConfiguration : IEntityTypeConfiguration<Refund>
     }
 }
 
+public class DoctorScheduleConfiguration : IEntityTypeConfiguration<DoctorSchedule>
+{
+    public void Configure(EntityTypeBuilder<DoctorSchedule> builder)
+    {
+        builder.ToTable("doctor_schedules", t =>
+        {
+            t.HasCheckConstraint("chk_doctor_schedules_day_of_week", "day_of_week >= 1 AND day_of_week <= 7");
+            t.HasCheckConstraint("chk_doctor_schedules_time_order", "start_time < end_time");
+            t.HasCheckConstraint("chk_doctor_schedules_effective_date_order", "effective_to IS NULL OR effective_to >= effective_from");
+        });
+
+        builder.HasKey(s => s.Id);
+
+        builder.Property(s => s.DayOfWeek).IsRequired();
+        builder.Property(s => s.StartTime).IsRequired();
+        builder.Property(s => s.EndTime).IsRequired();
+        builder.Property(s => s.EffectiveFrom).IsRequired();
+        builder.Property(s => s.EffectiveTo).IsRequired(false);
+        builder.Property(s => s.SlotDurationMinutes).IsRequired();
+        builder.Property(s => s.IsActive).IsRequired();
+
+        builder.HasOne(s => s.Doctor)
+            .WithMany(d => d.Schedules)
+            .HasForeignKey(s => s.DoctorId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(s => new { s.DoctorId, s.DayOfWeek, s.IsActive });
+    }
+}
+

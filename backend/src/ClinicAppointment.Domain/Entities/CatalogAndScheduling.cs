@@ -74,6 +74,83 @@ public class Service : BaseEntity
     public bool IsActive { get; set; } = true;
 
     public virtual Specialty? Specialty { get; set; }
+
+    public static Service Create(
+        Guid specialtyId,
+        string code,
+        string name,
+        int durationMinutes,
+        decimal price,
+        string currency = "VND",
+        string? description = null,
+        bool isActive = true)
+    {
+        if (specialtyId == Guid.Empty)
+            throw new ArgumentException("Chuyên khoa liên kết không hợp lệ.", nameof(specialtyId));
+
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ArgumentException("Mã dịch vụ không được để trống.", nameof(code));
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Tên dịch vụ không được để trống.", nameof(name));
+
+        if (durationMinutes <= 0)
+            throw new ArgumentException("Thời lượng dịch vụ phải lớn hơn 0 phút.", nameof(durationMinutes));
+
+        if (price < 0)
+            throw new ArgumentException("Giá dịch vụ không được âm.", nameof(price));
+
+        return new Service
+        {
+            SpecialtyId = specialtyId,
+            Code = code.Trim().ToUpperInvariant(),
+            Name = name.Trim(),
+            DurationMinutes = durationMinutes,
+            Price = price,
+            Currency = string.IsNullOrWhiteSpace(currency) ? "VND" : currency.Trim().ToUpperInvariant(),
+            Description = description?.Trim(),
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public void Update(
+        Guid specialtyId,
+        string name,
+        int durationMinutes,
+        decimal price,
+        string? description = null,
+        bool? isActive = null)
+    {
+        if (specialtyId == Guid.Empty)
+            throw new ArgumentException("Chuyên khoa liên kết không hợp lệ.", nameof(specialtyId));
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Tên dịch vụ không được để trống.", nameof(name));
+
+        if (durationMinutes <= 0)
+            throw new ArgumentException("Thời lượng dịch vụ phải lớn hơn 0 phút.", nameof(durationMinutes));
+
+        if (price < 0)
+            throw new ArgumentException("Giá dịch vụ không được âm.", nameof(price));
+
+        SpecialtyId = specialtyId;
+        Name = name.Trim();
+        DurationMinutes = durationMinutes;
+        Price = price;
+        Description = description?.Trim();
+        if (isActive.HasValue)
+        {
+            IsActive = isActive.Value;
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetStatus(bool isActive)
+    {
+        IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
 public class Doctor : BaseEntity
@@ -162,12 +239,93 @@ public class Doctor : BaseEntity
 public class DoctorSchedule : BaseEntity
 {
     public Guid DoctorId { get; set; }
-    public short DayOfWeek { get; set; } // 0 = Sun..6 = Sat
+    public short DayOfWeek { get; set; } // ISO 8601: Monday = 1, ..., Sunday = 7
     public TimeOnly StartTime { get; set; }
     public TimeOnly EndTime { get; set; }
+    public DateOnly EffectiveFrom { get; set; }
+    public DateOnly? EffectiveTo { get; set; }
     public int SlotDurationMinutes { get; set; } = 30;
     public bool IsActive { get; set; } = true;
 
     public virtual Doctor? Doctor { get; set; }
+
+    public static DoctorSchedule Create(
+        Guid doctorId,
+        short dayOfWeek,
+        TimeOnly startTime,
+        TimeOnly endTime,
+        DateOnly effectiveFrom,
+        DateOnly? effectiveTo = null,
+        int slotDurationMinutes = 30,
+        bool isActive = true)
+    {
+        if (doctorId == Guid.Empty)
+            throw new ArgumentException("Bác sĩ phụ trách không hợp lệ.", nameof(doctorId));
+
+        if (dayOfWeek < 1 || dayOfWeek > 7)
+            throw new ArgumentOutOfRangeException(nameof(dayOfWeek), "Thứ trong tuần phải từ 1 (Thứ Hai) đến 7 (Chủ Nhật) theo chuẩn ISO.");
+
+        if (startTime >= endTime)
+            throw new ArgumentException("Giờ bắt đầu ca làm việc phải trước giờ kết thúc.", nameof(startTime));
+
+        if (effectiveTo.HasValue && effectiveFrom > effectiveTo.Value)
+            throw new ArgumentException("Ngày bắt đầu hiệu lực không được lớn hơn ngày kết thúc hiệu lực.", nameof(effectiveFrom));
+
+        if (slotDurationMinutes <= 0)
+            throw new ArgumentException("Thời lượng mỗi slot phải lớn hơn 0 phút.", nameof(slotDurationMinutes));
+
+        return new DoctorSchedule
+        {
+            DoctorId = doctorId,
+            DayOfWeek = dayOfWeek,
+            StartTime = startTime,
+            EndTime = endTime,
+            EffectiveFrom = effectiveFrom,
+            EffectiveTo = effectiveTo,
+            SlotDurationMinutes = slotDurationMinutes,
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public void Update(
+        short dayOfWeek,
+        TimeOnly startTime,
+        TimeOnly endTime,
+        DateOnly effectiveFrom,
+        DateOnly? effectiveTo = null,
+        int slotDurationMinutes = 30,
+        bool? isActive = null)
+    {
+        if (dayOfWeek < 1 || dayOfWeek > 7)
+            throw new ArgumentOutOfRangeException(nameof(dayOfWeek), "Thứ trong tuần phải từ 1 (Thứ Hai) đến 7 (Chủ Nhật) theo chuẩn ISO.");
+
+        if (startTime >= endTime)
+            throw new ArgumentException("Giờ bắt đầu ca làm việc phải trước giờ kết thúc.", nameof(startTime));
+
+        if (effectiveTo.HasValue && effectiveFrom > effectiveTo.Value)
+            throw new ArgumentException("Ngày bắt đầu hiệu lực không được lớn hơn ngày kết thúc hiệu lực.", nameof(effectiveFrom));
+
+        if (slotDurationMinutes <= 0)
+            throw new ArgumentException("Thời lượng mỗi slot phải lớn hơn 0 phút.", nameof(slotDurationMinutes));
+
+        DayOfWeek = dayOfWeek;
+        StartTime = startTime;
+        EndTime = endTime;
+        EffectiveFrom = effectiveFrom;
+        EffectiveTo = effectiveTo;
+        SlotDurationMinutes = slotDurationMinutes;
+        if (isActive.HasValue)
+        {
+            IsActive = isActive.Value;
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetStatus(bool isActive)
+    {
+        IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
