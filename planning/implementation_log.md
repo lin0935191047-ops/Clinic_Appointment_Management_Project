@@ -180,3 +180,44 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln" --no-build` (Thành công: 39 Passed, 0 Failed)
 - Acceptance criteria evidence:
   - FEAT-011 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-012 — Patient Identifier Encryption & Lookup (AES-256-GCM & Keyed HMAC Exact Search)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Xây dựng `PiiEncryptionService.cs` (`IPiiEncryptionService`) thực thi mã hóa AES-256-GCM với 12-byte random nonce và 16-byte authentication tag; kiểm chứng tính toàn vẹn (tamper-resistant) ném ngoại lệ khi dữ liệu bị sửa đổi.
+  - Xây dựng `HmacService.cs` (`IHmacService`) thực thi Keyed HMAC-SHA256 trên chuỗi định danh đã chuẩn hóa (loại bỏ khoảng trắng, dấu gạch ngang, dấu chấm và in hoa); độc lập với plain hash, cho phép tìm kiếm chính xác (exact match) nhất quán dù người dùng/lễ tân nhập định dạng khác nhau.
+  - Xây dựng `IdentifierMaskingService.cs` (`IIdentifierMaskingService`) che giấu các định danh nhạy cảm:
+    - Số điện thoại: `091***5678` (giữ 3 đầu, 4 cuối).
+    - CCCD/CMND 12 số: `0010******34` (giữ 4 đầu, 2 cuối).
+    - Hộ chiếu: `B12***67` (giữ 3 đầu, 2 cuối).
+    - Thẻ BHYT: `GD401******89` (giữ 5 đầu, 2 cuối).
+    - Tuyệt đối không log thông tin định danh thô vào hệ thống logging.
+  - Xây dựng `PatientSecurityService.cs` (`IPatientSecurityService`) hỗ trợ gắn định danh mã hóa, giải mã có kiểm soát, tra cứu theo HMAC và cơ chế rà soát định danh mạnh trùng lặp (`CheckAndFlagDuplicateIdentifierAsync`): khi phát hiện trùng CCCD/Hộ chiếu với hồ sơ có sẵn, tự động gắn cờ `IsPossibleDuplicate = true` và `RecordStatus = "REVIEW_REQUIRED"`, không bao giờ tự ý gộp (Strictly NO Auto-merge).
+  - Cập nhật DTO `PatientDto` bổ sung các trường masked (`MaskedPhoneNumber`, `MaskedNationalId`, `MaskedPassport`, `MaskedHealthInsurance`).
+  - Cập nhật `CreatePatientCommand` và `CreatePatientCommandHandler` tích hợp mã hóa tự động khi tạo hồ sơ.
+  - Bổ sung Query `LookupPatientByIdentifierQuery` và endpoint bảo mật `POST /api/v1/patients/lookup-by-identifier` trong `PatientsController`.
+  - Bộ kiểm thử xUnit tự động:
+    - Xây dựng 20 test cases mới trong `PatientSecurityTests.cs`.
+    - Toàn bộ 59/59 unit test cases của Solution đều PASS 100%.
+- Files changed:
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/ISecurityServices.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IPatientSecurityService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Security/PiiEncryptionService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Security/HmacService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Security/IdentifierMaskingService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Services/PatientSecurityService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/DTOs/PatientDto.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/CreatePatientCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/CreatePatientCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Queries/PatientQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/PatientsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/PatientSecurityTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln" --no-restore` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln" --no-build` (Thành công: 59 Passed, 0 Failed)
+- Acceptance criteria evidence:
+  - FEAT-012 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

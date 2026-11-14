@@ -42,4 +42,16 @@ public class PatientsController : BaseApiController
         var result = await Mediator.Send(new GetPatientByCodeQuery(code));
         return HandleResult(result);
     }
+
+    /// <summary>
+    /// Tra cứu hồ sơ bệnh nhân bằng Định danh bảo mật (CCCD/Hộ chiếu/BHYT qua Keyed HMAC)
+    /// </summary>
+    [HttpPost("lookup-by-identifier")]
+    [ProducesResponseType(typeof(PatientDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> LookupByIdentifier([FromBody] LookupPatientByIdentifierQuery query)
+    {
+        var result = await Mediator.Send(query);
+        return HandleResult(result);
+    }
 }

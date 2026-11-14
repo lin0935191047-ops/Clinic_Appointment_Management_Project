@@ -12,5 +12,9 @@ public record CreatePatientCommand(
     Guid? UserId = null,
     string? Email = null,
     string? Gender = null,
-    string? Address = null
+    string? Address = null,
+    string? NationalId = null,
+    string? Passport = null,
+    string? HealthInsuranceNumber = null,
+    string? Pid = null
 ) : IRequest<Result<PatientDto>>;

@@ -2,6 +2,7 @@ using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Domain.Services;
 using ClinicAppointment.Infrastructure.Persistence;
 using ClinicAppointment.Infrastructure.Security;
+using ClinicAppointment.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,10 @@ public static class DependencyInjection
 
         // Security & Policies
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<IPiiEncryptionService, PiiEncryptionService>();
+        services.AddSingleton<IHmacService, HmacService>();
+        services.AddSingleton<IIdentifierMaskingService, IdentifierMaskingService>();
+        services.AddScoped<IPatientSecurityService, PatientSecurityService>();
         services.AddScoped<IRoleAssignmentPolicy, RoleAssignmentPolicy>();
         services.AddScoped<DatabaseSeeder>();
 

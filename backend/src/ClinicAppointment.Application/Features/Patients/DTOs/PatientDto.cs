@@ -10,9 +10,13 @@ public class PatientDto
     public DateOnly? DateOfBirth { get; set; }
     public short? BirthYear { get; set; }
     public string PhoneNumber { get; set; } = string.Empty;
+    public string MaskedPhoneNumber { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Gender { get; set; }
     public string? Address { get; set; }
+    public string? MaskedNationalId { get; set; }
+    public string? MaskedPassport { get; set; }
+    public string? MaskedHealthInsurance { get; set; }
     public string RecordStatus { get; set; } = "ACTIVE";
     public bool IsPossibleDuplicate { get; set; }
     public DateTime CreatedAt { get; set; }

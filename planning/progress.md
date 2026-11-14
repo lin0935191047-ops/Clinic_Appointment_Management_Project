@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-011 Completed)
-- Current phase: Patient Security & Identifier Encryption (FEAT-012)
+- Overall status: In progress (FEAT-001 through FEAT-012 Completed)
+- Current phase: Patient Duplicate Detection & Review (FEAT-013)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-011)
+## Features Completed (FEAT-001 -> FEAT-012)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -20,10 +20,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-009` (Initial migrations and seed): EF Core migration `20261114062800_InitialCreate.cs` kèm btree_gist GiST exclusion constraint chống trùng ca; kịch bản SQL idempotent `database/migrations/20261114_initial_schema.sql`; `DatabaseSeeder.cs` idempotent.
 - `FEAT-010` (Users and roles): Thực thể User, Role, UserRoleAssignment, RefreshToken; 4 vai trò ADMIN, DOCTOR, RECEPTIONIST, PATIENT; RoleAssignmentPolicy; PasswordHasher (PBKDF2 HMAC-SHA256); 21/21 unit tests PASS.
 - `FEAT-011` (Patient profile): Patient độc lập User (UserId nullable unique); FullName bắt buộc + NormalizedFullName; Ràng buộc DateOfBirth hoặc BirthYear; Candidate Duplicate Detection (Strictly NO Auto-merge); CQRS CreatePatientCommand/Queries/PatientsController; 39/39 tests PASS.
+- `FEAT-012` (Patient identifier encryption and lookup): Mã hóa xác thực AES-256-GCM; Keyed HMAC-SHA256 trên chuỗi chuẩn hóa cho exact search; Che giấu số điện thoại/CCCD/hộ chiếu/BHYT không log thô; Xử lý trùng định danh mạnh bảo đảm không auto-merge; 59/59 tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-012 (Patient identifier encryption and lookup: CCCD/passport/BHYT/PID/phone với Keyed HMAC exact search).
-2. Triển khai FEAT-013 (Patient identity matching logic: phát hiện trùng lặp nâng cao).
+1. Triển khai FEAT-013 (Patient duplicate detection/review: Candidate matching và manual review workflow).
+2. Triển khai FEAT-014 (Patient contact verification: OTP phone verification).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

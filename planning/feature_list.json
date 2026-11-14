@@ -296,7 +296,7 @@
       "module": "Patient Security",
       "description": "Quản lý CCCD/passport/BHYT/PID/phone.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-011"
       ],
@@ -306,7 +306,14 @@
         "Không log raw identifier",
         "Verified strong ID duplicate handling"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Triển khai PiiEncryptionService sử dụng mã hóa xác thực AES-256-GCM với 12-byte random nonce và 16-byte auth tag chống giả mạo",
+        "Triển khai HmacService sử dụng Keyed HMAC-SHA256 trên chuỗi định danh đã chuẩn hóa (xóa khoảng trắng/dấu gạch/in hoa) cho tìm kiếm chính xác, độc lập với plain hash",
+        "Triển khai IdentifierMaskingService che giấu số điện thoại (091***5678), CCCD (0010******34), Hộ chiếu (B12***67) và BHYT (GD401******89); cam kết tuyệt đối không log định danh thô",
+        "Triển khai PatientSecurityService hỗ trợ gán, giải mã, tra cứu chính xác theo HMAC và rà soát định danh mạnh trùng lặp (không tự ý gộp hồ sơ)",
+        "Bổ sung endpoint tra cứu bảo mật POST /api/v1/patients/lookup-by-identifier",
+        "Bộ kiểm thử xUnit tại PatientSecurityTests.cs: 20/20 test cases ĐẠT 100% (tổng 59/59 tests toàn solution PASS)"
+      ],
       "notes": []
     },
     {
