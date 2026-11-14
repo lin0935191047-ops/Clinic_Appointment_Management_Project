@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-037 Completed)
-- Current phase: Doctor assigned appointments (FEAT-038)
+- Overall status: In progress (FEAT-001 through FEAT-038 Completed)
+- Current phase: Consultation start and record (FEAT-039)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-037)
+## Features Completed (FEAT-001 -> FEAT-038)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -46,11 +46,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-035` (Reception patient management): Quản trị và tiếp nhận hồ sơ bệnh nhân tại quầy Lễ tân (Module Reception); Phân quyền nghiêm ngặt StaffOnly (chỉ Lễ tân hoặc Admin có quyền truy cập, chặn ẩn danh hoặc Bệnh nhân); Tìm kiếm đa tiêu chí (từ khóa, ngày sinh, cờ nghi trùng, trạng thái); Tạo mới và cập nhật hồ sơ bảo mật với mã hóa danh tính PII (CCCD/Hộ chiếu/BHYT qua AES-256-GCM + Keyed HMAC); Tuân thủ triệt để bất biến Không tự động gộp hồ sơ trùng Tên + Ngày sinh/Năm sinh (No auto-merge by name+DOB), tự động tạo hồ sơ độc lập và mở ca rà soát PatientIdentityReviewCase trạng thái OPEN; Quy trình xử lý ca nghi trùng có đối soát CCCD tại quầy và lưu vết kiểm toán đầy đủ (CONFIRMED_SAME_PERSON chuyển lịch hẹn, lưu PatientMergeEvent có beforeSnapshotJson và ghi AuditLog; DIFFERENT_PERSON xóa cờ nghi trùng và ghi AuditLog); Chặn chỉnh sửa hồ sơ MERGED; 294/294 unit tests PASS (10/10 tests FEAT-035 PASS 100%).
 - `FEAT-036` (Patient check-in): Lễ tân tiếp nhận và làm thủ tục check-in cho bệnh nhân tại quầy khi đến khám (Module Reception); Chuyển trạng thái Appointment từ Confirmed sang CheckedIn và cập nhật UpdatedAt theo Server Timestamp UTC; Ghi nhận người thực hiện (ActorUserId, ActorType = RECEPTIONIST/ADMIN/STAFF) và thời gian check-in bất biến trong AuditLog với Action = CHECK_IN_APPOINTMENT kèm metadata JSON an toàn không chứa PII; Từ chối các trạng thái không hợp lệ với HTTP 400 Bad Request (PendingConfirmation chưa duyệt, đã CheckedIn, Cancelled, Completed, InProgress); Phân quyền bảo vệ StaffOnly chặn Patient và Anonymous; 306/306 unit tests PASS (12/12 tests FEAT-036 PASS 100%).
 - `FEAT-037` (Reception queue): Quản lý và điều phối hàng đợi khám bệnh tại quầy Lễ tân theo Bác sĩ và Ngày khám (Module Reception); Bộ lọc đa tiêu chí linh hoạt: lọc theo DoctorId, lọc theo Ngày khám (Date - chuẩn hóa múi giờ Asia/Ho_Chi_Minh sang khoảng UTC tương ứng), lọc theo Trạng thái (CheckedIn, Confirmed, InProgress, Completed, Cancelled), lọc theo Từ khóa (tên, số điện thoại, mã booking); Sắp xếp theo thời gian tăng/giảm (time_asc/time_desc) hoặc ưu tiên trạng thái (status); Đánh số thứ tự tiếp nhận tuần tự (QueueNumber 1, 2, 3...); Phân quyền bảo vệ nghiêm ngặt StaffOnly (chỉ Lễ tân và Admin); Giới hạn dữ liệu an toàn (MaskedPhoneNumber dạng 091***5678, không lộ CCCD thô, OTP, hay bệnh án chuyên sâu); Endpoints GET /api/v1/reception/appointments và alias GET /api/v1/reception/queue; 319/319 unit tests PASS (13/13 tests FEAT-037 PASS 100%).
+- `FEAT-038` (Doctor assigned appointments): Bác sĩ xem danh sách các ca khám được phân công cho chính mình (Module Doctor); Chống IDOR tuyệt đối và bảo đảm nguyên tắc Assigned Doctor Only (tự động gắn DoctorId theo UserId tài khoản đăng nhập, bác sĩ A không thể xem ca của bác sĩ B kể cả khi giả mạo query param); Tối thiểu hóa dữ liệu bệnh nhân (Minimum patient data: số điện thoại được che giấu mặt nạ MaskedPhoneNumber, không lộ CCCD/Hộ chiếu thô, mật khẩu hay mã OTP); Lọc theo Ngày khám (Date) chuẩn hóa múi giờ Asia/Ho_Chi_Minh, lọc theo Trạng thái, tìm kiếm từ khóa, sắp xếp theo thời gian hoặc ưu tiên trạng thái hàng đợi; Phân trang chuẩn PaginatedList; Phân quyền bảo vệ StaffOrDoctor tại Controller DoctorAppointmentsController; 334/334 unit tests PASS (15/15 tests FEAT-038 PASS 100%).
 
 ## Next steps
-1. Triển khai FEAT-038 (Doctor assigned appointments: Bác sĩ xem danh sách các ca khám được phân công, phân quyền DoctorOnly kết hợp kiểm soát tài nguyên bác sĩ, tối thiểu hóa dữ liệu bệnh nhân).
-2. Triển khai FEAT-039 (Consultation start and notes: Bác sĩ bắt đầu khám, chuyển CheckedIn -> InProgress, ghi chép chẩn đoán ban đầu).
-3. Triển khai FEAT-040 (Consultation completion: Hoàn thành ca khám InProgress -> Completed, đơn thuốc và chỉ dẫn y tế).
+1. Triển khai FEAT-039 (Consultation start and record: Bác sĩ bắt đầu ca khám chuyển CheckedIn -> InProgress, ghi chép chẩn đoán, triệu chứng, kết luận và hướng dẫn điều trị).
+2. Triển khai FEAT-040 (Consultation completion: Hoàn thành ca khám InProgress -> Completed, đơn thuốc và chỉ dẫn y tế, bảo mật dữ liệu bệnh án).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

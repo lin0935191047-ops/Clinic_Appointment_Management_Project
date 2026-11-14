@@ -1033,7 +1033,7 @@
       "module": "Doctor",
       "description": "Doctor xem ca được phân công.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-017",
         "FEAT-036",
@@ -1044,8 +1044,17 @@
         "Minimum patient data",
         "Pagination/date filter"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Bác sĩ chỉ xem ca khám được phân công cho mình (Assigned doctor only & Chống IDOR): Hệ thống tự động xác định hồ sơ Bác sĩ tương ứng với UserId của người dùng đăng nhập; Bác sĩ A chỉ thấy các ca khám của Bác sĩ A, tuyệt đối không thấy ca của Bác sĩ B; Bác sĩ cố tình truyền DoctorId của bác sĩ khác trong query param vẫn bị hệ thống bỏ qua và ép buộc chỉ trả về ca khám của chính mình (kiểm thử AssignedDoctorOnly_DoctorSeesOnlyOwnAppointments, AssignedDoctorOnly_CannotTamperDoctorIdToViewOtherDoctorAppointments, AdminUser_CanFilterByDoctorId).",
+        "Tối thiểu hóa dữ liệu bệnh nhân (Minimum patient data): DTO DoctorAssignedAppointmentDto chỉ trả về thông tin tối thiểu phục vụ khám bệnh (họ tên, mã bệnh nhân, ngày sinh, giới tính, dịch vụ, giờ khám, lý do khám, thời gian check-in); số điện thoại bắt buộc được che giấu mặt nạ (MaskedPhoneNumber dạng 091***2333); TUYỆT ĐỐI không trả về số CCCD/Hộ chiếu/BHYT thô, mật khẩu hay mã OTP (kiểm thử MinimumPatientData_PhoneIsMasked_NoPiiLeakage).",
+        "Lọc theo ngày khám và trạng thái (Pagination/date filter): Hỗ trợ lọc theo Ngày khám (Date - chuẩn hóa múi giờ Asia/Ho_Chi_Minh sang khoảng UTC tương ứng), lọc theo Trạng thái (CheckedIn, InProgress, Confirmed...), lọc theo Từ khóa (tên bệnh nhân, mã booking); sắp xếp thời gian tăng dần/giảm dần hoặc ưu tiên trạng thái; phân trang chuẩn PaginatedList với TotalItems, TotalPages, Page, PageSize (kiểm thử FilterByDate_ReturnsAppointmentsForThatDay, FilterByStatus_ReturnsMatchingAppointments, FilterByKeyword_MatchesPatientNameAndBookingCode, Pagination_WorksCorrectly, SortByTime_AscendingAndDescending_OrdersCorrectly, SortByStatus_PrioritizesCheckedInAndInProgress, QueueNumber_AssignedSequentially).",
+        "Phân quyền bảo vệ truy cập: Endpoint GET /api/v1/doctor/appointments được bảo vệ bằng policy StaffOrDoctor; Bệnh nhân hoặc Anonymous bị chặn với HTTP 403 Forbidden / 401 Unauthorized; Tài khoản có vai trò DOCTOR nhưng chưa liên kết hồ sơ Bác sĩ bị từ chối 403 với thông báo rõ ràng (kiểm thử DoctorOnly_Enforced_PatientDenied, DoctorOnly_Enforced_AnonymousDenied, DoctorUser_WithoutProfile_ReturnsForbidden, DoctorAppointmentsController_ProtectedWithStaffOrDoctorPolicy).",
+        "Bộ kiểm thử tự động tại DoctorAssignedAppointmentsTests.cs: 15/15 test cases ĐẠT 100% (tổng 334/334 tests toàn solution PASS 100%)."
+      ],
+      "notes": [
+        "Hoàn thành trọn vẹn màn hình và API danh sách ca khám được phân công cho Bác sĩ điều trị.",
+        "Bảo đảm an toàn tuyệt đối chống IDOR, tối thiểu hóa dữ liệu bệnh nhân và hỗ trợ phân trang lọc ngày chuẩn mực."
+      ]
     },
     {
       "id": "FEAT-039",

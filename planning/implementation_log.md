@@ -1619,3 +1619,59 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.60s)
 - Acceptance criteria evidence:
   - FEAT-037 đạt toàn bộ tiêu chí nghiệm thu (Filter/sort works, Data access limited) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+
+## 2026-11-14: FEAT-038 - Doctor assigned appointments
+- Triển khai và hoàn thiện màn hình và API Bác sĩ xem danh sách các ca khám được phân công (Module Doctor), tuân thủ triệt để quy định trong AGENTS.md, docs/SPEC.md (FR-059), docs/BUSINESS_RULES.md (BR-013, BR-014), docs/API_SPECIFICATION.md mục Doctor.
+- Bảo đảm nguyên tắc Bác sĩ chỉ xem ca khám của mình & Chống IDOR (Assigned doctor only):
+  - Lệnh truy vấn `GetDoctorAppointmentsQuery` tự động xác định danh tính Bác sĩ dựa trên `UserId` của tài khoản đăng nhập (`_currentUserService.UserId`).
+  - Hệ thống tra cứu hồ sơ Bác sĩ tương ứng trong bảng `Doctors` và ép buộc điều kiện `a.DoctorId == doctorProfile.Id`.
+  - Tuyệt đối không cho phép Bác sĩ xem ca khám của bác sĩ khác; Bác sĩ cố tình gửi `DoctorId` của người khác trong query param vẫn bị hệ thống bỏ qua và chỉ trả về ca khám của chính mình.
+  - Quản trị viên (`ADMIN`) có thể hỗ trợ giám sát và lọc theo `DoctorId` khi cần thiết.
+  - Người dùng có vai trò `DOCTOR` nhưng chưa liên kết với hồ sơ bác sĩ trong CSDL bị từ chối với HTTP 403 Forbidden kèm thông báo lỗi rõ ràng.
+- Tối thiểu hóa dữ liệu bệnh nhân (Minimum patient data):
+  - DTO `DoctorAssignedAppointmentDto` chỉ cung cấp các thông tin thiết yếu phục vụ công tác khám bệnh: họ tên, mã bệnh nhân, ngày sinh/năm sinh, giới tính, dịch vụ, giờ khám, lý do khám, thời gian check-in.
+  - Số điện thoại bệnh nhân bắt buộc được che giấu mặt nạ qua `IIdentifierMaskingService.MaskPhone` (dạng `091***2333`).
+  - TUYỆT ĐỐI không trả về số CCCD/Hộ chiếu/BHYT thô, mật khẩu hay mã OTP bảo mật.
+- Phân trang, lọc theo ngày và trạng thái (Pagination/date filter):
+  - Hỗ trợ lọc theo `Date`: Quy đổi ngày khám từ 00:00:00 đến 23:59:59.999 múi giờ Việt Nam GMT+7 (`Asia/Ho_Chi_Minh`) sang khoảng thời gian tương ứng theo giờ UTC (-7 hours), đảm bảo chính xác tuyệt đối thời gian ca khám.
+  - Hỗ trợ lọc theo `Status`: `CheckedIn`, `InProgress`, `Confirmed`, `Completed`, v.v.
+  - Hỗ trợ tìm kiếm từ khóa `Keyword`: họ tên bệnh nhân, số điện thoại, mã booking.
+  - Hỗ trợ sắp xếp `SortBy`: theo thời gian tăng dần (`time_asc` - mặc định), giảm dần (`time_desc`), hoặc ưu tiên trạng thái hàng đợi (`status`: đưa các ca đã tiếp nhận `CheckedIn` và `InProgress` lên trước).
+  - Phân trang chuẩn với `PaginatedList<DoctorAssignedAppointmentDto>`, tính toán đầy đủ `TotalItems`, `TotalPages`, `Page`, `PageSize`, `HasNextPage`.
+  - Tự động đánh số thứ tự tiếp nhận `QueueNumber` tuần tự (1, 2, 3...) theo danh sách khám trong ngày.
+- Phân quyền bảo vệ Controller:
+  - Tạo mới `DoctorAppointmentsController` (`/api/v1/doctor/appointments`) bảo vệ bằng policy `StaffOrDoctor` (chỉ cho phép `DOCTOR` hoặc `ADMIN`). Bệnh nhân (`PATIENT`) hoặc khách ẩn danh (`Anonymous`) bị từ chối với HTTP 403 Forbidden / 401 Unauthorized.
+- Bộ kiểm thử tự động xUnit (`DoctorAssignedAppointmentsTests.cs`):
+  - 15 test cases bao phủ 100% các tiêu chí nghiệm thu:
+    1. `DoctorOnly_Enforced_PatientDenied`: Bệnh nhân bị từ chối với HTTP 403 Forbidden.
+    2. `DoctorOnly_Enforced_AnonymousDenied`: Khách ẩn danh bị từ chối với HTTP 403 Forbidden.
+    3. `DoctorUser_WithoutProfile_ReturnsForbidden`: Tài khoản Doctor chưa liên kết hồ sơ bác sĩ bị từ chối 403.
+    4. `AssignedDoctorOnly_DoctorSeesOnlyOwnAppointments`: Bác sĩ A chỉ thấy đúng ca khám của mình, không thấy ca của Bác sĩ B.
+    5. `AssignedDoctorOnly_CannotTamperDoctorIdToViewOtherDoctorAppointments`: Chống IDOR, Bác sĩ A truyền DoctorId của Bác sĩ B vẫn chỉ nhận được ca của mình.
+    6. `AdminUser_CanFilterByDoctorId`: Quản trị viên có thể xem lịch của bác sĩ cụ thể bằng cách truyền DoctorId.
+    7. `FilterByDate_ReturnsAppointmentsForThatDay`: Lọc chính xác các ca khám trong ngày theo giờ Việt Nam.
+    8. `FilterByStatus_ReturnsMatchingAppointments`: Lọc chính xác ca khám theo trạng thái CheckedIn.
+    9. `FilterByKeyword_MatchesPatientNameAndBookingCode`: Tìm kiếm chính xác theo tên bệnh nhân và mã booking.
+    10. `Pagination_WorksCorrectly`: Kiểm tra phân trang hoạt động chính xác với TotalItems, TotalPages, PageSize.
+    11. `SortByTime_AscendingAndDescending_OrdersCorrectly`: Sắp xếp chính xác theo thời gian tăng dần và giảm dần.
+    12. `SortByStatus_PrioritizesCheckedInAndInProgress`: Sắp xếp ưu tiên ca CheckedIn và InProgress lên trước.
+    13. `QueueNumber_AssignedSequentially`: Đánh số thứ tự tiếp nhận tuần tự (1, 2, 3...).
+    14. `MinimumPatientData_PhoneIsMasked_NoPiiLeakage`: Số điện thoại được mask, không lộ CCCD, mật khẩu hay OTP.
+    15. `DoctorAppointmentsController_ProtectedWithStaffOrDoctorPolicy`: Kiểm tra reflection phân quyền StaffOrDoctor trên Controller.
+  - Toàn bộ 334/334 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/GetDoctorAppointments/DoctorAssignedAppointmentDto.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/GetDoctorAppointments/GetDoctorAppointmentsQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/GetDoctorAppointments/GetDoctorAppointmentsQueryHandler.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorAppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/DoctorAssignedAppointmentsTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build backend/ClinicAppointment.sln` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 334 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 9.61s)
+- Acceptance criteria evidence:
+  - FEAT-038 đạt toàn bộ tiêu chí nghiệm thu (Assigned doctor only, Minimum patient data, Pagination/date filter) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
