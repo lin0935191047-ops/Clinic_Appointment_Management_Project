@@ -13,10 +13,6 @@ export const Footer: React.FC = () => {
             <p className="text-sm text-gray-400 leading-relaxed">
               Dịch vụ chăm sóc sức khỏe chất lượng cao, phục vụ tận tâm. Đặt lịch khám nhanh chóng, không cần tạo tài khoản.
             </p>
-            <div className="flex items-center space-x-2 text-teal-400 text-sm font-medium">
-              <CheckCircle className="w-4 h-4" />
-              <span>Guest Booking — Không bắt buộc đăng nhập</span>
-            </div>
           </div>
 
           {/* Quick links */}

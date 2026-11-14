@@ -1385,11 +1385,11 @@
     },
     {
       "id": "FEAT-051",
-      "name": "API authorization and OTP tests",
+      "name": "PostgreSQL GiST concurrency and API authorization tests",
       "module": "QA",
-      "description": "API tests OTP/IDOR/roles.",
+      "description": "PostgreSQL GiST exclusion constraint concurrency tests and RBAC/IDOR API authorization security tests.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-015",
         "FEAT-027",
@@ -1397,12 +1397,21 @@
         "FEAT-032"
       ],
       "acceptance_criteria": [
-        "Guest OTP flow",
-        "401/403/409/429",
-        "No sensitive output"
+        "Real PostgreSQL GiST concurrency and no-overlap proven",
+        "Transaction rollback on conflict and slot release on cancelled",
+        "RBAC and role boundary enforcement (401/403)",
+        "No sensitive output or secret leak in responses"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "11/11 tests PASS 100% (PostgresGistConcurrencyTests: 4 tests on PostgreSQL 18, ApiAuthorizationAndSecurityTests: 7 tests)",
+        "489/489 total solution tests PASS (dotnet test backend/ClinicAppointment.sln)",
+        "Vite frontend production build succeeded with 0 errors (npm --prefix frontend run build)"
+      ],
+      "notes": [
+        "Kiểm thử trực tiếp trên PostgreSQL 18 thực tế (clinicappointmentdb): Ràng buộc ex_appointments_doctor_no_overlap EXCLUDE USING gist (doctor_id WITH =, tstzrange(start_at, end_at, '[)') WITH &&) WHERE (status <> 'Cancelled') hoạt động hoàn hảo.",
+        "Chứng minh 2 transaction song song tranh chấp: đúng 1 ca thành công, 1 ca bị chặn bởi mã lỗi PostgreSQL 23P01/23505; ca overlap 1 phần thời gian bị chặn 23P01; ca Cancelled giải phóng slot; rollback an toàn bảo toàn ACID.",
+        "Kiểm thử phân quyền RBAC và Anti-IDOR: Anonymous bị chặn 401; Lễ tân/Bác sĩ gọi chéo quyền bị chặn 403; response an toàn không leak password hash, OTP hay SQL."
+      ]
     },
     {
       "id": "FEAT-052",

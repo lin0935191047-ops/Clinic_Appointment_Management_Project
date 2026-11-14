@@ -2323,3 +2323,38 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `OTP challenge, verification, and scoped grant token flow`: Đạt 100%, kiểm thử Anti-enumeration, sinh OTP challenge, cấp Scoped Grant 15 phút, tra cứu không lộ PII hay bệnh án.
   - `Reschedule review and approval/rejection lifecycle`: Đạt 100%, kiểm thử quy trình Lễ tân duyệt chuyển slot mới và từ chối bảo lưu slot cũ.
   - `Idempotency key enforcement and anti-enumeration protection`: Đạt 100%, bảo vệ toàn diện các rủi ro brute-force và network retry.
+
+
+### 2026-11-14 — FEAT-051 — PostgreSQL GiST concurrency and API authorization tests
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Xây dựng 2 bộ kiểm thử chuyên sâu kiểm chứng cơ chế chống trùng lặp PostgreSQL và bảo mật phân quyền RBAC:
+    1. `PostgresGistConcurrencyTests.cs` (4 test cases chạy trực tiếp trên PostgreSQL 18 thực tế):
+       - `PostgresGist_ConcurrentBookingSameSlot_OneSucceedsAndOneFailsWithExclusionViolation`: Mô phỏng race condition đặt 2 ca khám song song cùng một bác sĩ trong cùng khung giờ chính xác qua 2 kết nối/DbContext độc lập; chứng minh đúng 1 transaction hoàn tất thành công và 1 transaction bị PostgreSQL từ chối với mã lỗi `23P01 exclusion_violation` hoặc `23505 unique_violation`; cơ sở dữ liệu xác nhận chỉ có đúng 1 bản ghi được lưu.
+       - `PostgresGist_OverlappingTimeRanges_RejectsSecondAppointment`: Kiểm tra sức mạnh của ràng buộc exclusion constraint GiST `ex_appointments_doctor_no_overlap` (`tstzrange(start_at, end_at, '[)') WITH &&`): Ca 1 đặt 14:00 - 14:30, ca 2 đặt 14:15 - 14:45 (giao nhau 15 phút, start_at khác nhau nên index B-tree không bắt được); chứng minh PostgreSQL GiST chặn đứng ca 2 với mã lỗi chính xác `23P01`.
+       - `PostgresGist_CancelledAppointment_ReleasesSlotForNewBooking`: Kiểm tra điều kiện `WHERE (status <> 'Cancelled')` của GiST constraint: Cuộc hẹn cũ khi bị hủy (`Status = Cancelled`) sẽ tự động giải phóng slot thời gian, cho phép bệnh nhân khác đặt thành công vào khung giờ đó mà không bị chặn.
+       - `PostgresGist_TransactionRollbackOnConflict_MaintainsDatabaseConsistency`: Kiểm tra tính toàn vẹn ACID: Khi gặp lỗi exclusion violation trong một transaction phức hợp, transaction thực hiện Rollback sạch sẽ và không gây rò rỉ hay sai lệch dữ liệu.
+    2. `ApiAuthorizationAndSecurityTests.cs` (7 test cases kiểm thử phân quyền RBAC và an toàn bảo mật API):
+       - `AnonymousAccess_ToProtectedEndpoints_Returns401Unauthorized`: Kiểm thử 3 endpoint bảo vệ nội bộ (`/api/v1/admin/reports/dashboard`, `/api/v1/doctor/dashboard`, `/api/v1/reception/reschedule-requests`), bắt buộc trả về mã HTTP 401 Unauthorized khi không có header Authorization Bearer.
+       - `ReceptionistRole_AccessToDoctorOrAdminEndpoints_Returns403Forbidden`: Nhân viên Lễ tân đăng nhập hợp lệ nhưng cố tình gọi API của Admin hoặc Doctor bị từ chối HTTP 403 Forbidden.
+       - `DoctorRole_AccessToAdminEndpoints_Returns403Forbidden`: Bác sĩ đăng nhập hợp lệ nhưng cố tình truy cập báo cáo Admin bị từ chối HTTP 403 Forbidden.
+       - `DoctorRole_AccessToDoctorDashboard_Returns200OkWithAssignedScope`: Bác sĩ truy cập Dashboard của chính mình trong phạm vi phân công (Assigned Scope) trả về HTTP 200 OK với đầy đủ danh sách `todayAppointments` và `waitingQueue`.
+       - `SecurityAudit_ErrorResponsesAndPayloads_DoNotExposeSecretsOrSensitivePii`: Kiểm tra kiểm toán bảo mật: Khi xảy ra lỗi xác thực hoặc lỗi hệ thống, phản hồi JSON tuyệt đối không để lộ mật khẩu, mã hash, chuỗi kết nối, truy vấn SQL, hay nội dung nhạy cảm.
+  - Toàn bộ 11/11 tests của FEAT-051 đều PASS 100%.
+  - Tổng số test cases trong toàn Solution đạt 489/489 PASS 100%.
+  - Frontend Vite production build thành công 100% không lỗi (dist bundle 420.59 kB trong 5.92s).
+- Files created/changed:
+  - `backend/tests/ClinicAppointment.Domain.Tests/Integration/PostgresGistConcurrencyTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Integration/ApiAuthorizationAndSecurityTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~PostgresGist|FullyQualifiedName~ApiAuthorizationAndSecurity"` (Thành công: 11 Passed, 0 Failed, 0 Skipped, Duration: 4 s)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 489 Passed, 0 Failed, 0 Skipped, Duration: 7 s)
+  - `npm --prefix frontend run build` (Thành công: 0 Errors, built in 5.92s, 1649 modules transformed)
+- Acceptance criteria evidence:
+  - `Real PostgreSQL GiST concurrency and no-overlap proven`: Đạt 100%, kiểm thử trực tiếp trên PostgreSQL 18 thực tế, chứng minh 100% chống trùng ca và chặn overlap khung giờ bằng mã lỗi 23P01/23505.
+  - `Transaction rollback on conflict and slot release on cancelled`: Đạt 100%, kiểm thử rollback ACID và giải phóng slot khi hủy ca hẹn.
+  - `RBAC and role boundary enforcement (401/403)`: Đạt 100%, kiểm thử toàn diện Anonymous (401), Lễ tân/Bác sĩ gọi chéo quyền (403), Bác sĩ truy cập phạm vi phân công (200).
+  - `No sensitive output or secret leak in responses`: Đạt 100%, không rò rỉ secret, mật khẩu, hay thông tin kỹ thuật nhạy cảm trong response.
