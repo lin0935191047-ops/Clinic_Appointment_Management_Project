@@ -800,9 +800,9 @@
       "id": "FEAT-030",
       "name": "Reschedule approval/rejection",
       "module": "Reschedule",
-      "description": "Receptionist duyệt/từ chối và recheck slot.",
+      "description": "Receptionist duyệt hoặc từ chối yêu cầu đổi lịch; duyệt trong Database Transaction kiểm tra lại availability và cập nhật slot ca khám.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-029",
         "FEAT-015",
@@ -814,8 +814,19 @@
         "Approve transactionally",
         "Conflict leaves old schedule unchanged"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "backend/tests/ClinicAppointment.Domain.Tests/RescheduleReviewTests.cs: 9 tests (Approve_WhenSlotAvailable_ShouldUpdateAppointmentAndApproveRequest, Approve_WhenSlotConflictsWithAnotherAppointment_ShouldLeaveOldScheduleUnchanged_AndReturn409, Approve_WhenSlotConflictsWithDoctorTimeOff_ShouldLeaveOldScheduleUnchanged_AndReturn409, Reject_WithValidReason_ShouldKeepOldAppointment_AndSetRequestToRejected, Reject_WithoutReason_ShouldFailWith400, Review_ByNonStaffUser_ShouldFailWith403, Review_WhenRequestAlreadyReviewed_ShouldFailWith400, GetPendingRescheduleRequests_ShouldReturnOnlyPendingReviewRequests, ReceptionRescheduleRequestsController_ShouldHave_AuthorizeStaffOnlyAttribute)",
+        "dotnet test ClinicAppointment.Domain.Tests: 245/245 passed",
+        "frontend: npm run build passed"
+      ],
+      "notes": [
+        "Endpoints: POST /api/v1/reception/reschedule-requests/{requestId}/approve, POST /api/v1/reception/reschedule-requests/{requestId}/reject, GET /api/v1/reception/reschedule-requests",
+        "Bảo vệ bằng Authorize(Policy = 'StaffOnly') (chỉ Receptionist hoặc Admin mới có quyền review)",
+        "Thực thi trong Database Transaction: recheck slot trống, ngày nghỉ, lịch bận; cập nhật Appointment và RescheduleRequest đồng bộ",
+        "Bảo toàn lịch cũ khi từ chối hoặc khi xung đột (Conflict / Reject leaves old appointment): Appointment.StartAt, EndAt, DoctorId giữ nguyên 100%",
+        "Từ chối yêu cầu đổi lịch bắt buộc phải có lý do (ReviewNotes)",
+        "Ghi nhận Audit Log APPROVE_RESCHEDULE_REQUEST và REJECT_RESCHEDULE_REQUEST an toàn không PII"
+      ]
     },
     {
       "id": "FEAT-031",

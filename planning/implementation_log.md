@@ -1169,3 +1169,59 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.79s)
 - Acceptance criteria evidence:
   - FEAT-029 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+## 2026-11-14 — FEAT-030: Reschedule approval/rejection
+- Summary:
+  - Triển khai toàn diện chức năng duyệt hoặc từ chối yêu cầu đổi lịch khám (Reschedule approval/rejection) dành cho bộ phận Lễ tân / Quản trị viên (Module Reschedule).
+  - Phân quyền kiểm soát chặt chẽ (Acceptance Criteria 1: Only Receptionist can review):
+    - Bảo vệ bằng policy `StaffOnly` (yêu cầu vai trò `RECEPTIONIST` hoặc `ADMIN`).
+    - Kiểm tra tại Application Handler qua `ICurrentUserService.IsStaff`: nếu tài khoản không có quyền lễ tân hoặc admin, hệ thống từ chối và trả về HTTP 403 Forbidden.
+  - Phê duyệt trong Database Transaction (Acceptance Criteria 3: Approve transactionally):
+    - Thực hiện kiểm tra lại (re-check) slot đề xuất: ngày nghỉ của bác sĩ (`DoctorTimeOffs`), lịch bận / khóa lịch (`DoctorScheduleBlocks`), trùng lịch hẹn khác (`Appointments`).
+    - Khi slot hợp lệ: cập nhật `Appointment.StartAt`, `Appointment.EndAt`, `Appointment.DoctorId`, `Appointment.UpdatedAt = DateTime.UtcNow`, chuyển `RescheduleRequest.Status = Approved`, ghi nhận `ReviewedByUserId`, `ReviewedAt`, `ReviewNotes`.
+  - Bảo toàn lịch cũ khi xung đột hoặc từ chối (Acceptance Criteria 2 & 4: Conflict / Reject leaves old schedule unchanged):
+    - Nếu slot mới bị xung đột: rollback transaction, **lịch khám ban đầu của bệnh nhân GIỮ NGUYÊN 100%**, trả về HTTP 409 Conflict.
+    - Khi từ chối (`Reject`): bắt buộc nhập lý do (`ReviewNotes`), chuyển `RescheduleRequest.Status = Rejected`, **lịch khám ban đầu của bệnh nhân GIỮ NGUYÊN 100%**.
+  - Kiểm soát máy trạng thái:
+    - Chỉ cho phép duyệt hoặc từ chối yêu cầu đang ở trạng thái `PendingReview`. Yêu cầu đã duyệt/từ chối trước đó sẽ bị từ chối với HTTP 400 Bad Request.
+  - Hàng đợi duyệt yêu cầu đổi lịch (Receptionist Queue):
+    - Endpoint `GET /api/v1/reception/reschedule-requests` trả về danh sách yêu cầu chờ duyệt kèm thông tin bệnh nhân, bác sĩ hiện tại, bác sĩ yêu cầu và khung giờ đề xuất.
+  - Lịch sử kiểm toán (Audit Trail Logging):
+    - Ghi nhận `AuditLog` với `Action = "APPROVE_RESCHEDULE_REQUEST"` hoặc `"REJECT_RESCHEDULE_REQUEST"`, `MetadataRedacted` an toàn không chứa PII.
+  - Endpoints API:
+    - `GET /api/v1/reception/reschedule-requests`
+    - `POST /api/v1/reception/reschedule-requests/{requestId}/approve`
+    - `POST /api/v1/reception/reschedule-requests/{requestId}/reject`
+    - Cả 3 endpoint đều gắn `[Authorize(Policy = "StaffOnly")]`.
+  - Bộ kiểm thử tự động xUnit (`RescheduleReviewTests.cs`):
+    - 9 test cases bao phủ toàn diện:
+      1. `Approve_WhenSlotAvailable_ShouldUpdateAppointmentAndApproveRequest`: Duyệt thành công, cập nhật appointment sang slot mới, request chuyển Approved, ghi audit log.
+      2. `Approve_WhenSlotConflictsWithAnotherAppointment_ShouldLeaveOldScheduleUnchanged_AndReturn409`: Xung đột ca khám khác khi duyệt -> Trả về 409 Conflict, lịch cũ giữ nguyên.
+      3. `Approve_WhenSlotConflictsWithDoctorTimeOff_ShouldLeaveOldScheduleUnchanged_AndReturn409`: Xung đột lịch nghỉ bác sĩ khi duyệt -> Trả về 409 Conflict, lịch cũ giữ nguyên.
+      4. `Reject_WithValidReason_ShouldKeepOldAppointment_AndSetRequestToRejected`: Từ chối thành công, request chuyển Rejected, lịch cũ giữ nguyên, ghi audit log.
+      5. `Reject_WithoutReason_ShouldFailWith400`: Từ chối thiếu lý do trả về 400 Bad Request.
+      6. `Review_ByNonStaffUser_ShouldFailWith403`: Người dùng không có quyền Staff bị từ chối 403 Forbidden.
+      7. `Review_WhenRequestAlreadyReviewed_ShouldFailWith400`: Không thể duyệt/từ chối lại yêu cầu đã xử lý (400 Bad Request).
+      8. `GetPendingRescheduleRequests_ShouldReturnOnlyPendingReviewRequests`: Queue chỉ trả về các yêu cầu PendingReview.
+      9. `ReceptionRescheduleRequestsController_ShouldHave_AuthorizeStaffOnlyAttribute`: Controller có attribute StaffOnly.
+    - Toàn bộ 245/245 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.17s, 0 Error.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ReviewRescheduleRequest/ReviewRescheduleResponse.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ReviewRescheduleRequest/ReviewRescheduleCommands.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ReviewRescheduleRequest/GetPendingRescheduleRequestsQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ReviewRescheduleRequest/ApproveRescheduleRequestCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ReviewRescheduleRequest/RejectRescheduleRequestCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/ReceptionRescheduleRequestsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/RescheduleReviewTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 245 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.17s)
+- Acceptance criteria evidence:
+  - FEAT-030 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
