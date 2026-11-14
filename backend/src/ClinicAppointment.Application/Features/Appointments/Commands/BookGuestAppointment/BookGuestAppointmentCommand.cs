@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ClinicAppointment.Application.Common.Exceptions;
 using ClinicAppointment.Application.Common.Helpers;
 using ClinicAppointment.Application.Common.Interfaces;
@@ -32,7 +33,9 @@ public record BookGuestAppointmentCommand(
     Guid DoctorId,
     Guid ServiceId,
     DateTime StartAtUtc,
-    string? ReasonForVisit) : IRequest<Result<BookGuestAppointmentResponse>>;
+    string? ReasonForVisit,
+    string? IdempotencyKey = null,
+    string? ClientIp = null) : IRequest<Result<BookGuestAppointmentResponse>>;
 
 public class BookGuestAppointmentCommandValidator : AbstractValidator<BookGuestAppointmentCommand>
 {
@@ -65,20 +68,68 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
 {
     private readonly IApplicationDbContext _context;
     private readonly IPatientDuplicateDetectionService _duplicateDetectionService;
+    private readonly IAbuseProtectionService _abuseProtectionService;
 
     public BookGuestAppointmentCommandHandler(
         IApplicationDbContext context,
-        IPatientDuplicateDetectionService duplicateDetectionService)
+        IPatientDuplicateDetectionService duplicateDetectionService,
+        IAbuseProtectionService abuseProtectionService)
     {
         _context = context;
         _duplicateDetectionService = duplicateDetectionService;
+        _abuseProtectionService = abuseProtectionService;
     }
 
     public async Task<Result<BookGuestAppointmentResponse>> Handle(
         BookGuestAppointmentCommand request, 
         CancellationToken cancellationToken)
     {
-        // 1. Kiểm tra bác sĩ và chuyên khoa hoạt động
+        var clientIp = request.ClientIp ?? "unknown";
+
+        // 1. Kiểm tra Abuse Protection & Rate Limiting (chống spam/flood booking)
+        if (_abuseProtectionService.IsBookingRateLimitExceeded(clientIp, request.PhoneNumber))
+        {
+            throw new RateLimitExceededException();
+        }
+
+        // 2. Kiểm tra Idempotency (chống duplicate booking khi retry mạng hoặc click đúp)
+        string? canonicalPayload = null;
+        if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
+        {
+            canonicalPayload = $"{request.FullName.Trim()}|{request.PhoneNumber.Trim()}|{request.DateOfBirth?.ToString("yyyy-MM-dd")}|{request.BirthYear}|{request.DoctorId}|{request.ServiceId}|{request.StartAtUtc:O}";
+            var keyHash = IdempotencyRecord.ComputeHash(request.IdempotencyKey.Trim());
+
+            var existingRecord = await _context.IdempotencyRecords
+                .FirstOrDefaultAsync(r => r.Scope == "GuestBooking" && r.KeyHash == keyHash, cancellationToken);
+
+            if (existingRecord != null && !existingRecord.IsExpired())
+            {
+                if (existingRecord.MatchesRequest(canonicalPayload))
+                {
+                    // Tình huống retry hợp lệ: Trả về kết quả trước đó mà không tạo thêm Appointment mới
+                    if (!string.IsNullOrEmpty(existingRecord.ResponseBodyJson))
+                    {
+                        var cachedResponse = JsonSerializer.Deserialize<BookGuestAppointmentResponse>(
+                            existingRecord.ResponseBodyJson,
+                            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+                        if (cachedResponse != null)
+                        {
+                            return Result<BookGuestAppointmentResponse>.Success(
+                                cachedResponse, 
+                                existingRecord.ResponseStatusCode ?? 201);
+                        }
+                    }
+                }
+                else
+                {
+                    // Tái sử dụng cùng Idempotency Key nhưng payload khác -> Báo lỗi Conflict (HTTP 409)
+                    throw new IdempotencyConflictException("Idempotency key này đã được sử dụng cho một yêu cầu đặt lịch khác với thông tin khác nhau. Vui lòng tạo key mới.");
+                }
+            }
+        }
+
+        // 3. Kiểm tra bác sĩ và chuyên khoa hoạt động
         var doctor = await _context.Doctors
             .Include(d => d.Specialty)
             .FirstOrDefaultAsync(d => d.Id == request.DoctorId && d.IsActive, cancellationToken);
@@ -89,14 +140,14 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
         if (doctor.Specialty != null && !doctor.Specialty.IsActive)
             return Result<BookGuestAppointmentResponse>.Failure("Chuyên khoa của bác sĩ hiện đang tạm ngưng hoạt động.", 400);
 
-        // 2. Kiểm tra dịch vụ hoạt động
+        // 4. Kiểm tra dịch vụ hoạt động
         var service = await _context.Services
             .FirstOrDefaultAsync(s => s.Id == request.ServiceId && s.IsActive, cancellationToken);
 
         if (service == null)
             return Result<BookGuestAppointmentResponse>.Failure("Dịch vụ khám không tồn tại hoặc tạm ngưng.", 404);
 
-        // 3. Quy đổi thời gian sang giờ địa phương Việt Nam và tính khoảng thời gian
+        // 5. Quy đổi thời gian sang giờ địa phương Việt Nam và tính khoảng thời gian
         var endAtUtc = request.StartAtUtc.AddMinutes(service.DurationMinutes);
         var localStart = TimeZoneHelper.ToLocal(request.StartAtUtc);
         var localEnd = TimeZoneHelper.ToLocal(endAtUtc);
@@ -107,7 +158,7 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
         // Thứ trong tuần theo chuẩn ISO 8601 (1 = Thứ Hai, ..., 7 = Chủ Nhật)
         var dayOfWeekIso = TimeZoneHelper.GetIsoDayOfWeek(localDate);
 
-        // 4. Kiểm tra ca làm việc của bác sĩ (DoctorSchedule)
+        // 6. Kiểm tra ca làm việc của bác sĩ (DoctorSchedule)
         var schedules = await _context.DoctorSchedules
             .Where(s => s.DoctorId == doctor.Id &&
                         s.DayOfWeek == dayOfWeekIso &&
@@ -122,7 +173,7 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
             return Result<BookGuestAppointmentResponse>.Failure("Khung giờ hẹn không nằm trong ca làm việc của bác sĩ.", 400);
         }
 
-        // 5. Kiểm tra xung đột ngày nghỉ được duyệt (DoctorTimeOff)
+        // 7. Kiểm tra xung đột ngày nghỉ được duyệt (DoctorTimeOff)
         bool hasTimeOff = await _context.DoctorTimeOffs
             .AnyAsync(t => t.DoctorId == doctor.Id &&
                            t.Status == TimeOffStatus.Active &&
@@ -134,7 +185,7 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
             throw new AppointmentConflictException("Bác sĩ có lịch nghỉ đã được duyệt trong khung giờ này.");
         }
 
-        // 6. Kiểm tra xung đột khóa lịch / bận (DoctorScheduleBlock)
+        // 8. Kiểm tra xung đột khóa lịch / bận (DoctorScheduleBlock)
         bool hasBlock = await _context.DoctorScheduleBlocks
             .AnyAsync(b => b.DoctorId == doctor.Id &&
                            b.StartAt < endAtUtc &&
@@ -145,7 +196,7 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
             throw new AppointmentConflictException("Khung giờ này đã bị khóa hoặc bác sĩ có lịch bận đột xuất.");
         }
 
-        // 7. Kiểm tra trùng lịch hẹn đang hoạt động (Active Appointments)
+        // 9. Kiểm tra trùng lịch hẹn đang hoạt động (Active Appointments)
         bool hasOverlap = await _context.Appointments
             .AnyAsync(a => a.DoctorId == doctor.Id &&
                            a.Status != AppointmentStatus.Cancelled &&
@@ -157,7 +208,7 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
             throw new AppointmentConflictException("Khung giờ đã có lịch hẹn khác. Vui lòng chọn khung giờ khác.");
         }
 
-        // 8. Thực hiện giao dịch lưu trữ (Transaction)
+        // 10. Thực hiện giao dịch lưu trữ (Transaction)
         bool supportsTransaction = _context.Database.ProviderName != null && 
                                    !_context.Database.ProviderName.Contains("InMemory", StringComparison.OrdinalIgnoreCase);
         
@@ -181,7 +232,6 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
             _context.Patients.Add(patient);
 
             // Nghiệp vụ rà soát trùng lặp hồ sơ (Strictly NO Auto-merge):
-            // Lấy các hồ sơ có thể trùng tên hoặc số điện thoại trong DB
             var candidates = await _context.Patients
                 .Where(p => p.NormalizedFullName == patient.NormalizedFullName || p.PhoneNumber == patient.PhoneNumber)
                 .ToListAsync(cancellationToken);
@@ -212,13 +262,6 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
 
             _context.Appointments.Add(appointment);
 
-            await _context.SaveChangesAsync(cancellationToken);
-
-            if (transaction != null)
-            {
-                await transaction.CommitAsync(cancellationToken);
-            }
-
             var response = new BookGuestAppointmentResponse(
                 appointment.Id,
                 appointment.BookingCode,
@@ -230,6 +273,33 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
                 appointment.EndAt,
                 appointment.Status,
                 "Quý khách vui lòng lưu lại Mã đặt lịch (Booking Code) và đến trước giờ hẹn 15 phút để hoàn tất thủ tục tiếp đón.");
+
+            // Lưu Idempotency Record nếu có IdempotencyKey
+            if (!string.IsNullOrWhiteSpace(request.IdempotencyKey) && !string.IsNullOrEmpty(canonicalPayload))
+            {
+                var responseJson = JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                var idempotencyRecord = IdempotencyRecord.Create(
+                    "GuestBooking",
+                    request.IdempotencyKey,
+                    canonicalPayload,
+                    "Appointment",
+                    appointment.Id,
+                    201,
+                    responseJson,
+                    TimeSpan.FromHours(24));
+
+                _context.IdempotencyRecords.Add(idempotencyRecord);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            // Ghi nhận lượt đặt lịch để kiểm soát rate limit
+            _abuseProtectionService.RecordBookingAttempt(clientIp, request.PhoneNumber);
 
             return Result<BookGuestAppointmentResponse>.Success(response, 201);
         }

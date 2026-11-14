@@ -5,9 +5,11 @@ using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Enums;
 using ClinicAppointment.Domain.Services;
 using ClinicAppointment.Infrastructure.Persistence;
+using ClinicAppointment.Infrastructure.Services;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Xunit;
 
 namespace ClinicAppointment.Domain.Tests;
@@ -20,6 +22,13 @@ public class GuestBookingApiTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private BookGuestAppointmentCommandHandler CreateHandler(ApplicationDbContext db)
+    {
+        var duplicateService = new PatientDuplicateDetectionService();
+        var abuseProtectionService = new AbuseProtectionService(new MemoryCache(new MemoryCacheOptions()));
+        return new BookGuestAppointmentCommandHandler(db, duplicateService, abuseProtectionService);
     }
 
     private (User User, Specialty Specialty, Doctor Doctor, Service Service) SeedDoctorAndService(
@@ -68,8 +77,7 @@ public class GuestBookingApiTests
         // Arrange
         using var db = CreateInMemoryDbContext();
         var (_, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         // Đặt lịch vào Thứ Hai 16/11/2026 lúc 09:00 sáng giờ VN (tức 02:00 UTC)
         var mondayDate = new DateOnly(2026, 11, 16);
@@ -118,8 +126,7 @@ public class GuestBookingApiTests
         // Arrange
         using var db = CreateInMemoryDbContext();
         var (_, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var date1 = new DateOnly(2026, 11, 16);
         var start1 = TimeZoneHelper.ToUtc(date1, new TimeOnly(9, 0));
@@ -145,8 +152,7 @@ public class GuestBookingApiTests
         // Arrange: Snapshot giữ nguyên ngay cả khi dịch vụ sau đó đổi giá/tên
         using var db = CreateInMemoryDbContext();
         var (_, specialty, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var date = new DateOnly(2026, 11, 16);
         var startAtUtc = TimeZoneHelper.ToUtc(date, new TimeOnly(9, 0));
@@ -176,8 +182,7 @@ public class GuestBookingApiTests
         // Arrange 1: Doctor inactive
         using var db = CreateInMemoryDbContext();
         var (_, _, doctor, service) = SeedDoctorAndService(db, doctorActive: false);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var date = new DateOnly(2026, 11, 16);
         var startAtUtc = TimeZoneHelper.ToUtc(date, new TimeOnly(9, 0));
@@ -195,7 +200,7 @@ public class GuestBookingApiTests
         // Arrange 2: Specialty inactive
         using var db2 = CreateInMemoryDbContext();
         var (_, specialty2, doctor2, service2) = SeedDoctorAndService(db2, doctorActive: true, specialtyActive: false);
-        var handler2 = new BookGuestAppointmentCommandHandler(db2, duplicateService);
+        var handler2 = CreateHandler(db2);
 
         // Act 2
         var res2 = await handler2.Handle(cmd with { DoctorId = doctor2.Id, ServiceId = service2.Id }, CancellationToken.None);
@@ -212,8 +217,7 @@ public class GuestBookingApiTests
         // Arrange: Bác sĩ làm 08:00 - 17:00 các ngày Thứ Hai - Thứ Sáu
         using var db = CreateInMemoryDbContext();
         var (_, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         // 1. Đặt vào ngày Chủ Nhật (22/11/2026) - không có ca làm việc
         var sundayDate = new DateOnly(2026, 11, 22);
@@ -241,8 +245,7 @@ public class GuestBookingApiTests
         // Arrange
         using var db = CreateInMemoryDbContext();
         var (user, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var mondayDate = new DateOnly(2026, 11, 16);
         var timeOffStartUtc = TimeZoneHelper.ToUtc(mondayDate, new TimeOnly(9, 0));
@@ -268,8 +271,7 @@ public class GuestBookingApiTests
         // Arrange
         using var db = CreateInMemoryDbContext();
         var (user, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var mondayDate = new DateOnly(2026, 11, 16);
         var blockStartUtc = TimeZoneHelper.ToUtc(mondayDate, new TimeOnly(10, 0));
@@ -294,8 +296,7 @@ public class GuestBookingApiTests
         // Arrange
         using var db = CreateInMemoryDbContext();
         var (_, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var mondayDate = new DateOnly(2026, 11, 16);
         var startUtc = TimeZoneHelper.ToUtc(mondayDate, new TimeOnly(9, 0));
@@ -319,8 +320,7 @@ public class GuestBookingApiTests
         // Arrange: Cuộc hẹn trước bị hủy -> giải phóng slot cho người khác đặt
         using var db = CreateInMemoryDbContext();
         var (_, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var mondayDate = new DateOnly(2026, 11, 16);
         var startUtc = TimeZoneHelper.ToUtc(mondayDate, new TimeOnly(9, 0));
@@ -350,8 +350,7 @@ public class GuestBookingApiTests
         // Arrange: Đã có bệnh nhân cũ tên "Trần Văn An", sinh ngày 15/05/1990 trong hệ thống
         using var db = CreateInMemoryDbContext();
         var (_, _, doctor, service) = SeedDoctorAndService(db);
-        var duplicateService = new PatientDuplicateDetectionService();
-        var handler = new BookGuestAppointmentCommandHandler(db, duplicateService);
+        var handler = CreateHandler(db);
 
         var existingPatient = Patient.Create("Trần Văn An", "0900000001", new DateOnly(1990, 5, 15), 1990, null, "an.old@example.com");
         db.Patients.Add(existingPatient);

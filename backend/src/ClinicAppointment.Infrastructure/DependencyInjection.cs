@@ -68,6 +68,10 @@ public static class DependencyInjection
         services.AddScoped<IRoleAssignmentPolicy, RoleAssignmentPolicy>();
         services.AddScoped<DatabaseSeeder>();
 
+        // Abuse Protection & Rate Limiting
+        services.AddMemoryCache();
+        services.AddSingleton<IAbuseProtectionService, AbuseProtectionService>();
+
         // Current User & Resource Authorization
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();

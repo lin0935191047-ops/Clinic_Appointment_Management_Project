@@ -631,7 +631,7 @@
       "module": "Security",
       "description": "Chống retry duplicates và abuse.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-023"
       ],
@@ -640,7 +640,16 @@
         "Rate limits applied",
         "Generic safe errors"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Acceptance Criteria 1 — Idempotency key avoids duplicate booking (DB-DEC-11, FR-023): Hỗ trợ Client truyền Idempotency Key qua Header 'Idempotency-Key'/'X-Idempotency-Key' hoặc trường body; lưu trữ thực thể IdempotencyRecord với KeyHash và RequestHash SHA-256 trong phạm vi Scope 'GuestBooking'; khi client retry mạng hoặc click đúp với cùng key và payload, hệ thống trả về kết quả đã lưu mà hoàn toàn không tạo thêm Appointment hay Patient mới (số lượng records trong DB được bảo toàn đúng 1)",
+        "Phát hiện sai lệch payload với cùng Idempotency Key: Khi client tái sử dụng cùng một idempotency key cho yêu cầu có payload khác nhau, hệ thống tự động phát hiện vi phạm tính toàn vẹn và ném IdempotencyConflictException (HTTP 409 Conflict) theo đúng quy tắc thiết kế Database Design",
+        "Xử lý hết hạn Idempotency (ExpiresAt): Bản ghi idempotency có thời hạn hiệu lực (TTL 24 giờ); khi hết hạn, key có thể được sử dụng lại cho ca khám mới",
+        "Acceptance Criteria 2 — Rate limits applied (docs/SECURITY.md): Triển khai IAbuseProtectionService kết hợp Sliding Window Cache Rate Limiter; giới hạn tối đa 3 lần đặt lịch trong 5 phút trên một số điện thoại (chống spam SMS OTP/flood booking) và 10 lần trên một địa chỉ IP; khi vượt quá ngưỡng, hệ thống tự động ném RateLimitExceededException và trả về HTTP 429 Too Many Requests kèm thông báo an toàn",
+        "Acceptance Criteria 3 — Generic safe errors (docs/API_SPECIFICATION.md): ExceptionHandlingMiddleware bắt giữ các ngoại lệ nội bộ và lỗi hệ thống 500, trả về ApiResponse envelope chuẩn ('Đã xảy ra lỗi nội bộ trên máy chủ. Vui lòng thử lại sau.') mà tuyệt đối không để rò rỉ stack trace, chi tiết lỗi SQL, mật khẩu kết nối hoặc thông tin nhạy cảm của hệ thống ra bên ngoài",
+        "Tích hợp chuẩn Unicode tiếng Việt: Cấu hình JavaScriptEncoder.UnsafeRelaxedJsonEscaping trên pipeline JSON serializer của ExceptionHandlingMiddleware đảm bảo thông điệp lỗi tiếng Việt chuẩn xác không bị escape ký tự",
+        "EF Core Migration & Idempotent SQL: Tạo migration 20261114083500_AddIdempotencyRecords.cs kèm index Unique trên (scope, key_hash) và đồng bộ kịch bản SQL idempotent trong database/migrations/20261114_initial_schema.sql",
+        "Bộ kiểm thử tự động tại BookingIdempotencyAndAbuseTests.cs: 10/10 test cases ĐẠT 100% (tổng 189/189 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

@@ -27,11 +27,36 @@ public class AppointmentsController : BaseApiController
     [HttpPost("guest")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<BookGuestAppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<BookGuestAppointmentResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> BookGuest([FromBody] BookGuestAppointmentCommand command, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(command, cancellationToken);
+        // 1. Nhận diện Idempotency-Key từ Request Header nếu client không truyền trong body
+        string? idempotencyKey = command.IdempotencyKey;
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            if (Request.Headers.TryGetValue("Idempotency-Key", out var headerKey) && !string.IsNullOrWhiteSpace(headerKey))
+            {
+                idempotencyKey = headerKey.ToString();
+            }
+            else if (Request.Headers.TryGetValue("X-Idempotency-Key", out var xHeaderKey) && !string.IsNullOrWhiteSpace(xHeaderKey))
+            {
+                idempotencyKey = xHeaderKey.ToString();
+            }
+        }
+
+        // 2. Thu thập Client IP để phòng chống lạm dụng (Abuse Protection)
+        var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        var commandWithSecurity = command with 
+        { 
+            IdempotencyKey = idempotencyKey, 
+            ClientIp = clientIp 
+        };
+
+        var result = await Mediator.Send(commandWithSecurity, cancellationToken);
         return HandleResult(result);
     }
 

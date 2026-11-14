@@ -47,6 +47,14 @@ public class ExceptionHandlingMiddleware
                 conflictEx.Message,
                 (int)HttpStatusCode.Conflict),
 
+            IdempotencyConflictException idempEx => ApiResponse<object>.Fail(
+                idempEx.Message,
+                (int)HttpStatusCode.Conflict),
+
+            RateLimitExceededException rateLimitEx => ApiResponse<object>.Fail(
+                rateLimitEx.Message,
+                429),
+
             DbUpdateException dbUpdateEx when IsExclusionOrUniqueConstraintViolation(dbUpdateEx) => ApiResponse<object>.Fail(
                 "Khung giờ khám này vừa có người khác đặt trước. Vui lòng chọn khung giờ khác.",
                 (int)HttpStatusCode.Conflict),
@@ -73,7 +81,11 @@ public class ExceptionHandlingMiddleware
         };
 
         context.Response.StatusCode = response.StatusCode;
-        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        var jsonOptions = new JsonSerializerOptions 
+        { 
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
         await context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
     }
 

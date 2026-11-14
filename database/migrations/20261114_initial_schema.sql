@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
     migration_id character varying(150) NOT NULL,
     product_version character varying(32) NOT NULL,
     CONSTRAINT pk___ef_migrations_history PRIMARY KEY (migration_id)
@@ -470,3 +470,33 @@ BEGIN
 END $EF$;
 COMMIT;
 
+
+
+-- Migration: 20261114083500_AddIdempotencyRecords
+START TRANSACTION;
+CREATE TABLE IF NOT EXISTS idempotency_records (
+    id uuid NOT NULL,
+    scope character varying(100) NOT NULL,
+    key_hash bytea NOT NULL,
+    request_hash bytea NOT NULL,
+    resource_type character varying(50) NULL,
+    resource_id uuid NULL,
+    response_status_code smallint NULL,
+    response_body_json text NULL,
+    expires_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NULL,
+    CONSTRAINT pk_idempotency_records PRIMARY KEY (id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ix_idempotency_records_scope_key_hash 
+ON idempotency_records (scope, key_hash);
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261114083500_AddIdempotencyRecords') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261114083500_AddIdempotencyRecords', '8.0.10');
+    END IF;
+END $EF$;
+COMMIT;

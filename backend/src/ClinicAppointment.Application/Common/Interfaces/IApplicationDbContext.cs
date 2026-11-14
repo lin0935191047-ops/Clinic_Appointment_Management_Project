@@ -23,6 +23,7 @@ public interface IApplicationDbContext
     DbSet<OtpChallenge> OtpChallenges { get; }
     DbSet<PatientIdentityReviewCase> PatientIdentityReviewCases { get; }
     DbSet<PatientMergeEvent> PatientMergeEvents { get; }
+    DbSet<IdempotencyRecord> IdempotencyRecords { get; }
 
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
 

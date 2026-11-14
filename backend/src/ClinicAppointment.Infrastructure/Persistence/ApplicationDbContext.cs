@@ -29,6 +29,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<PatientIdentityReviewCase> PatientIdentityReviewCases => Set<PatientIdentityReviewCase>();
     public DbSet<PatientMergeEvent> PatientMergeEvents => Set<PatientMergeEvent>();
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

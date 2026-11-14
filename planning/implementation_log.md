@@ -810,3 +810,76 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 4.89s)
 - Acceptance criteria evidence:
   - FEAT-023 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-024 — Booking Idempotency & Abuse Protection (Idempotency Key, Chống Trùng Lặp Retry, Rate Limiting & Generic Safe Errors)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entity `IdempotencyRecord` (`ClinicAppointment.Domain.Entities.IdempotencyRecord`):
+    - Quản lý `Scope`, `KeyHash` (SHA-256 bytea), `RequestHash` (SHA-256 bytea), `ResourceType`, `ResourceId`, `ResponseStatusCode`, `ResponseBodyJson`, `ExpiresAt`, `CreatedAt`.
+    - Bổ sung hàm tiện ích `ComputeHash`, `MatchesRequest`, `IsExpired`.
+    - Cấu hình EF Core `IdempotencyRecordConfiguration` với ràng buộc Unique trên `(Scope, KeyHash)` theo chuẩn Database Design (DB-DEC-11).
+  - Abuse Protection & Rate Limiting (`IAbuseProtectionService` & `AbuseProtectionService`):
+    - Quản lý bộ đệm Sliding Window Cache (`IMemoryCache`) theo dõi số lần gửi yêu cầu đặt lịch trong cửa sổ 5 phút.
+    - Giới hạn tối đa 3 lần đặt lịch trên một số điện thoại (chống spam SMS OTP và flood booking).
+    - Giới hạn tối đa 10 lần đặt lịch trên một địa chỉ IP client.
+    - Tự động ném `RateLimitExceededException` khi vượt ngưỡng cho phép.
+  - Tích hợp CQRS Command & Controller:
+    - `BookGuestAppointmentCommand`: Thêm trường `IdempotencyKey` và `ClientIp`.
+    - `AppointmentsController.cs`: Tự động nhận diện header `Idempotency-Key` hoặc `X-Idempotency-Key` và thu thập Remote IP của client để bảo vệ an toàn.
+    - `BookGuestAppointmentCommandHandler`:
+      1. Kiểm tra rate limit theo số điện thoại và IP client; ném `RateLimitExceededException` (HTTP 429) nếu vi phạm.
+      2. Kiểm tra Idempotency: Tra cứu bản ghi đã lưu theo `Scope = "GuestBooking"` và `KeyHash`.
+         - Nếu trùng payload: Trả về kết quả cached ngay lập tức (không gọi lại logic đặt lịch, không tạo thêm bản ghi Appointment/Patient nào).
+         - Nếu khác payload: Ném `IdempotencyConflictException` (HTTP 409 Conflict).
+      3. Khi đặt lịch thành công: Lưu `IdempotencyRecord` trong cùng giao dịch và ghi nhận lượt request vào abuse protection service.
+  - Exception Handling & Generic Safe Errors:
+    - `IdempotencyConflictException` -> HTTP 409 Conflict.
+    - `RateLimitExceededException` -> HTTP 429 Too Many Requests.
+    - Lỗi không kiểm soát (500): Trả về ApiResponse generic ("Đã xảy ra lỗi nội bộ trên máy chủ. Vui lòng thử lại sau."), giấu hoàn toàn stack trace, database query, mật khẩu hay chuỗi kết nối nhạy cảm.
+    - Cấu hình `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` hỗ trợ Unicode tiếng Việt chuẩn xác trong middleware.
+  - Database Migration & Idempotent SQL:
+    - Migration `20261114083500_AddIdempotencyRecords.cs` và `20261114083500_AddIdempotencyRecords.Designer.cs`.
+    - Cập nhật kịch bản SQL idempotent `database/migrations/20261114_initial_schema.sql`.
+  - Bộ kiểm thử tự động xUnit (`BookingIdempotencyAndAbuseTests.cs`):
+    - 10 test cases bao phủ toàn diện:
+      1. `Booking_WithIdempotencyKey_FirstCall_SucceedsAndPersistsRecord`: Đặt lịch kèm key thành công và lưu IdempotencyRecord vào DB.
+      2. `Booking_WithSameIdempotencyKey_AndSamePayload_ReturnsCachedResponse_WithoutCreatingDuplicateBooking`: Retry cùng key và payload trả về kết quả đã lưu mà KHÔNG tạo duplicate booking (số lượng appointment và patient trong DB vẫn là 1).
+      3. `Booking_WithSameIdempotencyKey_ButDifferentPayload_ThrowsConflictException`: Tái sử dụng key với payload khác ném `IdempotencyConflictException`.
+      4. `Booking_AbuseProtection_WhenExceedingPhoneRateLimit_ThrowsRateLimitExceededException`: Vượt quá 3 lần đặt/5 phút với cùng số điện thoại ném `RateLimitExceededException`.
+      5. `Booking_AbuseProtection_WhenExceedingIpRateLimit_ThrowsRateLimitExceededException`: Vượt quá 10 lần đặt/5 phút với cùng IP ném `RateLimitExceededException`.
+      6. `Booking_ExpiredIdempotencyRecord_AllowsNewBooking`: Key đã hết hạn (TTL 24h) được chấp nhận cho ca khám mới.
+      7. `ExceptionHandlingMiddleware_MapsIdempotencyConflict_ToHttp409Conflict`: Middleware ánh xạ `IdempotencyConflictException` thành HTTP 409.
+      8. `ExceptionHandlingMiddleware_MapsRateLimitExceeded_ToHttp429TooManyRequests`: Middleware ánh xạ `RateLimitExceededException` thành HTTP 429.
+      9. `ExceptionHandlingMiddleware_GenericSafeErrors_HidesInternalDetailsOnUnexpectedException`: Lỗi 500 giấu kín tuyệt đối mật khẩu database và chuỗi kết nối, trả về thông báo generic an toàn.
+      10. `IdempotencyRecord_ComputeHash_MatchesSha256Deterministically`: Kiểm tra tính nhất quán và xác định của hàm băm SHA-256.
+    - Toàn bộ 189/189 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 4.87s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/IdempotencyRecord.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IAbuseProtectionService.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Exceptions/IdempotencyConflictException.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Exceptions/RateLimitExceededException.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/BookGuestAppointment/BookGuestAppointmentCommand.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/IdempotencyRecordConfiguration.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114083500_AddIdempotencyRecords.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114083500_AddIdempotencyRecords.Designer.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Services/AbuseProtectionService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/src/ClinicAppointment.Api/Middlewares/ExceptionHandlingMiddleware.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/BookingIdempotencyAndAbuseTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/GuestBookingApiTests.cs`
+  - `database/migrations/20261114_initial_schema.sql`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 189 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 4.87s)
+- Acceptance criteria evidence:
+  - FEAT-024 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

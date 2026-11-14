@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-023 Completed)
-- Current phase: Booking idempotency and abuse protection (FEAT-024)
+- Overall status: In progress (FEAT-001 through FEAT-024 Completed)
+- Current phase: OTP challenge service (FEAT-025)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-023)
+## Features Completed (FEAT-001 -> FEAT-024)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -32,10 +32,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-021` (Availability calculation): Thuật toán tính khung giờ khả dụng cho Bác sĩ; Chia slot theo thời lượng dịch vụ DurationMinutes; Không hiển thị ngoài lịch làm việc; Tự động loại trừ ngày nghỉ DoctorTimeOff, khung giờ bận DoctorScheduleBlock, và các ca khám đang hoạt động Appointments; Giải phóng slot cho lịch hẹn đã hủy Cancelled; Bảo mật tuyệt đối không lộ thông tin bệnh nhân; Endpoint công khai GET /api/v1/availability; 158/158 unit tests PASS.
 - `FEAT-022` (PostgreSQL no-overlap constraint): GiST Exclusion constraint (ex_appointments_doctor_no_overlap) trên appointments(doctor_id, tstzrange(start_at, end_at, '[)')) WHERE (status <> 'Cancelled') bảo vệ tầng cuối ở PostgreSQL; Chống race condition đặt trùng ca đồng thời; ExceptionHandlingMiddleware ánh xạ chuẩn xác ngoại lệ vi phạm constraint và AppointmentConflictException thành HTTP 409 Conflict; 168/168 unit tests PASS.
 - `FEAT-023` (Guest booking API): Tạo lịch khám công khai không yêu cầu tài khoản/JWT ([AllowAnonymous]); Hồ sơ bệnh nhân độc lập (UserId = null); Strictly NO Auto-merge: quét ứng viên trùng lặp mở PatientIdentityReviewCase trạng thái OPEN để lễ tân đối soát tại quầy; Sinh BookingCode ngẫu nhiên duy nhất khó đoán (format APT-yyyyMMdd-XXXXXX); Lưu snapshot bất biến của dịch vụ (tên, giá, thời lượng); Kiểm tra Availability và ca làm việc; Bọc trong Database Transaction với rollback khi lỗi; 179/179 unit tests PASS.
+- `FEAT-024` (Booking idempotency and abuse protection): Hỗ trợ Idempotency Key qua Header 'Idempotency-Key'/'X-Idempotency-Key' hoặc body; Thực thể IdempotencyRecord với KeyHash và RequestHash SHA-256; Chống duplicate booking khi retry mạng hoặc click đúp (giữ nguyên duy nhất 1 booking record); Phát hiện và ném IdempotencyConflictException (HTTP 409 Conflict) khi tái sử dụng key với payload khác; Quản lý thời hạn TTL 24h; Abuse Protection & Rate Limiting (IAbuseProtectionService): giới hạn 3 lần/5 phút theo số điện thoại (chống spam SMS OTP/flood booking) và 10 lần/5 phút theo IP; Generic Safe Errors qua ExceptionHandlingMiddleware bắt lỗi 500 giấu chi tiết nhạy cảm (không lộ stack trace/connection string/password); 189/189 unit tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-024 (Booking idempotency and abuse protection: Chống retry trùng lặp và lạm dụng đặt lịch).
-2. Triển khai FEAT-025 (Guest OTP issuance and verification: Cấp phát và xác thực OTP tra cứu, đổi lịch, hủy lịch).
+1. Triển khai FEAT-025 (OTP challenge service: OTP purpose-bound LOOKUP/RESCHEDULE/CANCEL, SMS abstraction, hashing & attempts).
+2. Triển khai FEAT-026 (Guest appointment lookup API: Tra cứu lịch khám công khai bằng BookingCode + OTP grant).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.
