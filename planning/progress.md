@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-030 Completed)
-- Current phase: Cancellation policy calculation & cancellation API (FEAT-031 / FEAT-032)
+- Overall status: In progress (FEAT-001 through FEAT-031 Completed)
+- Current phase: Guest cancellation API (FEAT-032)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-030)
+## Features Completed (FEAT-001 -> FEAT-031)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -39,10 +39,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-028` (Appointment confirmation): Xác nhận ca khám từ PendingConfirmation sang Confirmed; Bảo vệ nghiêm ngặt bằng policy StaffOnly (chỉ Receptionist hoặc Admin); Từ chối xác nhận ca khám ở trạng thái không hợp lệ (Confirmed, Cancelled, Completed, CheckedIn - HTTP 400); Ghi nhận lịch sử kiểm toán toàn vẹn trong bảng audit_logs (ActorType, ActorUserId, Action='CONFIRM_APPOINTMENT', EntityType='Appointment', EntityId, OccurredAt, MetadataRedacted an toàn không chứa PII); Endpoint POST /api/v1/reception/appointments/{id}/confirm và alias POST /api/v1/appointments/{id}/confirm; EF migration 20261114090000_AddAuditLogs; 226/226 unit tests PASS.
 - `FEAT-029` (Reschedule request submission): Tạo yêu cầu đổi lịch sau khi xác thực OTP với Scoped Grant token (Purpose: RESCHEDULE, One-time use); Thực thể RescheduleRequest trạng thái PendingReview; Giữ nguyên 100% thông tin slot cũ (Old slot held) của Appointment; Quy tắc One pending request (tối đa 1 yêu cầu đổi lịch chờ duyệt cho mỗi ca khám, vi phạm trả về 409 Conflict); Kiểm tra sơ bộ tính khả dụng khung giờ đề xuất (ngày nghỉ, lịch bận, trùng lịch khác); Endpoint POST /api/v1/appointments/{bookingCode}/reschedule-requests ([AllowAnonymous]); 236/236 unit tests PASS.
 - `FEAT-030` (Reschedule approval/rejection): Lễ tân duyệt hoặc từ chối yêu cầu đổi lịch; Phân quyền StaffOnly (chỉ Receptionist hoặc Admin); Duyệt trong Database Transaction kiểm tra lại availability/xung đột (Approve transactionally); Giữ nguyên lịch khám ban đầu 100% khi từ chối hoặc khi khung giờ đề xuất bị xung đột (Reject/Conflict leaves old appointment); Queue duyệt GET /api/v1/reception/reschedule-requests; Endpoints POST approve/reject; Ghi audit log; 245/245 unit tests PASS.
+- `FEAT-031` (Cancellation policy calculation): Tính toán tỷ lệ hoàn phí và phí hủy theo mốc 60 phút và Server Clock (RefundCalculator, ICancellationPolicyService); minutesBefore >= 60 phút (gồm đúng 60 phút): hoàn 100%, phí hủy 0%; 0 < minutesBefore < 60 phút: hoàn 50%, phí hủy 50%; minutesBefore <= 0 (tại/sau giờ hẹn): từ chối tự hủy (CanCancel = false); Làm tròn tiền VND số nguyên chuẩn; Hỗ trợ endpoint preview chính sách hủy POST /api/v1/appointments/{bookingCode}/cancellation-preview; 254/254 unit tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-031 (Cancellation policy calculation: Tính toán tỷ lệ và số tiền hoàn phí dựa theo mốc 60 phút và server clock: >= 60 phút hoàn 100%, < 60 phút hoàn 50%, tại/sau giờ hẹn từ chối).
-2. Triển khai FEAT-032 (Guest cancellation API: Khách hủy lịch bằng OTP grant CANCEL; server tính hoàn tiền và lưu Refund).
+1. Triển khai FEAT-032 (Guest cancellation workflow/API: Bệnh nhân/Guest hủy lịch sau OTP với Scoped Grant CANCEL; tự động tính hoàn tiền, cập nhật Appointment Cancelled và lưu bản ghi Refund trong cùng transaction).
+2. Triển khai FEAT-033 (Refund record creation: Ghi nhận đầy đủ chi tiết giao dịch hoàn tiền).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

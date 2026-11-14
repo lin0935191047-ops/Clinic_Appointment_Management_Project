@@ -832,9 +832,9 @@
       "id": "FEAT-031",
       "name": "Cancellation policy calculation",
       "module": "Cancellation",
-      "description": "Tính refund policy với server clock.",
+      "description": "Tính toán chính sách hoàn tiền và phí hủy dựa theo mốc 60 phút và Server Clock; >= 60 phút hoàn 100%, < 60 phút hoàn 50%, tại/sau giờ hẹn từ chối.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-023"
       ],
@@ -845,8 +845,19 @@
         "At/after start denied",
         "Unit tests pass"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "backend/tests/ClinicAppointment.Domain.Tests/RefundCalculationTests.cs: 10 tests (Calculate_WhenCancelled61MinutesBefore_ShouldRefund100Percent, Calculate_WhenCancelledExactly60MinutesBefore_ShouldRefund100Percent, Calculate_WhenCancelled59MinutesBefore_ShouldRefund50Percent, Calculate_VariousMinutesUnder60_ShouldRefund50Percent, Calculate_WhenCancelledAtOrAfterStart_ShouldThrowException, Calculate_WhenUnpaid_ShouldRefundZeroAndFeeZero, Calculate_WhenOddAmount_ShouldRoundVndToInteger, CancellationPolicyService_Evaluate_WhenPast_ShouldReturnCanCancelFalse_AndDenialReason, CancellationPolicyService_Evaluate_When60MinutesBefore_ShouldReturn100Percent, PreviewCancellationPolicy_WithValidGrantToken_ShouldReturnAccuratePreview)",
+        "dotnet test ClinicAppointment.Domain.Tests: 254/254 passed",
+        "frontend: npm run build passed"
+      ],
+      "notes": [
+        "Quy tắc mốc 60 phút: minutesBefore >= 60.0 (bao gồm đúng 60 phút 0 giây) hoàn 100% phí dịch vụ đã thanh toán (CancellationFeeRate = 0%, RefundRate = 100%)",
+        "Quy tắc dưới 60 phút: 0 < minutesBefore < 60.0 hoàn 50% phí dịch vụ đã thanh toán (CancellationFeeRate = 50%, RefundRate = 50%)",
+        "Quy tắc tại/sau giờ hẹn: minutesBefore <= 0 bệnh nhân không được phép tự hủy (CanCancel = false)",
+        "Chưa thanh toán (PaidAmount = 0): RefundAmount = 0, CancellationFeeAmount = 0 (không tự thu phí khi chưa có policy thu ngoài TBD-04)",
+        "Làm tròn tiền theo currency: VND làm tròn số nguyên chuẩn (Math.Round AwayFromZero)",
+        "Dịch vụ ICancellationPolicyService và endpoint POST /api/v1/appointments/{bookingCode}/cancellation-preview cho phép preview minh bạch không tiêu thụ grant token"
+      ]
     },
     {
       "id": "FEAT-032",

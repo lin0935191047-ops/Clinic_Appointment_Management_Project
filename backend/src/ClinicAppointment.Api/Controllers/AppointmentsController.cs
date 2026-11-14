@@ -145,6 +145,45 @@ public class AppointmentsController : BaseApiController
     }
 
     /// <summary>
+    /// Xem trước chính sách hủy và số tiền hoàn dự kiến theo Server Clock (FEAT-031)
+    /// </summary>
+    [HttpPost("{bookingCode}/cancellation-preview")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<ClinicAppointment.Application.Features.Appointments.Queries.PreviewCancellationPolicy.CancellationPreviewDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PreviewCancellationPolicy(
+        [FromRoute] string bookingCode,
+        [FromBody] ClinicAppointment.Application.Features.Appointments.Queries.LookupAppointment.LookupAppointmentRequest? body,
+        CancellationToken cancellationToken)
+    {
+        string? grantToken = body?.GrantToken;
+        if (string.IsNullOrWhiteSpace(grantToken))
+        {
+            if (Request.Headers.TryGetValue("X-Appointment-Grant", out var headerGrant) && !string.IsNullOrWhiteSpace(headerGrant))
+            {
+                grantToken = headerGrant.ToString();
+            }
+            else if (Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                var authStr = authHeader.ToString();
+                if (authStr.StartsWith("Grant ", StringComparison.OrdinalIgnoreCase))
+                {
+                    grantToken = authStr.Substring(6).Trim();
+                }
+            }
+        }
+
+        var query = new ClinicAppointment.Application.Features.Appointments.Queries.PreviewCancellationPolicy.PreviewCancellationPolicyQuery(
+            bookingCode,
+            grantToken);
+
+        var result = await Mediator.Send(query, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
     /// Xem chi tiết lịch khám theo Id (Kiểm tra quyền sở hữu ca khám, chống IDOR)
     /// </summary>
     [HttpGet("{id:guid}")]

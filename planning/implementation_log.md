@@ -1225,3 +1225,51 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.17s)
 - Acceptance criteria evidence:
   - FEAT-030 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+## 2026-11-14 — FEAT-031: Cancellation policy calculation
+- Summary:
+  - Triển khai và hoàn thiện logic tính toán chính sách hủy và hoàn tiền (Cancellation policy calculation) dựa trên mốc 60 phút và Server Clock (Module Cancellation), tuân thủ nghiêm ngặt quy định bất biến của dự án (AGENTS.md, docs/SPEC.md v1.2, docs/BUSINESS_RULES.md BR-010).
+  - Quy tắc ranh giới mốc thời gian hoàn tiền:
+    - `minutesBefore >= 60.0`: Hủy từ 60 phút trở lên (bao gồm đúng mốc 60 phút 0 giây trước giờ hẹn): tỷ lệ hoàn phí 100% (`RefundRate = 1.0m`), phí hủy 0% (`CancellationFeeRate = 0.0m`).
+    - `0 < minutesBefore < 60.0`: Hủy dưới 60 phút nhưng trước giờ hẹn: tỷ lệ hoàn phí 50% (`RefundRate = 0.50m`), phí hủy 50% (`CancellationFeeRate = 0.50m`).
+    - `minutesBefore <= 0`: Tại hoặc sau thời điểm bắt đầu ca khám: bệnh nhân/guest **tự hủy bị từ chối** (`CanCancel = false`), ném ngoại lệ hoặc trả về denial reason không cho phép tự hủy.
+  - Quy tắc xử lý tài chính & Làm tròn tiền:
+    - Áp dụng trên phí dịch vụ đã thanh toán (`paidServiceAmount`).
+    - Nếu chưa thanh toán (`paidServiceAmount <= 0`): `ExpectedRefundAmount = 0m`, `CancellationFeeAmount = 0m`; không tự tính âm hoặc tự thu phí khi chưa có policy thu ngoài (TBD-04).
+    - Làm tròn số tiền VND theo chuẩn số nguyên: `Math.Round(amount, 0, MidpointRounding.AwayFromZero)`.
+  - Dịch vụ ứng dụng & Endpoint Preview:
+    - Tạo `ICancellationPolicyService` và `CancellationPolicyService` trong Application layer, inject vào DI.
+    - Cung cấp endpoint xem trước chính sách hủy `POST /api/v1/appointments/{bookingCode}/cancellation-preview` ([AllowAnonymous]) cho phép hiển thị minh bạch số tiền hoàn và giải thích chính sách trước khi người dùng xác nhận hủy (không tiêu thụ grant token khi chỉ preview).
+  - Bộ kiểm thử tự động xUnit (`RefundCalculationTests.cs`):
+    - 10 test cases bao phủ đầy đủ toàn diện các tiêu chí nghiệm thu:
+      1. `Calculate_WhenCancelled61MinutesBefore_ShouldRefund100Percent`: Hủy 61 phút trước giờ hẹn -> Hoàn 100%, phí hủy 0%.
+      2. `Calculate_WhenCancelledExactly60MinutesBefore_ShouldRefund100Percent`: Đúng 60 phút trước giờ hẹn -> Hoàn 100%, phí hủy 0%.
+      3. `Calculate_WhenCancelled59MinutesBefore_ShouldRefund50Percent`: Hủy 59 phút trước giờ hẹn -> Hoàn 50%, phí hủy 50%.
+      4. `Calculate_VariousMinutesUnder60_ShouldRefund50Percent`: Các mốc thời gian 45, 30, 15, 1 phút đều hoàn 50%.
+      5. `Calculate_WhenCancelledAtOrAfterStart_ShouldThrowException`: Hủy tại thời điểm 0 phút hoặc sau giờ hẹn (-5 phút, -60 phút) -> Ném ngoại lệ bị từ chối.
+      6. `Calculate_WhenUnpaid_ShouldRefundZeroAndFeeZero`: Chưa thanh toán -> Hoàn 0, phí 0.
+      7. `Calculate_WhenOddAmount_ShouldRoundVndToInteger`: Giá dịch vụ lẻ (355.555 đ) -> Làm tròn số nguyên VND chuẩn.
+      8. `CancellationPolicyService_Evaluate_WhenPast_ShouldReturnCanCancelFalse_AndDenialReason`: Đánh giá ca khám quá khứ trả về `CanCancel = false`.
+      9. `CancellationPolicyService_Evaluate_When60MinutesBefore_ShouldReturn100Percent`: Đánh giá ca khám 60 phút trước giờ hẹn trả về `CanCancel = true`, hoàn 100%.
+      10. `PreviewCancellationPolicy_WithValidGrantToken_ShouldReturnAccuratePreview`: Xem trước chính sách hủy với grant token hợp lệ thành công và không tiêu thụ grant token.
+    - Toàn bộ 254/254 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.59s, 0 Error.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Domain/Services/RefundCalculator.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Services/ICancellationPolicyService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Services/CancellationPolicyService.cs`
+  - `backend/src/ClinicAppointment.Application/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/PreviewCancellationPolicy/PreviewCancellationPolicyQuery.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/RefundCalculationTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 254 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.59s)
+- Acceptance criteria evidence:
+  - FEAT-031 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
