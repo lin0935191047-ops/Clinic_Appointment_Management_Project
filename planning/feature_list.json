@@ -428,7 +428,7 @@
       "module": "Catalog",
       "description": "Quản lý hồ sơ bác sĩ và staff account.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-010",
         "FEAT-016"
@@ -438,7 +438,16 @@
         "Public DTO không lộ private data",
         "Deactivate giữ lịch sử"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Liên kết hồ sơ Bác sĩ với tài khoản người dùng: Mỗi Doctor bắt buộc liên kết với 1 User duy nhất (Unique UserId); tự động khởi tạo User mới hoặc liên kết User sẵn có và cấp quyền Role DOCTOR",
+        "Ràng buộc duy nhất DoctorCode: Kiểm tra tính duy nhất toàn hệ thống, ngăn chặn trùng lặp mã bác sĩ",
+        "Liên kết chuyên khoa hợp lệ: Kiểm tra SpecialtyId tồn tại và đang hoạt động (IsActive == true) trước khi tạo hoặc cập nhật hồ sơ bác sĩ",
+        "Public Catalog Doctor view (FR-003 Invariant): GetActiveDoctorsQuery chỉ hiển thị các bác sĩ có IsActive == true và chuyên khoa của họ cũng IsActive == true; hỗ trợ lọc theo SpecialtyId hoặc SpecialtySlug",
+        "Bảo vệ dữ liệu riêng tư (No private data leakage): DTO công khai DoctorDto chỉ trả về thông tin chuyên môn công khai (DoctorCode, FullName, Title, Bio, RoomNumber, SpecialtyName), không lộ mật khẩu, CCCD hoặc thông tin nhạy cảm của User",
+        "Cơ chế Deactivate giữ lịch sử: Khi xóa bác sĩ đã có lịch hẹn khám trong hệ thống, hệ thống tự động chuyển sang IsActive = false (soft delete / deactivation) để bảo toàn lịch sử y tế và kiểm toán",
+        "API Controllers: DoctorsController công khai cho Guest/Patient xem và lọc; AdminDoctorsController phân quyền StaffOnly cho xem danh sách và AdminOnly cho các mutation (Create, Update, SetStatus, Delete)",
+        "Bộ kiểm thử tự động tại DoctorManagementTests.cs: 11/11 test cases ĐẠT 100% (tổng 116/116 unit tests toàn solution PASS 100%)"
+      ],
       "notes": []
     },
     {

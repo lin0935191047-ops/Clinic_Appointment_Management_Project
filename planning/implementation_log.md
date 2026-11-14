@@ -429,3 +429,50 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-016 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-017 — Doctor Management (Staff Account Link, DoctorCode Unique, Specialty Link, Public Filter & Deactivation)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entity `Doctor`:
+    - Bổ sung `Doctor.Create(userId, specialtyId, doctorCode, fullName, title, bio, roomNumber, isActive)`.
+    - Bổ sung `Doctor.Update(specialtyId, fullName, title, bio, roomNumber, isActive)` và `Doctor.SetStatus(isActive)`.
+  - Quản lý tài khoản người dùng và phân quyền (Staff Account Link):
+    - Tự động tạo tài khoản User mới hoặc liên kết tài khoản User đã có với Role `DOCTOR`.
+    - Ràng buộc 1 User chỉ liên kết với tối đa 1 hồ sơ Doctor (Unique `UserId`).
+  - Ràng buộc Cơ sở dữ liệu:
+    - Bảng `doctors`: `DoctorCode` unique toàn hệ thống, `SpecialtyId` liên kết với bảng `specialties`.
+    - Kiểm tra tính hợp lệ của chuyên khoa: `SpecialtyId` phải tồn tại và đang hoạt động (`IsActive == true`).
+  - CQRS Commands & Queries:
+    - Commands: `CreateDoctorCommand`, `UpdateDoctorCommand`, `SetDoctorStatusCommand`, `DeleteDoctorCommand`.
+    - Queries: `GetActiveDoctorsQuery` (Public catalog FR-003, chỉ trả về bác sĩ đang hoạt động và thuộc chuyên khoa đang hoạt động, hỗ trợ lọc theo `specialtyId` hoặc `specialtySlug`), `GetDoctorByIdQuery`, `GetAllDoctorsQuery`.
+  - Bảo vệ dữ liệu riêng tư (No private data leakage):
+    - DTO công khai `DoctorDto` chỉ cung cấp thông tin chuyên môn công khai (`DoctorCode`, `FullName`, `Title`, `Bio`, `RoomNumber`, `SpecialtyName`), tuyệt đối không để lộ mật khẩu hay thông tin nhạy cảm.
+  - Cơ chế Deactivate an toàn:
+    - Khi bác sĩ đã có lịch hẹn khám (`Appointments`), yêu cầu xóa sẽ tự động chuyển sang `IsActive = false` (soft delete) thay vì xóa vật lý để bảo toàn lịch sử y tế và kiểm toán.
+  - API Controllers:
+    - `DoctorsController` (`/api/v1/doctors`): `[AllowAnonymous]` phục vụ công khai cho khách và bệnh nhân.
+    - `AdminDoctorsController` (`/api/v1/admin/doctors`): `[Authorize(Policy = "StaffOnly")]` cho truy vấn nội bộ và `[Authorize(Policy = "AdminOnly")]` cho các thao tác tạo mới, cập nhật, đổi trạng thái và xóa.
+  - FluentValidation:
+    - `CreateDoctorRequestValidator` và `UpdateDoctorRequestValidator`.
+  - Bộ kiểm thử tự động xUnit:
+    - Xây dựng 11 test cases mới trong `DoctorManagementTests.cs` kiểm tra toàn bộ luồng tạo bác sĩ, liên kết tài khoản User và gán Role `DOCTOR`, kiểm tra bắt lỗi trùng `DoctorCode`, bắt lỗi trùng `UserId`, kiểm tra chuyên khoa Inactive, kiểm tra Public Catalog Filter theo chuyên khoa, Status Toggle và Soft Delete.
+    - Toàn bộ 116/116 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch Frontend: `npm run build` chạy thành công 100% trong 5.44s.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/CatalogAndScheduling.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Doctors/DTOs/DoctorDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Doctors/Validators/DoctorValidators.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Doctors/Commands/DoctorCommands.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Doctors/Queries/DoctorQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorsController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AdminDoctorsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/DoctorManagementTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 116 Passed, 0 Failed)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-017 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

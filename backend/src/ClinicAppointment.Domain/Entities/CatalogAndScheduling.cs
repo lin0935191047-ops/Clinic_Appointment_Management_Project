@@ -89,6 +89,74 @@ public class Doctor : BaseEntity
 
     public virtual Specialty? Specialty { get; set; }
     public virtual ICollection<DoctorSchedule> Schedules { get; set; } = new List<DoctorSchedule>();
+
+    public static Doctor Create(
+        Guid userId, 
+        Guid specialtyId, 
+        string doctorCode, 
+        string fullName, 
+        string? title = null, 
+        string? bio = null, 
+        string? roomNumber = null, 
+        bool isActive = true)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("Tài khoản người dùng liên kết không hợp lệ.", nameof(userId));
+
+        if (specialtyId == Guid.Empty)
+            throw new ArgumentException("Chuyên khoa liên kết không hợp lệ.", nameof(specialtyId));
+
+        if (string.IsNullOrWhiteSpace(doctorCode))
+            throw new ArgumentException("Mã bác sĩ không được để trống.", nameof(doctorCode));
+
+        if (string.IsNullOrWhiteSpace(fullName))
+            throw new ArgumentException("Họ và tên bác sĩ không được để trống.", nameof(fullName));
+
+        return new Doctor
+        {
+            UserId = userId,
+            SpecialtyId = specialtyId,
+            DoctorCode = doctorCode.Trim().ToUpperInvariant(),
+            FullName = fullName.Trim(),
+            Title = title?.Trim(),
+            Bio = bio?.Trim(),
+            RoomNumber = roomNumber?.Trim(),
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public void Update(
+        Guid specialtyId, 
+        string fullName, 
+        string? title = null, 
+        string? bio = null, 
+        string? roomNumber = null, 
+        bool? isActive = null)
+    {
+        if (specialtyId == Guid.Empty)
+            throw new ArgumentException("Chuyên khoa liên kết không hợp lệ.", nameof(specialtyId));
+
+        if (string.IsNullOrWhiteSpace(fullName))
+            throw new ArgumentException("Họ và tên bác sĩ không được để trống.", nameof(fullName));
+
+        SpecialtyId = specialtyId;
+        FullName = fullName.Trim();
+        Title = title?.Trim();
+        Bio = bio?.Trim();
+        RoomNumber = roomNumber?.Trim();
+        if (isActive.HasValue)
+        {
+            IsActive = isActive.Value;
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetStatus(bool isActive)
+    {
+        IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
 public class DoctorSchedule : BaseEntity
