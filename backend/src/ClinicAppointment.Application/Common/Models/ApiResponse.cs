@@ -58,7 +58,7 @@ public class Result<T>
         StatusCode = statusCode;
     }
 
-    public static Result<T> Success(T value) => new(true, value, string.Empty, 200);
+    public static Result<T> Success(T value, int statusCode = 200) => new(true, value, string.Empty, statusCode);
     public static Result<T> Failure(string error, int statusCode = 400) => new(false, default, error, statusCode);
 }
 

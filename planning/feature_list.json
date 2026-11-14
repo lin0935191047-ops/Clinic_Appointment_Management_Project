@@ -599,7 +599,7 @@
       "module": "Appointment",
       "description": "Tạo lịch công khai không JWT.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-011",
         "FEAT-018",
@@ -613,7 +613,16 @@
         "Price/duration snapshots",
         "Transaction rollback tested"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Acceptance Criteria 1 — POST succeeds without token: Endpoint POST /api/v1/appointments/guest gắn [AllowAnonymous], cho phép Khách vãng lai (Guest) đặt lịch khám thành công không cần JWT Bearer token hay đăng ký tài khoản; trả về HTTP 201 Created kèm BookingCode, thông tin ca khám, snapshot dịch vụ và hướng dẫn tiếp đón",
+        "Acceptance Criteria 2 — Patient may have no User (FR-022, BR-001): Hồ sơ bệnh nhân được tạo tự động với Patients.UserId = null, hoàn toàn độc lập, tuyệt đối không tự động tạo User cho Guest; xác thực số điện thoại và họ tên đầy đủ + ngày sinh hoặc năm sinh",
+        "Quy tắc nghiệp vụ cốt lõi — Strictly NO Auto-merge (BR-002): Tích hợp IPatientDuplicateDetectionService để rà soát candidate trùng họ tên + ngày sinh/năm sinh (NAME_DOB, NAME_BIRTH_YEAR); tuyệt đối không tự động gộp bệnh nhân, tạo hồ sơ mới độc lập kèm một PatientIdentityReviewCase trạng thái OPEN để nhân viên lễ tân đối soát tại quầy tiếp đón",
+        "Acceptance Criteria 3 — Unique random BookingCode (FR-023): Sinh mã đặt lịch ngẫu nhiên định dạng APT-yyyyMMdd-XXXXXX (CSPRNG hex), duy nhất, khó đoán, không tuần tự và tuyệt đối không chứa thông tin định danh cá nhân (PII)",
+        "Acceptance Criteria 4 — Price/duration snapshots (FR-024): Lưu snapshot bất biến gồm ServiceNameSnapshot, ServiceDurationSnapshot, ServicePriceSnapshot, tiền tệ VND, PaidAmount = 0.0; bảo toàn nguyên vẹn giá trị lịch sử kể cả khi bảng Services sau này cập nhật tên hoặc điều chỉnh giá dịch vụ",
+        "Kiểm tra Availability & Ràng buộc ca làm việc: Kiểm tra trạng thái Active của Bác sĩ, Chuyên khoa (FR-004) và Dịch vụ; từ chối khi đặt ngoài ca làm việc DoctorSchedule; tự động ném AppointmentConflictException (HTTP 409 Conflict) khi bác sĩ có lịch nghỉ DoctorTimeOff, lịch bận DoctorScheduleBlock, hoặc slot đã có người đặt trước; cuộc hẹn đã hủy (Cancelled) giải phóng slot cho người khác đặt bình thường",
+        "Acceptance Criteria 5 — Transaction rollback tested: Thao tác tạo Patient, rà soát trùng lặp mở ReviewCase, và tạo Appointment được bọc trong Database Transaction; đảm bảo tính toàn vẹn (ACID) và rollback sạch sẽ nếu xảy ra xung đột hay lỗi phát sinh trong quá trình lưu",
+        "Bộ kiểm thử tự động tại GuestBookingApiTests.cs: 11/11 test cases ĐẠT 100% (tổng 179/179 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

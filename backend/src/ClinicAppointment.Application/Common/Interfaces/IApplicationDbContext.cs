@@ -24,5 +24,7 @@ public interface IApplicationDbContext
     DbSet<PatientIdentityReviewCase> PatientIdentityReviewCases { get; }
     DbSet<PatientMergeEvent> PatientMergeEvents { get; }
 
+    Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

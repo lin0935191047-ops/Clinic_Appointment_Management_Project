@@ -754,3 +754,59 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-022 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-023 — Guest Booking API (Tạo Lịch Khám Công Khai Không Cần Đăng Nhập, BookingCode Ngẫu Nhiên, Snapshot Dịch Vụ, Strictly NO Auto-Merge & Transaction Integrity)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - CQRS Command & Handler (`ClinicAppointment.Application.Features.Appointments.Commands.BookGuestAppointment`):
+    - `BookGuestAppointmentCommand`: Nhận FullName, PhoneNumber, DateOfBirth, BirthYear, Email, DoctorId, ServiceId, StartAtUtc, ReasonForVisit.
+    - `BookGuestAppointmentCommandValidator`: Xác thực họ tên bắt buộc (tối đa 150 ký tự); số điện thoại chuẩn di động Việt Nam (10 số); bắt buộc cung cấp ít nhất Ngày sinh hoặc Năm sinh; DoctorId và ServiceId không rỗng; StartAtUtc phải ở tương lai.
+    - `BookGuestAppointmentCommandHandler`:
+      1. Kiểm tra Bác sĩ hoạt động và Chuyên khoa hoạt động (FR-004); từ chối nếu không hoạt động.
+      2. Kiểm tra Dịch vụ hoạt động.
+      3. Quy đổi múi giờ qua `TimeZoneHelper`: Kiểm tra khung giờ nằm trọn vẹn trong ca làm việc `DoctorSchedule` có hiệu lực tại ngày khám theo chuẩn ISO 8601; từ chối khi đặt ngoài ca.
+      4. Kiểm tra xung đột ngày nghỉ `DoctorTimeOff` (trạng thái Active) -> Ném `AppointmentConflictException` (HTTP 409 Conflict).
+      5. Kiểm tra xung đột khung giờ bận `DoctorScheduleBlock` -> Ném `AppointmentConflictException` (HTTP 409 Conflict).
+      6. Kiểm tra xung đột cuộc hẹn đang hoạt động (`Appointments` có status != Cancelled) -> Ném `AppointmentConflictException` (HTTP 409 Conflict).
+      7. Quản lý Giao dịch DB (`DatabaseFacade.BeginTransactionAsync` trên relational provider): Bọc toàn bộ quá trình tạo Patient, ReviewCase, và Appointment trong Transaction; rollback sạch sẽ nếu có lỗi.
+      8. Hồ sơ bệnh nhân độc lập: Tạo `Patient` với `UserId = null`, hoàn toàn không tự động tạo tài khoản User cho Guest (FR-022, BR-001).
+      9. Quy tắc nghiệp vụ cốt lõi Strictly NO Auto-merge (BR-002): Quét ứng viên trùng lặp bằng `IPatientDuplicateDetectionService`; khi phát hiện trùng họ tên + ngày sinh/năm sinh, tạo hồ sơ bệnh nhân mới độc lập và tự động mở một `PatientIdentityReviewCase` trạng thái `OPEN` để nhân viên lễ tân đối soát tại quầy tiếp đón.
+      10. Khởi tạo cuộc hẹn với snapshot dịch vụ: Lưu `ServiceNameSnapshot`, `ServiceDurationSnapshot`, `ServicePriceSnapshot`, tiền tệ VND, `PaidAmount = 0.0`. Sinh `BookingCode` ngẫu nhiên định dạng `APT-yyyyMMdd-XXXXXX` (CSPRNG hex), duy nhất, khó đoán và không chứa PII (FR-023).
+  - API Controller (`AppointmentsController.cs`):
+    - Endpoint `POST /api/v1/appointments/guest` gắn `[AllowAnonymous]`, trả về `201 Created` kèm `BookGuestAppointmentResponse` (BookingCode, FullName, ServiceName, Price, Duration, StartAt, EndAt, Status, NextSteps); tuyệt đối không trả PatientId nội bộ.
+  - Abstraction & Dependency Injection:
+    - Bổ sung `DatabaseFacade Database { get; }` vào `IApplicationDbContext`.
+    - Đăng ký `IPatientDuplicateDetectionService` vào DI container.
+    - Bổ sung overload `Result<T>.Success(value, statusCode = 200)` trong `ApiResponse.cs`.
+  - Bộ kiểm thử tự động xUnit (`GuestBookingApiTests.cs`):
+    - 11 test cases bao phủ toàn diện:
+      1. `GuestBooking_Success_CreatesIndependentPatientWithoutUser`: Đặt lịch thành công, Patient có UserId = null, Appointment có IsGuest = true, Status = PendingConfirmation.
+      2. `GuestBooking_Generates_UniqueSecureBookingCode`: Hai ca khám sinh 2 BookingCode độc lập, đúng regex `^APT-\d{8}-[A-Z0-9]{6}$`.
+      3. `GuestBooking_Captures_ServicePriceAndDurationSnapshots`: Snapshot giá, thời lượng và tên dịch vụ được bảo toàn nguyên vẹn kể cả khi dịch vụ gốc sau này bị sửa giá hoặc đổi tên.
+      4. `GuestBooking_Rejects_WhenDoctorOrSpecialtyInactive`: Từ chối khi Bác sĩ hoặc Chuyên khoa bị vô hiệu hóa.
+      5. `GuestBooking_Rejects_WhenOutsideDoctorWorkingSchedule`: Từ chối khi đặt vào ngày không có ca làm việc hoặc ngoài khung giờ ca làm việc.
+      6. `GuestBooking_ThrowsConflict_WhenDoctorHasApprovedTimeOff`: Ném `AppointmentConflictException` khi bác sĩ có lịch nghỉ.
+      7. `GuestBooking_ThrowsConflict_WhenDoctorScheduleIsBlocked`: Ném `AppointmentConflictException` khi khung giờ bị khóa bởi ScheduleBlock.
+      8. `GuestBooking_ThrowsConflict_WhenSlotAlreadyBooked`: Ném `AppointmentConflictException` khi slot đã có người đặt trước.
+      9. `GuestBooking_CancelledAppointment_DoesNotBlockNewBooking`: Lịch hẹn trước bị hủy sẽ giải phóng slot để người khác đặt bình thường.
+      10. `GuestBooking_StrictlyNoAutoMerge_CreatesSeparatePatientAndOpensReviewCase_WhenDuplicateSuspected`: Tuyệt đối không tự gộp bệnh nhân khi trùng tên + ngày sinh; tạo Patient mới riêng biệt và mở `PatientIdentityReviewCase` trạng thái `OPEN`.
+      11. `GuestBooking_Validation_RejectsMissingRequiredFields`: FluentValidation bắt lỗi thiếu ngày sinh/năm sinh, sai số điện thoại di động, hoặc giờ hẹn ở quá khứ.
+    - Toàn bộ 179/179 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 4.89s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Models/ApiResponse.cs`
+  - `backend/src/ClinicAppointment.Application/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/BookGuestAppointment/BookGuestAppointmentCommand.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/GuestBookingApiTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 179 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 4.89s)
+- Acceptance criteria evidence:
+  - FEAT-023 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
