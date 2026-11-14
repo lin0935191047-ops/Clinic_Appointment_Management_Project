@@ -19,6 +19,8 @@ public interface IApplicationDbContext
     DbSet<RescheduleRequest> RescheduleRequests { get; }
     DbSet<Refund> Refunds { get; }
     DbSet<OtpChallenge> OtpChallenges { get; }
+    DbSet<PatientIdentityReviewCase> PatientIdentityReviewCases { get; }
+    DbSet<PatientMergeEvent> PatientMergeEvents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

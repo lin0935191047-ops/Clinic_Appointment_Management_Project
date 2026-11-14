@@ -221,3 +221,113 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln" --no-build` (Thành công: 59 Passed, 0 Failed)
 - Acceptance criteria evidence:
   - FEAT-012 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-013 — Patient Duplicate Detection & Review (Candidate Matching, Manual Review, Safe Family Phone & Audit Merge)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Xây dựng Domain Entities & Enums:
+    - Enums: `IdentityMatchReason` (`NAME_DOB`, `NAME_BIRTH_YEAR`, `VERIFIED_IDENTIFIER`, `SHARED_PHONE_DIFFERENT_NAME`) và `IdentityReviewStatus` (`OPEN`, `CONFIRMED_SAME_PERSON`, `CONFIRMED_DIFFERENT_PERSON`, `DISMISSED`) trong `DomainEnums.cs`.
+    - Thực thể `PatientIdentityReviewCase`: Lưu ca rà soát giữa hồ sơ mới (`PatientId`) và ứng viên nghi trùng (`CandidatePatientId`), lý do so khớp, ghi chú và người duyệt.
+    - Thực thể `PatientMergeEvent`: Lưu nhật ký kiểm toán gộp hồ sơ bất biến (snapshot JSON dữ liệu nguồn, số lượng lịch hẹn chuyển giao, lý do, người thực hiện).
+  - Domain Service `PatientDuplicateDetectionService.cs`:
+    - Phân tích 4 điều kiện so khớp ứng viên trùng lặp.
+    - Thực thi nguyên tắc **Strictly NO Auto-merge**: Khi họ tên chuẩn hóa và ngày sinh/năm sinh trùng nhau, hệ thống chỉ gắn cờ `IsPossibleDuplicate = true`, `RecordStatus = "REVIEW_REQUIRED"` và tạo ca rà soát `OPEN`, không tự động gộp.
+    - An toàn khi dùng chung số điện thoại (`SHARED_PHONE_DIFFERENT_NAME`): Khi số điện thoại trùng nhưng họ tên khác biệt (phụ huynh đặt cho con), hệ thống không coi là trùng lặp và không chặn luồng đặt khám.
+  - Cấu hình EF Core `PatientReviewConfigurations.cs`:
+    - Map bảng `patient_identity_review_cases` và `patient_merge_events`.
+    - Ràng buộc Check Constraints: `ck_identity_review_distinct_patients` (`patient_id <> candidate_patient_id`) và `ck_patient_merge_distinct_patients` (`source_patient_id <> target_patient_id`).
+    - Khắc phục triệt để shadow foreign key `Appointment.PatientId1` bằng việc liên kết hai chiều tường minh `builder.HasOne(a => a.Patient).WithMany(p => p.Appointments)`.
+    - Sinh EF Migration chuẩn: `20261114070558_AddPatientReviewAndMerge.cs`.
+  - Application CQRS & Controller:
+    - Command: `ResolvePatientReviewCaseCommand` xử lý 2 kịch bản: `CONFIRMED_DIFFERENT_PERSON` (xác nhận người khác, gỡ cờ nghi trùng) và `CONFIRMED_SAME_PERSON` (gộp hồ sơ an toàn: sao lưu snapshot JSON, chuyển giao appointments sang target, cập nhật source thành `MERGED` với `MergedIntoPatientId`, ghi audit event).
+    - Query: `GetOpenReviewCasesQuery`, `GetReviewCaseByIdQuery`.
+    - Endpoints tại `PatientsController`: `GET /api/v1/patients/reviews/open`, `GET /api/v1/patients/reviews/{id}`, `POST /api/v1/patients/reviews/{id}/resolve`.
+  - Kiểm thử tự động xUnit:
+    - Xây dựng 10 test cases mới trong `PatientDuplicateReviewTests.cs` kiểm tra cả 4 trường hợp matching, quy tắc no auto-merge, shared family phone và kiểm toán merge.
+    - Toàn bộ 69/69 unit tests trong Solution đều PASS 100%.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Enums/DomainEnums.cs`
+  - `backend/src/ClinicAppointment.Domain/Entities/PatientReviewAndMerge.cs`
+  - `backend/src/ClinicAppointment.Domain/Services/PatientDuplicateDetectionService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/PatientReviewConfigurations.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/AppointmentConfiguration.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/DTOs/ReviewAndMergeDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/ResolvePatientReviewCaseCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Queries/GetReviewCasesQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/PatientsController.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114070558_AddPatientReviewAndMerge.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/PatientDuplicateReviewTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet-ef migrations add AddPatientReviewAndMerge`
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 69 Passed, 0 Failed)
+- Acceptance criteria evidence:
+  - FEAT-013 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-014 — Authentication and Password Management (PBKDF2 Hasher, JWT Access Token, Refresh Token Rotation & Auth Endpoints)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Cài đặt package `Microsoft.AspNetCore.Authentication.JwtBearer` (v8.0.10) cho `ClinicAppointment.Api` và `ClinicAppointment.Infrastructure`.
+  - Triển khai `IJwtTokenService` và `JwtTokenService`:
+    - Tạo JWT Access Token chứa các claims: `sub`, `email`, `role`, `patient_profile_id`, `doctor_profile_id`, `jti`.
+    - Tạo Refresh Token ngẫu nhiên cryptographically secure (64 bytes) và băm SHA-256 (`TokenHash`) lưu trữ an toàn trong DB theo `docs/DATABASE_DESIGN.md`.
+    - Trích xuất ClaimsPrincipal từ expired token (`GetPrincipalFromExpiredToken`).
+  - Thực thi quy trình Refresh Token Rotation & Revocation:
+    - Thu hồi token cũ (`RevokedAt = DateTime.UtcNow`) và liên kết `ReplacedByTokenId`.
+    - Phát hành Refresh Token mới và Access Token mới đồng thời.
+    - Ngăn chặn triệt để token đã bị thu hồi hoặc hết hạn.
+  - Xây dựng các DTOs và FluentValidation:
+    - `RegisterPatientRequest`, `LoginRequest`, `RefreshTokenRequest`, `ChangePasswordRequest`, `ForgotPasswordRequest`, `ResetPasswordRequest`, `AuthResponseDto`, `UserSummaryDto`.
+    - `RegisterPatientRequestValidator`: kiểm tra độ phức tạp mật khẩu (chữ hoa, chữ thường, số, $\ge 8$ ký tự), số điện thoại VN (10 số), và bất biến bắt buộc DateOfBirth hoặc BirthYear.
+  - Xây dựng Application CQRS Handlers:
+    - `RegisterPatientCommand`: Tạo User, gán role `PATIENT`, tạo Patient profile, mã hóa PII định danh, rà soát trùng lặp không auto-merge, phát hành bộ token.
+    - `LoginCommand`: Xác thực Email + Password bằng `IPasswordHasher.VerifyPassword`, kiểm tra `IsActive`, cập nhật `LastLoginAt`, phát hành token.
+    - `RefreshTokenCommand`: Xác thực hash, thực hiện Token Rotation.
+    - `LogoutCommand`: Thu hồi refresh token.
+    - `ChangePasswordCommand`: Đổi mật khẩu cho người dùng xác thực.
+    - `ForgotPasswordCommand` & `ResetPasswordCommand`: Quy trình đặt lại mật khẩu an toàn.
+    - `GetCurrentUserQuery`: Lấy thông tin user hiện tại kèm roles và profile ID.
+  - Xây dựng API Controller `AuthController`:
+    - `POST /api/v1/auth/register` (Public Patient Optional)
+    - `POST /api/v1/auth/login`
+    - `POST /api/v1/auth/refresh`
+    - `POST /api/v1/auth/logout`
+    - `POST /api/v1/auth/change-password` [Authorize]
+    - `POST /api/v1/auth/forgot-password`
+    - `POST /api/v1/auth/reset-password`
+    - `GET /api/v1/auth/me` [Authorize]
+  - Cấu hình Middleware & Swagger trong `Program.cs`:
+    - `AddAuthentication(JwtBearerDefaults)`.
+    - Swagger Security Definition hỗ trợ Bearer Token Authentication.
+    - `app.UseAuthentication()` trước `app.UseAuthorization()`.
+  - Bộ kiểm thử tự động xUnit:
+    - Xây dựng 10 test cases mới trong `AuthAndJwtTests.cs` (Token generation, claims validation, refresh token lifecycle, password hasher verification, FluentValidation rules).
+    - Toàn bộ 79/79 unit tests trong Solution đều PASS 100%.
+  - Biên dịch Frontend: `npm run build` chạy thành công 100% không có lỗi.
+- Files changed:
+  - `backend/src/ClinicAppointment.Api/ClinicAppointment.Api.csproj`
+  - `backend/src/ClinicAppointment.Infrastructure/ClinicAppointment.Infrastructure.csproj`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IJwtTokenService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Security/JwtSettings.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Security/JwtTokenService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Auth/DTOs/AuthDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Auth/Validators/AuthValidators.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Auth/Commands/AuthCommands.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AuthController.cs`
+  - `backend/src/ClinicAppointment.Api/Program.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/AuthAndJwtTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer --version 8.0.10`
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 79 Passed, 0 Failed)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-014 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

@@ -1,11 +1,14 @@
+using System.Text;
 using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Domain.Services;
 using ClinicAppointment.Infrastructure.Persistence;
 using ClinicAppointment.Infrastructure.Security;
 using ClinicAppointment.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ClinicAppointment.Infrastructure;
 
@@ -28,12 +31,39 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider => 
             provider.GetRequiredService<ApplicationDbContext>());
 
-        // Security & Policies
+        // Security, JWT & Policies
+        var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
+        services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.AddSingleton<IJwtTokenService, JwtTokenService>();
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false; // Local development
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidateAudience = true,
+                ValidAudience = jwtSettings.Audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IPiiEncryptionService, PiiEncryptionService>();
         services.AddSingleton<IHmacService, HmacService>();
         services.AddSingleton<IIdentifierMaskingService, IdentifierMaskingService>();
         services.AddScoped<IPatientSecurityService, PatientSecurityService>();
+        services.AddSingleton<IPatientDuplicateDetectionService, PatientDuplicateDetectionService>();
         services.AddScoped<IRoleAssignmentPolicy, RoleAssignmentPolicy>();
         services.AddScoped<DatabaseSeeder>();
 

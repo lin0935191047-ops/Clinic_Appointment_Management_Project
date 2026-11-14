@@ -337,7 +337,8 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
                         .HasColumnName("full_name");
 
                     b.Property<string>("Gender")
-                        .HasColumnType("text")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
                         .HasColumnName("gender");
 
                     b.Property<byte[]>("InsuranceCardCiphertext")
@@ -363,6 +364,12 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
                     b.Property<string>("NationalIdHmac")
                         .HasColumnType("text")
                         .HasColumnName("national_id_hmac");
+
+                    b.Property<string>("NormalizedFullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("normalized_full_name");
 
                     b.Property<byte[]>("PassportCiphertext")
                         .HasColumnType("bytea")
@@ -396,6 +403,14 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("pid_hmac");
 
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("ACTIVE")
+                        .HasColumnName("record_status");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -407,9 +422,15 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_patients");
 
+                    b.HasIndex("MergedIntoPatientId")
+                        .HasDatabaseName("ix_patients_merged_into_patient_id");
+
                     b.HasIndex("NationalIdHmac")
                         .HasDatabaseName("ix_patients_national_id_hmac")
                         .HasFilter("national_id_hmac IS NOT NULL");
+
+                    b.HasIndex("NormalizedFullName")
+                        .HasDatabaseName("ix_patients_normalized_full_name");
 
                     b.HasIndex("PatientCode")
                         .IsUnique()
@@ -425,7 +446,122 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
 
                     b.ToTable("patients", null, t =>
                         {
+                            t.HasCheckConstraint("ck_patients_birth_year_matches_dob", "date_of_birth IS NULL OR birth_year IS NULL OR birth_year = EXTRACT(YEAR FROM date_of_birth)::smallint");
+
                             t.HasCheckConstraint("ck_patients_dob_or_birth_year", "date_of_birth IS NOT NULL OR birth_year IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicAppointment.Domain.Entities.PatientIdentityReviewCase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CandidatePatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("candidate_patient_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("MatchReason")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("match_reason");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("ReviewNote")
+                        .HasColumnType("text")
+                        .HasColumnName("review_note");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_patient_identity_review_cases");
+
+                    b.HasIndex("CandidatePatientId")
+                        .HasDatabaseName("ix_patient_identity_review_cases_candidate_patient_id");
+
+                    b.HasIndex("ReviewedByUserId")
+                        .HasDatabaseName("ix_patient_identity_review_cases_reviewed_by_user_id");
+
+                    b.HasIndex("PatientId", "CandidatePatientId", "MatchReason")
+                        .IsUnique()
+                        .HasDatabaseName("ix_patient_identity_review_cases_patient_id_candidate_patient_");
+
+                    b.ToTable("patient_identity_review_cases", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_identity_review_distinct_patients", "patient_id <> candidate_patient_id");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicAppointment.Domain.Entities.PatientMergeEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BeforeSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("before_snapshot_json");
+
+                    b.Property<DateTime>("MergedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("merged_at");
+
+                    b.Property<Guid>("MergedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("merged_by_user_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("SourcePatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_patient_id");
+
+                    b.Property<Guid>("TargetPatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_patient_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_patient_merge_events");
+
+                    b.HasIndex("MergedByUserId")
+                        .HasDatabaseName("ix_patient_merge_events_merged_by_user_id");
+
+                    b.HasIndex("SourcePatientId")
+                        .HasDatabaseName("ix_patient_merge_events_source_patient_id");
+
+                    b.HasIndex("TargetPatientId")
+                        .HasDatabaseName("ix_patient_merge_events_target_patient_id");
+
+                    b.ToTable("patient_merge_events", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_patient_merge_distinct_patients", "source_patient_id <> target_patient_id");
                         });
                 });
 
@@ -852,7 +988,7 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_appointments_doctors_doctor_id");
 
                     b.HasOne("ClinicAppointment.Domain.Entities.Patient", "Patient")
-                        .WithMany()
+                        .WithMany("Appointments")
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
@@ -905,10 +1041,80 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ClinicAppointment.Domain.Entities.Patient", b =>
                 {
-                    b.HasOne("ClinicAppointment.Domain.Entities.User", null)
+                    b.HasOne("ClinicAppointment.Domain.Entities.Patient", "MergedIntoPatient")
+                        .WithMany()
+                        .HasForeignKey("MergedIntoPatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_patients_patients_merged_into_patient_id");
+
+                    b.HasOne("ClinicAppointment.Domain.Entities.User", "User")
                         .WithOne("PatientProfile")
                         .HasForeignKey("ClinicAppointment.Domain.Entities.Patient", "UserId")
+                        .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_patients_users_user_id");
+
+                    b.Navigation("MergedIntoPatient");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ClinicAppointment.Domain.Entities.PatientIdentityReviewCase", b =>
+                {
+                    b.HasOne("ClinicAppointment.Domain.Entities.Patient", "CandidatePatient")
+                        .WithMany()
+                        .HasForeignKey("CandidatePatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_patient_identity_review_cases_patients_candidate_patient_id");
+
+                    b.HasOne("ClinicAppointment.Domain.Entities.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_patient_identity_review_cases_patients_patient_id");
+
+                    b.HasOne("ClinicAppointment.Domain.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_patient_identity_review_cases_users_reviewed_by_user_id");
+
+                    b.Navigation("CandidatePatient");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("ReviewedByUser");
+                });
+
+            modelBuilder.Entity("ClinicAppointment.Domain.Entities.PatientMergeEvent", b =>
+                {
+                    b.HasOne("ClinicAppointment.Domain.Entities.User", "MergedByUser")
+                        .WithMany()
+                        .HasForeignKey("MergedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_patient_merge_events_users_merged_by_user_id");
+
+                    b.HasOne("ClinicAppointment.Domain.Entities.Patient", "SourcePatient")
+                        .WithMany()
+                        .HasForeignKey("SourcePatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_patient_merge_events_patients_source_patient_id");
+
+                    b.HasOne("ClinicAppointment.Domain.Entities.Patient", "TargetPatient")
+                        .WithMany()
+                        .HasForeignKey("TargetPatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_patient_merge_events_patients_target_patient_id");
+
+                    b.Navigation("MergedByUser");
+
+                    b.Navigation("SourcePatient");
+
+                    b.Navigation("TargetPatient");
                 });
 
             modelBuilder.Entity("ClinicAppointment.Domain.Entities.RefreshToken", b =>
@@ -983,6 +1189,11 @@ namespace ClinicAppointment.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ClinicAppointment.Domain.Entities.Doctor", b =>
                 {
                     b.Navigation("Schedules");
+                });
+
+            modelBuilder.Entity("ClinicAppointment.Domain.Entities.Patient", b =>
+                {
+                    b.Navigation("Appointments");
                 });
 
             modelBuilder.Entity("ClinicAppointment.Domain.Entities.Role", b =>

@@ -25,6 +25,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<RescheduleRequest> RescheduleRequests => Set<RescheduleRequest>();
     public DbSet<Refund> Refunds => Set<Refund>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
+    public DbSet<PatientIdentityReviewCase> PatientIdentityReviewCases => Set<PatientIdentityReviewCase>();
+    public DbSet<PatientMergeEvent> PatientMergeEvents => Set<PatientMergeEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

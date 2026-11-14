@@ -44,3 +44,21 @@ public enum UserRole
     Patient
 }
 
+public enum IdentityMatchReason
+{
+    NAME_DOB,
+    NAME_BIRTH_YEAR,
+    VERIFIED_IDENTIFIER,
+    VERIFIED_PERSONAL_PHONE,
+    SHARED_PHONE_DIFFERENT_NAME,
+    CONFLICT
+}
+
+public enum IdentityReviewStatus
+{
+    OPEN,
+    CONFIRMED_SAME_PERSON,
+    DIFFERENT_PERSON,
+    NEEDS_MORE_INFO
+}
+

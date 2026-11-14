@@ -40,7 +40,7 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
             .HasFilter("status NOT IN ('Cancelled', 'NoShow')");
 
         builder.HasOne(a => a.Patient)
-            .WithMany()
+            .WithMany(p => p.Appointments)
             .HasForeignKey(a => a.PatientId)
             .OnDelete(DeleteBehavior.Restrict);
 

@@ -2,6 +2,7 @@ using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Models;
 using ClinicAppointment.Application.Features.Patients.DTOs;
 using ClinicAppointment.Domain.Entities;
+using ClinicAppointment.Domain.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,17 +13,20 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
 {
     private readonly IApplicationDbContext _context;
     private readonly IPatientSecurityService _securityService;
+    private readonly IPatientDuplicateDetectionService _duplicateDetectionService;
     private readonly IIdentifierMaskingService _maskingService;
     private readonly ILogger<CreatePatientCommandHandler> _logger;
 
     public CreatePatientCommandHandler(
         IApplicationDbContext context,
         IPatientSecurityService securityService,
+        IPatientDuplicateDetectionService duplicateDetectionService,
         IIdentifierMaskingService maskingService,
         ILogger<CreatePatientCommandHandler> logger)
     {
         _context = context;
         _securityService = securityService;
+        _duplicateDetectionService = duplicateDetectionService;
         _maskingService = maskingService;
         _logger = logger;
     }
@@ -77,27 +81,52 @@ public class CreatePatientCommandHandler : IRequestHandler<CreatePatientCommand,
             _securityService.AttachPid(patient, request.Pid);
         }
 
-        // 4. Cơ chế phát hiện hồ sơ nghi trùng theo nhân khẩu học (Strictly NO Auto-merge)
+        // 4. Cơ chế phát hiện hồ sơ nghi trùng theo nhân khẩu học (FEAT-013 - Strictly NO Auto-merge)
         var normalizedName = patient.NormalizedFullName;
-        var birthYear = patient.BirthYear;
+        var phone = patient.PhoneNumber;
 
-        var duplicateCandidates = await _context.Patients
+        var potentialCandidates = await _context.Patients
             .Where(p => p.RecordStatus != "MERGED" &&
-                        p.NormalizedFullName == normalizedName &&
-                        p.BirthYear == birthYear)
-            .Take(5)
+                        (p.NormalizedFullName == normalizedName || p.PhoneNumber == phone))
+            .Take(10)
             .ToListAsync(cancellationToken);
 
-        if (duplicateCandidates.Any())
+        var matches = _duplicateDetectionService.EvaluateCandidates(patient, potentialCandidates);
+        var reviewCasesToCreate = new List<PatientIdentityReviewCase>();
+
+        foreach (var match in matches)
         {
-            patient.IsPossibleDuplicate = true;
-            patient.RecordStatus = "REVIEW_REQUIRED";
-            _logger.LogWarning(
-                "Phát hiện {Count} hồ sơ nghi trùng với Họ tên '{FullName}' và Năm sinh '{BirthYear}'. Đánh dấu để Lễ tân/Quản trị viên rà soát thủ công.",
-                duplicateCandidates.Count, patient.FullName, patient.BirthYear);
+            if (match.RequiresManualReview)
+            {
+                patient.IsPossibleDuplicate = true;
+                patient.RecordStatus = "REVIEW_REQUIRED";
+
+                var reviewCase = PatientIdentityReviewCase.Create(
+                    patientId: patient.Id,
+                    candidatePatientId: match.ExistingPatient.Id,
+                    matchReason: match.Reason
+                );
+                reviewCasesToCreate.Add(reviewCase);
+
+                _logger.LogWarning(
+                    "Tạo ca rà soát nghi trùng #{CaseId}: Bệnh nhân mới={NewCode} khớp với ứng viên={CandidateCode} vì lý do {Reason}. Không gộp tự động.",
+                    reviewCase.Id, patient.PatientCode, match.ExistingPatient.PatientCode, match.Reason);
+            }
+            else
+            {
+                // Trường hợp SHARED_PHONE_DIFFERENT_NAME: An toàn số dùng chung gia đình, không gộp và không đánh dấu lỗi
+                _logger.LogInformation(
+                    "Số điện thoại {MaskedPhone} được dùng chung giữa các cá nhân khác nhau: '{Name1}' và '{Name2}'. Lưu trữ an toàn riêng biệt.",
+                    _maskingService.MaskPhone(phone), patient.FullName, match.ExistingPatient.FullName);
+            }
         }
 
         _context.Patients.Add(patient);
+        if (reviewCasesToCreate.Any())
+        {
+            _context.PatientIdentityReviewCases.AddRange(reviewCasesToCreate);
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(

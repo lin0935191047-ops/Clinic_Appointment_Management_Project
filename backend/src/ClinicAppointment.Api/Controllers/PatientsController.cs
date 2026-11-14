@@ -54,4 +54,33 @@ public class PatientsController : BaseApiController
         var result = await Mediator.Send(query);
         return HandleResult(result);
     }
+
+    /// <summary>
+    /// Lấy danh sách các ca rà soát hồ sơ nghi trùng (Dành cho Lễ tân / Quản trị viên)
+    /// </summary>
+    [HttpGet("review-cases")]
+    [ProducesResponseType(typeof(List<PatientIdentityReviewCaseDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetReviewCases()
+    {
+        var result = await Mediator.Send(new GetOpenReviewCasesQuery());
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Xử lý ca rà soát nghi trùng: gộp hồ sơ có kiểm toán hoặc xác nhận người khác biệt
+    /// </summary>
+    [HttpPost("review-cases/{id:guid}/resolve")]
+    [ProducesResponseType(typeof(PatientIdentityReviewCaseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResolveReviewCase(Guid id, [FromBody] ResolvePatientReviewCaseCommand command)
+    {
+        if (id != command.CaseId)
+        {
+            return BadRequest("Id trên đường dẫn không khớp với dữ liệu yêu cầu.");
+        }
+
+        var result = await Mediator.Send(command);
+        return HandleResult(result);
+    }
 }
