@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-039 Completed)
-- Current phase: Consultation completion (FEAT-040)
+- Overall status: In progress (FEAT-001 through FEAT-040 Completed)
+- Current phase: Notification abstraction (FEAT-041)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-039)
+## Features Completed (FEAT-001 -> FEAT-040)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -48,10 +48,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-037` (Reception queue): Quản lý và điều phối hàng đợi khám bệnh tại quầy Lễ tân theo Bác sĩ và Ngày khám (Module Reception); Bộ lọc đa tiêu chí linh hoạt: lọc theo DoctorId, lọc theo Ngày khám (Date - chuẩn hóa múi giờ Asia/Ho_Chi_Minh sang khoảng UTC tương ứng), lọc theo Trạng thái (CheckedIn, Confirmed, InProgress, Completed, Cancelled), lọc theo Từ khóa (tên, số điện thoại, mã booking); Sắp xếp theo thời gian tăng/giảm (time_asc/time_desc) hoặc ưu tiên trạng thái (status); Đánh số thứ tự tiếp nhận tuần tự (QueueNumber 1, 2, 3...); Phân quyền bảo vệ nghiêm ngặt StaffOnly (chỉ Lễ tân và Admin); Giới hạn dữ liệu an toàn (MaskedPhoneNumber dạng 091***5678, không lộ CCCD thô, OTP, hay bệnh án chuyên sâu); Endpoints GET /api/v1/reception/appointments và alias GET /api/v1/reception/queue; 319/319 unit tests PASS (13/13 tests FEAT-037 PASS 100%).
 - `FEAT-038` (Doctor assigned appointments): Bác sĩ xem danh sách các ca khám được phân công cho chính mình (Module Doctor); Chống IDOR tuyệt đối và bảo đảm nguyên tắc Assigned Doctor Only (tự động gắn DoctorId theo UserId tài khoản đăng nhập, bác sĩ A không thể xem ca của bác sĩ B kể cả khi giả mạo query param); Tối thiểu hóa dữ liệu bệnh nhân (Minimum patient data: số điện thoại được che giấu mặt nạ MaskedPhoneNumber, không lộ CCCD/Hộ chiếu thô, mật khẩu hay mã OTP); Lọc theo Ngày khám (Date) chuẩn hóa múi giờ Asia/Ho_Chi_Minh, lọc theo Trạng thái, tìm kiếm từ khóa, sắp xếp theo thời gian hoặc ưu tiên trạng thái hàng đợi; Phân trang chuẩn PaginatedList; Phân quyền bảo vệ StaffOrDoctor tại Controller DoctorAppointmentsController; 334/334 unit tests PASS (15/15 tests FEAT-038 PASS 100%).
 - `FEAT-039` (Consultation start and record): Bác sĩ bắt đầu ca khám và ghi chép kết quả lâm sàng (Module Consultation); Bác sĩ bắt đầu ca khám chuyển trạng thái Appointment từ CheckedIn sang InProgress; Phân quyền nghiêm ngặt theo bác sĩ được phân công (Assigned doctor only), từ chối bác sĩ khác với HTTP 403 Forbidden và từ chối các trạng thái không hợp lệ với HTTP 400 Bad Request; Chống IDOR tuyệt đối; Ghi chép kết quả khám (Symptoms, Diagnosis, ExaminationNotes, Conclusion, FollowUpInstructions) với validation bắt buộc triệu chứng và chẩn đoán qua FluentValidation; Bảo mật bệnh án trong AuditLog theo AGENTS.md: TUYỆT ĐỐI KHÔNG log triệu chứng hay chẩn đoán vào AuditLog, chỉ lưu cờ boolean an toàn; Endpoints POST /api/v1/doctor/appointments/{id}/start, POST /api/v1/doctor/appointments/{id}/consultation, GET /api/v1/doctor/appointments/{id}/consultation và POST /api/v1/doctor/consultations; 349/349 unit tests PASS (15/15 tests FEAT-039 PASS 100%).
+- `FEAT-040` (Consultation completion): Bác sĩ hoàn thành ca khám y khoa (Module Consultation); Chuyển trạng thái Appointment từ InProgress sang Completed, cập nhật UpdatedAt theo Server Timestamp UTC; Khóa hồ sơ bệnh án sau khi hoàn tất chống chỉnh sửa hoặc re-opening (RecordConsultationCommand và StartConsultationCommand bị chặn 400 khi đã Completed); Kiểm tra ca khám phải có bản ghi chẩn đoán/triệu chứng lâm sàng Consultation trước khi hoàn tất; Cập nhật bổ sung Conclusion và FollowUpInstructions; Phân quyền nghiêm ngặt theo bác sĩ được phân công (Assigned doctor only) hoặc Admin, từ chối bác sĩ khác với HTTP 403 Forbidden; Ghi nhận AuditLog bất biến với Action = COMPLETE_CONSULTATION bảo mật tuyệt đối không log nội dung y tế vào audit metadata; Endpoints POST /api/v1/doctor/appointments/{id}/complete và POST /api/v1/doctor/consultations/{appointmentId}/complete; 365/365 unit tests PASS (16/16 tests FEAT-040 PASS 100%).
 
 ## Next steps
-1. Triển khai FEAT-040 (Consultation completion: Bác sĩ hoàn thành ca khám InProgress -> Completed, khóa ca khám chống mở lại, xuất tóm tắt y tế an toàn, audit log).
-2. Triển khai FEAT-041 (Notification abstraction: Adapter/outbox cho SMS/email/in-app, chống gửi trùng lặp).
+1. Triển khai FEAT-041 (Notification abstraction: Adapter/outbox cho SMS/email/in-app, chống gửi trùng lặp).
+2. Triển khai FEAT-042 (Notification triggers: Tự động kích hoạt thông báo khi đặt lịch, xác nhận, đổi lịch, hủy lịch).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

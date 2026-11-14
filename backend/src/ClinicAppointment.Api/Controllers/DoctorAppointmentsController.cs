@@ -1,5 +1,6 @@
 using ClinicAppointment.Application.Common.Models;
 using ClinicAppointment.Application.Features.Appointments.Queries.GetDoctorAppointments;
+using ClinicAppointment.Application.Features.Consultations.Commands.CompleteConsultation;
 using ClinicAppointment.Application.Features.Consultations.Commands.RecordConsultation;
 using ClinicAppointment.Application.Features.Consultations.Commands.StartConsultation;
 using ClinicAppointment.Application.Features.Consultations.DTOs;
@@ -88,6 +89,29 @@ public class DoctorAppointmentsController : BaseApiController
     {
         var query = new GetConsultationByAppointmentIdQuery(id);
         var result = await Mediator.Send(query, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Bác sĩ hoàn tất ca khám (chuyển InProgress -> Completed, khóa ca khám và cập nhật kết luận/hướng dẫn)
+    /// </summary>
+    [HttpPost("{id:guid}/complete")]
+    [ProducesResponseType(typeof(ApiResponse<CompleteConsultationResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CompleteConsultation(
+        [FromRoute] Guid id,
+        [FromBody] CompleteConsultationRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CompleteConsultationCommand(
+            AppointmentId: id,
+            Conclusion: request?.Conclusion,
+            FollowUpInstructions: request?.FollowUpInstructions
+        );
+        var result = await Mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
 }

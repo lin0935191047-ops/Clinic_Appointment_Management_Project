@@ -31,3 +31,25 @@ public record RecordConsultationRequest(
     string? Conclusion = null,
     string? FollowUpInstructions = null
 );
+
+public record CompleteConsultationRequest(
+    string? Conclusion = null,
+    string? FollowUpInstructions = null
+);
+
+public record CompleteConsultationResponse(
+    Guid AppointmentId,
+    string BookingCode,
+    AppointmentStatus Status,
+    Guid DoctorId,
+    string DoctorName,
+    Guid PatientId,
+    string PatientFullName,
+    string Symptoms,
+    string Diagnosis,
+    string? ExaminationNotes,
+    string? Conclusion,
+    string? FollowUpInstructions,
+    DateTime? ConsultedAt,
+    DateTime CompletedAt
+);

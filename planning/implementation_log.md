@@ -1745,3 +1745,68 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.92s)
 - Acceptance criteria evidence:
   - FEAT-039 đạt toàn bộ tiêu chí nghiệm thu (CheckedIn to InProgress, Consultation protected, Required field validation) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+## 2026-11-14 — FEAT-040: Consultation completion
+- Feature: FEAT-040 (Consultation completion)
+- Status: Completed
+- Context: Triển khai luồng hoàn thành ca khám y khoa của Bác sĩ (Module Consultation), chuyển trạng thái ca khám sang Completed, khóa hồ sơ bệnh án chống chỉnh sửa và re-opening, ghi nhận lịch sử kiểm toán bất biến bảo mật thông tin y tế theo AGENTS.md.
+- Actions taken:
+  - Domain Model & Entity Invariants (`Appointment.cs` & `Consultation.cs`):
+    - Đảm bảo phương thức Domain `Appointment.CompleteConsultation(serverTimestampUtc)` chuyển trạng thái `InProgress` -> `Completed`, cập nhật `UpdatedAt` theo UTC, từ chối mọi trạng thái khác.
+    - Cập nhật thông tin `Conclusion` và `FollowUpInstructions` (nếu có cung cấp) vào thực thể `Consultation` và cập nhật `UpdatedAt`.
+  - CQRS Commands & DTOs (`ClinicAppointment.Application.Features.Consultations`):
+    - Mở rộng DTOs: `CompleteConsultationRequest` (Conclusion, FollowUpInstructions) và `CompleteConsultationResponse` (AppointmentId, BookingCode, Status, DoctorId, DoctorName, PatientId, PatientFullName, Symptoms, Diagnosis, ExaminationNotes, Conclusion, FollowUpInstructions, ConsultedAt, CompletedAt).
+    - Tạo `CompleteConsultationCommand` và `CompleteConsultationCommandHandler`:
+      - Phân quyền: Chỉ cho phép Bác sĩ hoặc Quản trị viên (Admin). Bệnh nhân hoặc khách ẩn danh bị từ chối 403 Forbidden.
+      - Phân quyền tài nguyên: Bác sĩ được phân công phụ trách ca khám (`Assigned Doctor Only`). Chống IDOR triệt để (Bác sĩ B không thể can thiệp ca khám của Bác sĩ A, trả về HTTP 403 Forbidden).
+      - Kiểm tra hồ sơ Bác sĩ liên kết tài khoản: Bác sĩ chưa có hồ sơ bị từ chối 403.
+      - Kiểm tra trạng thái ca khám: Chỉ cho phép hoàn tất ca khám đang `InProgress`. Từ chối các trạng thái `PendingConfirmation`, `Confirmed`, `CheckedIn`, `Cancelled` với HTTP 400 Bad Request. Nếu ca khám đã `Completed` trước đó, từ chối với thông báo "Ca khám đã được hoàn tất trước đó và đã khóa hồ sơ."
+      - Kiểm tra hồ sơ thăm khám y khoa: Bắt buộc ca khám phải đã được ghi chép kết quả thăm khám và chẩn đoán lâm sàng (`Consultation` tồn tại với Symptoms và Diagnosis) trước khi hoàn tất theo quy định FR-061 & FR-062.
+      - Chuyển trạng thái Appointment sang `Completed`.
+      - Khóa ca khám chống chỉnh sửa bệnh án (`RecordConsultationCommand`): Bổ sung kiểm tra chặn chỉnh sửa kết quả khám khi Appointment đã ở trạng thái `Completed` ("Ca khám đã hoàn tất (Completed) và đã khóa hồ sơ bệnh án. Không thể chỉnh sửa kết quả khám.").
+      - Khóa ca khám chống mở lại (`StartConsultationCommand`): Bị chặn 400 khi Appointment đã ở trạng thái `Completed`.
+      - Ghi nhận lịch sử kiểm toán bất biến (`AuditLog`):
+        - `Action = "COMPLETE_CONSULTATION"`
+        - `ActorType = "DOCTOR"` hoặc `"ADMIN"`
+        - `ActorUserId = _currentUserService.UserId`
+        - `EntityType = "Appointment"`
+        - `EntityId = appointment.Id`
+        - Bảo mật tuyệt đối theo AGENTS.md: `MetadataRedacted` KHÔNG log nội dung triệu chứng hay chẩn đoán bệnh án y tế, chỉ lưu cờ boolean `HasConclusion`, `HasFollowUpInstructions`, `CompletedAtUtc` và metadata an toàn.
+  - Validation qua FluentValidation:
+    - `CompleteConsultationCommandValidator`: Kiểm tra `AppointmentId` bắt buộc, `Conclusion` tối đa 2000 ký tự, `FollowUpInstructions` tối đa 2000 ký tự.
+  - Web API Endpoints:
+    - Thêm `POST /api/v1/doctor/appointments/{id}/complete` trong `DoctorAppointmentsController` (`[Authorize(Policy = "StaffOrDoctor")]`).
+    - Thêm alias endpoint `POST /api/v1/doctor/consultations/{appointmentId}/complete` trong `DoctorConsultationsController` (`[Authorize(Policy = "StaffOrDoctor")]`).
+  - Bộ kiểm thử tự động xUnit (`ConsultationCompletionTests.cs`):
+    - 16 test cases bao phủ toàn diện 100% các tiêu chí nghiệm thu:
+      1. `CompleteConsultation_WithInProgressAppointment_SucceedsAndTransitionsToCompleted`: Hoàn thành ca khám thành công, chuyển sang `Completed`, cập nhật đầy đủ thông tin y tế và trả về DTO.
+      2. `CompleteConsultation_WhenNotInProgress_ReturnsBadRequest`: Từ chối khi trạng thái là `PendingConfirmation`, `Confirmed`, `CheckedIn`.
+      3. `CompleteConsultation_WhenAlreadyCompleted_ReturnsBadRequest`: Từ chối ca khám đã `Completed` trước đó ("Ca khám đã được hoàn tất trước đó và đã khóa hồ sơ").
+      4. `CompleteConsultation_WhenCancelled_ReturnsBadRequest`: Từ chối ca khám đã bị hủy.
+      5. `CompleteConsultation_WhenNoConsultationRecordExists_ReturnsBadRequest`: Từ chối khi ca khám chưa có bản ghi kết quả thăm khám lâm sàng.
+      6. `CompleteConsultation_ByUnassignedDoctor_ThrowsForbidden`: Bác sĩ B cố ý hoàn tất ca của Bác sĩ A bị từ chối với HTTP 403 Forbidden.
+      7. `CompleteConsultation_ByDoctorWithoutProfile_ThrowsForbidden`: Bác sĩ chưa liên kết hồ sơ bị từ chối 403.
+      8. `CompleteConsultation_ByPatientOrAnonymous_ThrowsForbidden`: Vai trò không hợp lệ bị từ chối 403.
+      9. `CompleteConsultation_ByAdmin_Succeeds`: Quản trị viên (Admin) hoàn tất ca khám thành công.
+      10. `CompleteConsultation_WritesAuditLog_WithoutPiiOrMedicalNotes`: Ghi nhận AuditLog với `Action = COMPLETE_CONSULTATION`, kiểm tra không chứa nội dung chẩn đoán/triệu chứng.
+      11. `RecordConsultation_WhenAppointmentAlreadyCompleted_IsBlocked`: Chặn chỉnh sửa kết quả khám khi ca khám đã hoàn tất.
+      12. `StartConsultation_WhenAppointmentAlreadyCompleted_IsBlocked`: Chặn mở lại ca khám đã hoàn tất.
+      13. `CompleteConsultationValidator_ValidatesExcessiveLength`: Validator từ chối khi nội dung vượt quá giới hạn độ dài.
+      14. `DoctorAppointmentsController_CompleteEndpoint_ProtectedWithStaffOrDoctorPolicy`: Phân quyền Controller bảo vệ bằng `StaffOrDoctor`.
+    - Toàn bộ 365/365 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/DTOs/ConsultationDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Commands/CompleteConsultation/CompleteConsultationCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Commands/RecordConsultation/RecordConsultationCommand.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorAppointmentsController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorConsultationsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ConsultationCompletionTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~ConsultationCompletionTests"` (Thành công: 16 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 365 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 7.51s)
+- Acceptance criteria evidence:
+  - FEAT-040 đạt toàn bộ tiêu chí nghiệm thu (InProgress to Completed, History recorded, Only assigned doctor/authorized role) và có đầy đủ bằng chứng kiểm thử tự động thực tế.

@@ -129,6 +129,13 @@ public class RecordConsultationCommandHandler : IRequestHandler<RecordConsultati
                 400);
         }
 
+        if (appointment.Status == AppointmentStatus.Completed)
+        {
+            return Result<ConsultationDto>.Failure(
+                "Ca khám đã hoàn tất (Completed) và đã khóa hồ sơ bệnh án. Không thể chỉnh sửa kết quả khám.", 
+                400);
+        }
+
         // 5. Kiểm tra hoặc tạo bản ghi Consultation
         var existingConsultation = await _context.Consultations
             .FirstOrDefaultAsync(c => c.AppointmentId == request.AppointmentId, cancellationToken);

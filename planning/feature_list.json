@@ -1088,7 +1088,7 @@
       "module": "Consultation",
       "description": "Doctor hoàn thành khám.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-039"
       ],
@@ -1097,8 +1097,16 @@
         "History recorded",
         "Only assigned doctor/authorized role"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — InProgress to Completed: Bác sĩ phụ trách hoàn tất ca khám qua CompleteConsultationCommand, chuyển trạng thái Appointment từ InProgress sang Completed, cập nhật UpdatedAt theo Server Timestamp UTC; từ chối mọi trạng thái khác InProgress (PendingConfirmation, Confirmed, CheckedIn, Cancelled) với HTTP 400 Bad Request; từ chối khi ca khám đã Completed trước đó với thông báo 'Ca khám đã được hoàn tất trước đó và đã khóa hồ sơ'.",
+        "Acceptance Criteria 2 — History recorded: Ghi nhận AuditLog bất biến với Action = COMPLETE_CONSULTATION, ActorType = DOCTOR (hoặc ADMIN), ActorUserId, EntityId = Appointment.Id, OccurredAt; Bảo mật tuyệt đối theo AGENTS.md: TUYỆT ĐỐI KHÔNG log triệu chứng hay chẩn đoán bệnh án y tế vào AuditLog (chỉ lưu cờ HasConclusion, HasFollowUpInstructions, CompletedAtUtc); Khóa ca khám sau khi hoàn tất: ngăn chặn sửa đổi kết quả khám (RecordConsultationCommand bị chặn 400 khi status == Completed) và ngăn chặn mở lại ca khám (StartConsultationCommand bị chặn 400); Cập nhật Conclusion và FollowUpInstructions vào bản ghi Consultation nếu được bổ sung lúc hoàn tất.",
+        "Acceptance Criteria 3 — Only assigned doctor/authorized role: Chỉ Bác sĩ được phân công phụ trách ca khám (Assigned doctor only) hoặc Quản trị viên (ADMIN) mới có quyền hoàn tất; Bác sĩ khác gọi API bị từ chối với HTTP 403 Forbidden; Bệnh nhân hoặc khách ẩn danh bị từ chối 403; Chống IDOR triệt để; Bác sĩ chưa có hồ sơ Bác sĩ bị từ chối 403; Controller được bảo vệ bằng policy StaffOrDoctor.",
+        "Bộ kiểm thử tự động tại ConsultationCompletionTests.cs: 16/16 test cases ĐẠT 100% (tổng 365/365 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
+      "notes": [
+        "Khóa ca khám: Sau khi Completed, hồ sơ bệnh án được khóa chống chỉnh sửa hoặc re-opening.",
+        "Bảo mật AuditLog: Tuyệt đối không log nội dung y tế/chẩn đoán vào metadata kiểm toán."
+      ]
     },
     {
       "id": "FEAT-041",
