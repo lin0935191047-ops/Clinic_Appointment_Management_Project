@@ -184,6 +184,47 @@ public class AppointmentsController : BaseApiController
     }
 
     /// <summary>
+    /// Bệnh nhân / Guest hủy lịch khám (Yêu cầu Grant token từ xác thực OTP mục đích CANCEL, không cần Lễ tân duyệt)
+    /// </summary>
+    [HttpPost("{bookingCode}/cancel")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<ClinicAppointment.Application.Features.Appointments.Commands.CancelAppointment.CancelAppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelAppointment(
+        [FromRoute] string bookingCode,
+        [FromBody] ClinicAppointment.Application.Features.Appointments.Commands.CancelAppointment.CancelAppointmentBody? body,
+        CancellationToken cancellationToken)
+    {
+        string? grantToken = body?.GrantToken;
+        if (string.IsNullOrWhiteSpace(grantToken))
+        {
+            if (Request.Headers.TryGetValue("X-Appointment-Grant", out var headerGrant) && !string.IsNullOrWhiteSpace(headerGrant))
+            {
+                grantToken = headerGrant.ToString();
+            }
+            else if (Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                var authStr = authHeader.ToString();
+                if (authStr.StartsWith("Grant ", StringComparison.OrdinalIgnoreCase))
+                {
+                    grantToken = authStr.Substring(6).Trim();
+                }
+            }
+        }
+
+        var command = new ClinicAppointment.Application.Features.Appointments.Commands.CancelAppointment.CancelAppointmentCommand(
+            bookingCode,
+            body?.Reason,
+            grantToken);
+
+        var result = await Mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
     /// Xem chi tiết lịch khám theo Id (Kiểm tra quyền sở hữu ca khám, chống IDOR)
     /// </summary>
     [HttpGet("{id:guid}")]

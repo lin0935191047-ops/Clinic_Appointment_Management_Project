@@ -1273,3 +1273,123 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.59s)
 - Acceptance criteria evidence:
   - FEAT-031 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+
+## 2026-11-14 — FEAT-032: Guest cancellation workflow
+- Summary:
+  - Triển khai và hoàn thiện quy trình hủy lịch hẹn trực tuyến dành cho bệnh nhân/Guest không cần đăng nhập tài khoản (Module Cancellation), tuân thủ nghiêm ngặt quy định bất biến của dự án (AGENTS.md, docs/SPEC.md v1.2, docs/BUSINESS_RULES.md BR-008, BR-009, BR-010, BR-011).
+  - Quy tắc xác thực & Bảo mật:
+    - Bắt buộc phải có Scoped OTP Grant Token hợp lệ với mục đích `CANCEL` (`Purpose = OtpPurpose.Cancel`).
+    - Thực thi cơ chế One-time use: grant token bị đánh dấu `ConsumedAt = DateTime.UtcNow` ngay khi yêu cầu hủy được xác nhận; không thể tái sử dụng token cho bất kỳ hành động nào khác.
+    - Token sai mục đích hoặc hết hạn bị từ chối với HTTP 403 Forbidden hoặc HTTP 401 Unauthorized.
+  - Quy tắc hủy lịch & Giải phóng Slot:
+    - Bệnh nhân tự hủy không cần Lễ tân duyệt (khác với Reschedule bắt buộc duyệt).
+    - Kiểm tra thời điểm hủy theo Server Clock (`DateTime.UtcNow`): Nghiêm cấm hủy tại hoặc sau thời điểm bắt đầu ca khám (`StartAt`), trả về HTTP 409 Conflict với thông báo từ chối rõ ràng.
+    - Từ chối hủy ca khám đã bị hủy trước đó (`AppointmentStatus.Cancelled`), trả về HTTP 400 Bad Request.
+    - Cập nhật trạng thái `Appointment.Status = AppointmentStatus.Cancelled`, ghi nhận `CancellationAcceptedAt = DateTime.UtcNow`, `CancellationReason`.
+    - Việc chuyển trạng thái sang `Cancelled` tự động giải phóng slot khám của bác sĩ ngay trong Database Transaction (nhờ ràng buộc GiST exclusion constraint lọc `WHERE status <> 'Cancelled'`).
+  - Quy tắc tính toán và lưu bản ghi Refund:
+    - Tự động đánh giá chính sách hoàn tiền theo mốc 60 phút qua `ICancellationPolicyService`:
+      - $\ge 60$ phút trước giờ hẹn: Hoàn 100% phí dịch vụ đã thanh toán, phí hủy 0%.
+      - $< 60$ phút trước giờ hẹn: Hoàn 50% phí dịch vụ đã thanh toán, phí hủy 50%.
+    - Nếu ca khám đã có thanh toán (`PaidAmount > 0`), tự động tạo bản ghi `Refund` gắn với `AppointmentId` với trạng thái `RefundStatus.Pending`, lưu snapshot tỷ lệ phí, số tiền phạt và số tiền hoàn dự kiến.
+    - Nếu chưa thanh toán (`PaidAmount = 0`), số tiền hoàn và phí hủy đều là 0, không tạo nợ hoặc charge thêm.
+  - Ghi nhận Audit Log:
+    - Tạo bản ghi `AuditLog` với `Action = "CANCEL_APPOINTMENT"`, `ActorType = "GUEST"`, `EntityType = "Appointment"`, `EntityId = appointment.Id`.
+    - `MetadataRedacted` lưu an toàn thông tin lý do hủy, tỷ lệ hoàn, số tiền hoàn dự kiến mà tuyệt đối không log PII (không log số điện thoại, OTP, CCCD).
+  - Endpoint & CQRS:
+    - Command: `CancelAppointmentCommand` và handler `CancelAppointmentCommandHandler` trong `ClinicAppointment.Application`.
+    - Endpoint: `POST /api/v1/appointments/{bookingCode}/cancel` ([AllowAnonymous]) trong `AppointmentsController`.
+  - Bộ kiểm thử tự động xUnit (`GuestCancellationWorkflowTests.cs`):
+    - 10 test cases bao phủ 100% luồng và các nhánh validation:
+      1. `GuestCancel_WithoutGrantToken_ReturnsUnauthorized`: Không truyền grant token -> HTTP 401.
+      2. `GuestCancel_WithWrongPurposeToken_ReturnsForbidden`: Dùng token sai mục đích (RESCHEDULE/LOOKUP) -> HTTP 403.
+      3. `GuestCancel_WithExpiredToken_ReturnsUnauthorized`: Dùng token đã hết hạn -> HTTP 401.
+      4. `GuestCancel_AfterStartAt_ReturnsConflict`: Hủy tại hoặc sau giờ hẹn -> HTTP 409 Conflict ("Không thể tự hủy ca khám tại hoặc sau thời điểm bắt đầu").
+      5. `GuestCancel_AlreadyCancelled_ReturnsBadRequest`: Gọi hủy ca khám đã hủy -> HTTP 400 Bad Request.
+      6. `GuestCancel_Success_AtOrAbove60Min_100PercentRefund_AndReleasesSlot`: Hủy trước 60 phút -> Hoàn 100%, slot được giải phóng cho bệnh nhân khác.
+      7. `GuestCancel_Success_Under60Min_50PercentRefund_AndReleasesSlot`: Hủy dưới 60 phút -> Hoàn 50%, phí phạt 50%, slot được giải phóng.
+      8. `GuestCancel_Success_ZeroPaidAmount_ZeroRefundCreated`: Hủy ca khám chưa thanh toán -> Hoàn 0, phí 0.
+      9. `GuestCancel_ConsumesGrantToken_CannotBeReused`: Grant token bị tiêu thụ ngay, tái sử dụng token bị từ chối HTTP 403 Forbidden.
+      10. `GuestCancel_WrongBookingCodeForToken_ReturnsForbidden`: Dùng grant token của ca khám này để hủy ca khám khác -> HTTP 403 Forbidden.
+    - Toàn bộ 264/264 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.35s, 0 Error.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CancelAppointment/CancelAppointmentCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CancelAppointment/CancelAppointmentCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CancelAppointment/CancelAppointmentResultDto.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/GuestCancellationWorkflowTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 264 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.35s)
+- Acceptance criteria evidence:
+  - FEAT-032 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+
+## 2026-11-14 — FEAT-033: Payment and refund tracking
+- Summary:
+  - Triển khai và hoàn thiện module theo dõi, lưu trữ và xử lý giao dịch hoàn tiền chi tiết sau khi hủy ca khám (Module Finance), tuân thủ nghiêm ngặt quy định bất biến của dự án (AGENTS.md, docs/SPEC.md v1.2, docs/BUSINESS_RULES.md BR-010, BR-011, docs/DATABASE_DESIGN.md mục 4.6).
+  - Sử dụng Snapshot giá dịch vụ (Fee snapshot used):
+    - Đảm bảo tính toán hoàn tiền và lưu trữ bản ghi `Refund` hoàn toàn dựa trên snapshot giá dịch vụ lúc đặt khám (`ServicePriceSnapshot` và `Appointment.PaidAmount`).
+    - Việc quản trị viên cập nhật giá mới trong catalog dịch vụ sau đó hoàn toàn không ảnh hưởng đến số tiền hoàn hoặc phí hủy của ca khám đã đặt.
+  - Lưu trữ phiên bản chính sách, tỷ lệ và số tiền (Policy version/rate/amount stored):
+    - Bổ sung trường `PolicyVersion` (mặc định `"v1.0"`), `ProviderReference` (mã ủy nhiệm chi / số tham chiếu chuyển khoản ngân hàng), `ProcessedByUserId` (nhân viên xử lý), `FailureReason` (lý do nếu hoàn tiền thất bại) vào thực thể `Refund`.
+    - Lưu chính xác: `PaidServiceAmount`, `CancellationFeeRate`, `CancellationFeeAmount`, `ExpectedRefundAmount`, `PolicyVersion`, `Status`.
+  - Tách bạch trạng thái — Không hiển thị Pending là Succeeded (Pending not shown as Succeeded):
+    - Rạch ròi 4 trạng thái nghiệp vụ: `Pending` (Chờ xử lý), `Processing` (Đang đối soát/xử lý), `Succeeded` (Đã hoàn thành), `Failed` (Thất bại).
+    - Cả trong API cho nhân viên (`GetRefundsListQuery`, `GetRefundByIdQuery`) và API tra cứu cho bệnh nhân (`LookupAppointmentQuery`), thuộc tính `IsCompleted` chỉ bằng `true` khi `Status == RefundStatus.Succeeded`.
+    - Trạng thái `Pending` hoặc `Processing` tuyệt đối không được báo là đã hoàn tất, cung cấp mô tả tiến độ minh bạch cho người dùng.
+  - Không giả lập cổng thanh toán ảo (No fake gateway integration):
+    - Tuân thủ quy định dự án (cổng thanh toán là TBD), cung cấp quy trình đối soát / xác nhận hoàn tiền nội bộ dành cho nhân viên Lễ tân/Kế toán (`StaffOnly`):
+      - `GET /api/v1/reception/refunds`: Danh sách hoàn tiền có phân trang, hỗ trợ lọc theo trạng thái, mã booking, khoảng ngày.
+      - `GET /api/v1/reception/refunds/{id}`: Chi tiết yêu cầu hoàn tiền.
+      - `POST /api/v1/reception/refunds/{id}/process`: Nhân viên xử lý chuyển trạng thái sang `Processing`, `Succeeded` (kèm `ProviderReference`), hoặc `Failed` (bắt buộc kèm `FailureReason`).
+      - Ngăn chặn triệt để hành vi chỉnh sửa khoản hoàn tiền đã `Succeeded` để chống double refund.
+      - Ghi nhận `AuditLog` an toàn với `Action = "PROCESS_REFUND"`, `ActorType = "STAFF"` không lưu PII.
+  - Bộ kiểm thử tự động xUnit (`RefundTrackingTests.cs`):
+    - 10 test cases bao phủ đầy đủ toàn diện các tiêu chí nghiệm thu:
+      1. `FeeSnapshot_UsedForRefundCalculationAndRecord`: Dùng snapshot giá lúc đặt, đổi giá catalog không đổi refund.
+      2. `PolicyVersion_AndRatesAndAmounts_StoredAccurately`: Lưu chính xác PolicyVersion, rates và amounts.
+      3. `PendingOrProcessing_NotShownAsSucceeded`: Pending và Processing có `IsCompleted == false`, mô tả rõ ràng.
+      4. `NoFakeGateway_ManualStaffProcessingWorkflow`: Luồng đối soát thủ công không phụ thuộc fake gateway.
+      5. `StaffOnly_AuthorizationEnforced`: Chỉ Staff (Receptionist/Admin) mới được xử lý hoàn tiền; từ chối Patient với HTTP 403.
+      6. `ProcessRefund_PendingToProcessing_Succeeds`: Chuyển sang Processing lưu nhân viên và provider reference.
+      7. `ProcessRefund_ToSucceeded_SetsProcessedAtAndAuditLog`: Chuyển sang Succeeded lưu ProcessedAt, ProviderReference và ghi AuditLog.
+      8. `ProcessRefund_AlreadySucceeded_CannotBeModified`: Chống sửa đổi khoản hoàn tiền đã Succeeded.
+      9. `ProcessRefund_ToFailed_RequiresFailureReason`: Chuyển sang Failed bắt buộc phải có lý do thất bại.
+      10. `LookupAppointment_CancelledWithRefund_ReturnsSafeRefundSummaryWithAccurateStatus`: Bệnh nhân tra cứu lịch khám bị hủy nhận được tóm tắt hoàn tiền an toàn, không hiển thị đã hoàn tất khi Pending.
+    - Toàn bộ 274/274 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.90s, 0 Error.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/RescheduleRefundOtp.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/CatalogConfigurations.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Models/PaginatedList.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Refunds/DTOs/RefundDetailDto.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Refunds/Queries/GetRefundsList/GetRefundsListQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Refunds/Queries/GetRefundById/GetRefundByIdQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Refunds/Commands/ProcessRefund/ProcessRefundCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Refunds/Commands/ProcessRefund/ProcessRefundCommandValidator.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Refunds/Commands/ProcessRefund/ProcessRefundCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CancelAppointment/CancelAppointmentResponse.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CancelAppointment/CancelAppointmentCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/LookupAppointment/LookupAppointmentQuery.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/ReceptionRefundsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/RefundTrackingTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 274 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.90s)
+- Acceptance criteria evidence:
+  - FEAT-033 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

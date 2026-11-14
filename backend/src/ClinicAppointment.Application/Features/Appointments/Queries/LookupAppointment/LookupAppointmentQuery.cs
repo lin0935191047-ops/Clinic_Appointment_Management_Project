@@ -7,6 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClinicAppointment.Application.Features.Appointments.Queries.LookupAppointment;
 
+public record PublicRefundSummaryDto(
+    decimal ExpectedRefundAmount,
+    decimal CancellationFeeAmount,
+    decimal CancellationFeeRate,
+    string PolicyVersion,
+    RefundStatus Status,
+    string StatusDescription,
+    bool IsCompleted,
+    DateTime? ProcessedAtUtc);
+
 public record PublicAppointmentSummaryDto(
     string BookingCode,
     AppointmentStatus Status,
@@ -23,7 +33,8 @@ public record PublicAppointmentSummaryDto(
     decimal PaidAmount,
     string? ReasonForVisit,
     bool CanCancel,
-    bool CanReschedule);
+    bool CanReschedule,
+    PublicRefundSummaryDto? Refund = null);
 
 public record LookupAppointmentRequest(
     string BookingCode,
@@ -106,6 +117,38 @@ public class LookupAppointmentQueryHandler : IRequestHandler<LookupAppointmentQu
         bool canModify = (appointment.Status == AppointmentStatus.PendingConfirmation || appointment.Status == AppointmentStatus.Confirmed) 
                          && appointment.StartAt > DateTime.UtcNow;
 
+        PublicRefundSummaryDto? refundSummary = null;
+        if (appointment.Status == AppointmentStatus.Cancelled && appointment.PaidAmount > 0)
+        {
+            var refund = await _context.Refunds
+                .Where(r => r.AppointmentId == appointment.Id)
+                .OrderByDescending(r => r.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (refund != null)
+            {
+                string statusDesc = refund.Status switch
+                {
+                    RefundStatus.Pending => "Yêu cầu hoàn tiền đang chờ bộ phận kế toán xử lý (Pending)",
+                    RefundStatus.Processing => "Khoản hoàn tiền đang được đối soát ngân hàng (Processing)",
+                    RefundStatus.Succeeded => "Đã hoàn tiền thành công vào tài khoản của quý khách (Succeeded)",
+                    RefundStatus.Failed => "Xử lý hoàn tiền thất bại, vui lòng liên hệ nhân viên phòng khám",
+                    _ => "Không áp dụng hoàn tiền"
+                };
+
+                refundSummary = new PublicRefundSummaryDto(
+                    ExpectedRefundAmount: refund.ExpectedRefundAmount,
+                    CancellationFeeAmount: refund.CancellationFeeAmount,
+                    CancellationFeeRate: refund.CancellationFeeRate,
+                    PolicyVersion: refund.PolicyVersion,
+                    Status: refund.Status,
+                    StatusDescription: statusDesc,
+                    IsCompleted: refund.Status == RefundStatus.Succeeded,
+                    ProcessedAtUtc: refund.ProcessedAt
+                );
+            }
+        }
+
         var summary = new PublicAppointmentSummaryDto(
             BookingCode: appointment.BookingCode,
             Status: appointment.Status,
@@ -122,7 +165,8 @@ public class LookupAppointmentQueryHandler : IRequestHandler<LookupAppointmentQu
             PaidAmount: appointment.PaidAmount,
             ReasonForVisit: appointment.ReasonForVisit,
             CanCancel: canModify,
-            CanReschedule: canModify);
+            CanReschedule: canModify,
+            Refund: refundSummary);
 
         return Result<PublicAppointmentSummaryDto>.Success(summary, 200);
     }

@@ -865,7 +865,7 @@
       "module": "Cancellation",
       "description": "Guest hủy sau OTP, không cần receptionist approval.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-026",
         "FEAT-031"
@@ -876,8 +876,16 @@
         "Appointment Cancelled",
         "Slot released transactionally"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "GuestCancellationWorkflowTests.cs với 10/10 tests PASS (GuestCancel_WithoutGrantToken_ReturnsUnauthorized, GuestCancel_WithWrongPurposeToken_ReturnsForbidden, GuestCancel_WithExpiredToken_ReturnsUnauthorized, GuestCancel_AfterStartAt_ReturnsConflict, GuestCancel_AlreadyCancelled_ReturnsBadRequest, GuestCancel_Success_AtOrAbove60Min_100PercentRefund_AndReleasesSlot, GuestCancel_Success_Under60Min_50PercentRefund_AndReleasesSlot, GuestCancel_Success_ZeroPaidAmount_ZeroRefundCreated, GuestCancel_ConsumesGrantToken_CannotBeReused, GuestCancel_WrongBookingCodeForToken_ReturnsForbidden)",
+        "Database transaction cập nhật Appointment.Status = Cancelled, giải phóng slot khám cho bệnh nhân khác",
+        "Tạo bản ghi Refund với trạng thái Pending, snapshot đúng phí phạt hủy và tiền hoàn dự kiến",
+        "Tổng bộ unit test suite: 264/264 tests PASS, frontend build thành công"
+      ],
+      "notes": [
+        "One-time use của OTP Grant token được thực thi và bảo đảm",
+        "AuditLog được ghi nhận an toàn với Action = CANCEL_APPOINTMENT không chứa PII"
+      ]
     },
     {
       "id": "FEAT-033",
@@ -885,7 +893,7 @@
       "module": "Finance",
       "description": "Lưu payment/refund calculation và processing status.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-031",
         "FEAT-032"
@@ -896,8 +904,16 @@
         "Pending not shown as Succeeded",
         "No fake gateway integration"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "RefundTrackingTests.cs với 10/10 tests PASS (FeeSnapshot_UsedForRefundCalculationAndRecord, PolicyVersion_AndRatesAndAmounts_StoredAccurately, PendingOrProcessing_NotShownAsSucceeded, NoFakeGateway_ManualStaffProcessingWorkflow, StaffOnly_AuthorizationEnforced, ProcessRefund_PendingToProcessing_Succeeds, ProcessRefund_ToSucceeded_SetsProcessedAtAndAuditLog, ProcessRefund_AlreadySucceeded_CannotBeModified, ProcessRefund_ToFailed_RequiresFailureReason, LookupAppointment_CancelledWithRefund_ReturnsSafeRefundSummaryWithAccurateStatus)",
+        "Tách bạch trạng thái Pending/Processing tuyệt đối không hiển thị là Succeeded",
+        "Quản lý hoàn tiền thủ công qua quyền StaffOnly với AuditLog đầy đủ không phụ thuộc fake gateway",
+        "Tổng bộ unit test suite: 274/274 tests PASS, frontend build thành công"
+      ],
+      "notes": [
+        "Khoản hoàn tiền đã Succeeded được bảo vệ không thể bị chỉnh sửa lại tránh double refund",
+        "Bệnh nhân tra cứu lịch khám đã hủy chỉ thấy thông tin trạng thái đang chờ xử lý/đối soát, không bị lừa hiểu nhầm tiền đã hoàn"
+      ]
     },
     {
       "id": "FEAT-034",

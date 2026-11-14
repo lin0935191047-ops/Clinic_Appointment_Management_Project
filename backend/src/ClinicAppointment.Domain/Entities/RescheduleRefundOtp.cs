@@ -81,11 +81,113 @@ public class Refund : BaseEntity
     public decimal CancellationFeeRate { get; set; }
     public decimal CancellationFeeAmount { get; set; }
     public decimal ExpectedRefundAmount { get; set; }
+    public string PolicyVersion { get; set; } = "v1.0";
     public RefundStatus Status { get; set; } = RefundStatus.Pending;
     public string? Reason { get; set; }
+    public Guid? ProcessedByUserId { get; set; }
+    public string? ProviderReference { get; set; }
+    public string? FailureReason { get; set; }
     public DateTime? ProcessedAt { get; set; }
 
     public virtual Appointment? Appointment { get; set; }
+    public virtual User? ProcessedByUser { get; set; }
+
+    public static Refund Create(
+        Guid appointmentId,
+        decimal paidServiceAmount,
+        decimal cancellationFeeRate,
+        decimal cancellationFeeAmount,
+        decimal expectedRefundAmount,
+        string? reason = null,
+        RefundStatus status = RefundStatus.Pending,
+        string policyVersion = "v1.0")
+    {
+        if (appointmentId == Guid.Empty)
+            throw new ArgumentException("Mã cuộc hẹn không hợp lệ.", nameof(appointmentId));
+
+        if (paidServiceAmount < 0)
+            throw new ArgumentException("Số tiền đã thanh toán không được âm.", nameof(paidServiceAmount));
+
+        if (expectedRefundAmount > paidServiceAmount)
+            throw new ArgumentException("Số tiền hoàn dự kiến không được vượt quá số tiền đã thanh toán.", nameof(expectedRefundAmount));
+
+        return new Refund
+        {
+            Id = Guid.NewGuid(),
+            AppointmentId = appointmentId,
+            PaidServiceAmount = paidServiceAmount,
+            CancellationFeeRate = cancellationFeeRate,
+            CancellationFeeAmount = cancellationFeeAmount,
+            ExpectedRefundAmount = expectedRefundAmount,
+            PolicyVersion = string.IsNullOrWhiteSpace(policyVersion) ? "v1.0" : policyVersion.Trim(),
+            Status = status,
+            Reason = reason?.Trim(),
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Bắt đầu xử lý hoàn tiền (chuyển sang trạng thái Processing)
+    /// </summary>
+    public void Process(Guid processedByUserId, string? providerReference = null)
+    {
+        if (processedByUserId == Guid.Empty)
+            throw new ArgumentException("ID người xử lý không hợp lệ.", nameof(processedByUserId));
+
+        if (Status == RefundStatus.Succeeded)
+            throw new InvalidOperationException("Khoản hoàn tiền này đã hoàn tất thành công, không thể đưa về trạng thái đang xử lý.");
+
+        Status = RefundStatus.Processing;
+        ProcessedByUserId = processedByUserId;
+        if (!string.IsNullOrWhiteSpace(providerReference))
+        {
+            ProviderReference = providerReference.Trim();
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Xác nhận hoàn tiền thành công (Succeeded)
+    /// </summary>
+    public void MarkSucceeded(Guid processedByUserId, string? providerReference = null, DateTime? processedAt = null)
+    {
+        if (processedByUserId == Guid.Empty)
+            throw new ArgumentException("ID người xử lý không hợp lệ.", nameof(processedByUserId));
+
+        if (Status == RefundStatus.Succeeded)
+            throw new InvalidOperationException("Khoản hoàn tiền này đã được xác nhận hoàn tất thành công trước đó.");
+
+        Status = RefundStatus.Succeeded;
+        ProcessedByUserId = processedByUserId;
+        if (!string.IsNullOrWhiteSpace(providerReference))
+        {
+            ProviderReference = providerReference.Trim();
+        }
+        ProcessedAt = processedAt ?? DateTime.UtcNow;
+        FailureReason = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Đánh dấu hoàn tiền thất bại (Failed) kèm lý do
+    /// </summary>
+    public void MarkFailed(Guid processedByUserId, string failureReason, DateTime? processedAt = null)
+    {
+        if (processedByUserId == Guid.Empty)
+            throw new ArgumentException("ID người xử lý không hợp lệ.", nameof(processedByUserId));
+
+        if (string.IsNullOrWhiteSpace(failureReason))
+            throw new ArgumentException("Lý do hoàn tiền thất bại là bắt buộc.", nameof(failureReason));
+
+        if (Status == RefundStatus.Succeeded)
+            throw new InvalidOperationException("Khoản hoàn tiền này đã được hoàn tất thành công, không thể chuyển sang thất bại.");
+
+        Status = RefundStatus.Failed;
+        ProcessedByUserId = processedByUserId;
+        FailureReason = failureReason.Trim();
+        ProcessedAt = processedAt ?? DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
 public class OtpChallenge : BaseEntity

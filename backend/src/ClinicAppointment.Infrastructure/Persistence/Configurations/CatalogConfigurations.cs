@@ -84,10 +84,28 @@ public class RefundConfiguration : IEntityTypeConfiguration<Refund>
         builder.Property(r => r.CancellationFeeAmount).HasPrecision(12, 2);
         builder.Property(r => r.ExpectedRefundAmount).HasPrecision(12, 2);
 
+        builder.Property(r => r.PolicyVersion)
+            .HasMaxLength(50)
+            .HasDefaultValue("v1.0")
+            .IsRequired();
+
         builder.Property(r => r.Status)
             .HasConversion<string>()
             .HasMaxLength(30)
             .IsRequired();
+
+        builder.Property(r => r.ProviderReference)
+            .HasMaxLength(150);
+
+        builder.Property(r => r.FailureReason)
+            .HasColumnType("text");
+
+        builder.HasIndex(r => new { r.AppointmentId, r.Status });
+
+        builder.HasOne(r => r.ProcessedByUser)
+            .WithMany()
+            .HasForeignKey(r => r.ProcessedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
