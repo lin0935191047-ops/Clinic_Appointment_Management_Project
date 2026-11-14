@@ -1332,7 +1332,7 @@
       "module": "QA",
       "description": "Unit tests domain/application.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-031",
         "FEAT-039"
@@ -1342,8 +1342,16 @@
         "State transitions",
         "Identity matcher"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — Refund boundaries (RefundBoundariesTests.cs): Kiểm thử chuyên sâu toàn diện các mốc ranh giới hoàn tiền tính theo Server Timestamp UTC và mốc 60 phút bất biến (BR-010, docs/SPEC.md); Đúng 60 phút (60m 00s): hoàn 100%, phí hủy 0%; 60 phút 01 giây (>60m): hoàn 100%; 59 phút 59 giây (<60m): hoàn 50%, phí hủy 50%; 1 phút trước giờ hẹn: hoàn 50%; Đúng thời điểm bắt đầu ca khám (0 phút) hoặc sau giờ hẹn (<0 phút): từ chối tự hủy (CanCancel = false, ném InvalidOperationException); Bảo toàn tuyệt đối số tiền lẻ VND (Odd amounts: 155.555 VND, 333.333 VND, 999.999 VND) với nguyên tắc làm tròn số nguyên chuẩn: RefundAmount + CancellationFeeAmount == PaidAmount; Kiểm thử ca khám miễn phí (0 VND) và ca khám giá trị cao (15.000.000 VND).",
+        "Acceptance Criteria 2 — State transitions (AppointmentStateMachineTests.cs): Kiểm thử toàn diện máy trạng thái ca khám (Appointment) và yêu cầu đổi lịch (RescheduleRequest); Chu trình chuẩn: PendingConfirmation -> Confirmed -> CheckedIn -> InProgress -> Completed; Chuyển đổi trạng thái hủy hợp lệ từ PendingConfirmation và Confirmed; Kiểm tra nghiêm ngặt tính bất biến của Terminal States (Completed và Cancelled): từ chối tuyệt đối mọi thao tác chuyển trạng thái, đảo ngược hoặc hủy lại (ném InvalidOperationException); Kiểm tra các bước chuyển đổi bất hợp lệ: không thể Check-in khi chưa Confirmed, không thể khám khi chưa CheckedIn, không thể hoàn thành khi chưa InProgress; Máy trạng thái RescheduleRequest: PendingReview -> Approved/Rejected, kiểm tra bắt buộc nhập lý do từ chối và chặn duyệt/từ chối lại yêu cầu đã xử lý.",
+        "Acceptance Criteria 3 — Identity matcher (PatientIdentityMatcherTests.cs): Kiểm thử chuyên sâu thuật toán đối soát định danh bệnh nhân (PatientDuplicateDetectionService) tuân thủ quy tắc bất biến Strictly NO Auto-merge; Trùng Họ Tên và Ngày Sinh/Năm Sinh: nhận diện ứng viên trùng lặp (NAME_DOB, NAME_BIRTH_YEAR) và bắt buộc rà soát thủ công (RequiresManualReview = true), bảo đảm 2 hồ sơ có Id riêng biệt và độc lập; Nhận diện trường hợp số điện thoại dùng chung trong gia đình (SHARED_PHONE_DIFFERENT_NAME, mẹ đặt cho con, người thân đặt hộ) an toàn không bị chặn; Chuẩn hóa họ tên tiếng Việt (NormalizedFullName): loại bỏ khoảng trắng thừa, chuẩn hóa chữ in hoa/thường; Kiểm thử quy trình rà soát thủ công tại quầy: trường hợp CONFIRMED_SAME_PERSON gộp hồ sơ, tạo PatientMergeEvent lưu snapshot JSON và đánh dấu hồ sơ phụ MERGED; trường hợp DIFFERENT_PERSON xóa cờ trùng lặp và giữ nguyên 2 hồ sơ độc lập trạng thái ACTIVE.",
+        "Bộ kiểm thử tự động Backend tại RefundBoundariesTests.cs, AppointmentStateMachineTests.cs, PatientIdentityMatcherTests.cs: 46/46 test cases ĐẠT 100% (tổng 465/465 unit tests toàn solution PASS 100%, 0 warning, 0 error); Frontend Vite build 100% thành công."
+      ],
+      "notes": [
+        "Ranh giới hoàn tiền: Bảo đảm nguyên tắc mốc 60 phút và làm tròn VND chuẩn không có số thập phân.",
+        "Đối soát định danh: Strictly NO Auto-merge; bảo vệ hồ sơ bệnh nhân độc lập."
+      ]
     },
     {
       "id": "FEAT-050",

@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-048 Completed)
-- Current phase: Backend unit tests (FEAT-049)
+- Overall status: In progress (FEAT-001 through FEAT-049 Completed)
+- Current phase: API integration tests (FEAT-050)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-048)
+## Features Completed (FEAT-001 -> FEAT-049)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -57,10 +57,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-046` (Reception frontend): Giao diện Quầy Lễ tân trực quan, phân quyền chặt chẽ và tích hợp API thật (Module Frontend); Xử lý yêu cầu đổi lịch (Approve/reject reschedule) với modal bắt buộc nhập lý do từ chối và bảo lưu 100% slot cũ khi từ chối; Xác nhận ca khám mới (Confirm appointment) từ PendingConfirmation sang Confirmed; Tiếp đón bệnh nhân tại quầy (Check-in) chuyển sang CheckedIn vào hàng đợi khám; Bộ lọc đa tiêu chí theo ngày, trạng thái, và từ khóa tìm kiếm (mã booking, tên, số điện thoại); Kiểm soát quyền truy cập Role-aware (chỉ RECEPTIONIST hoặc ADMIN) với màn hình đăng nhập lễ tân chuyên biệt và interceptor tự động gắn Bearer Token; Backend tests 49/49 tests liên quan PASS 100% (419/419 total solution tests PASS), Frontend Vite build 100% thành công.
 - `FEAT-047` (Doctor frontend): Giao diện Bác sĩ lâm sàng trực quan, phân quyền chặt chẽ và tích hợp luồng thăm khám toàn diện (Module Frontend); Hiển thị lịch khám trong ngày được phân công (Assigned schedule), thống kê chỉ số ca khám, hàng đợi bệnh nhân đang chờ khám (WaitingQueue các ca CheckedIn với số thứ tự QueueNumber), và ca khám đang diễn ra (CurrentActiveAppointment các ca InProgress); Luồng khám bệnh hoàn chỉnh (Consultation workflow): Thao tác Bắt đầu khám (StartConsultation) chuyển CheckedIn sang InProgress; Form ghi chép bệnh án lâm sàng chuẩn y tế gồm Triệu chứng lâm sàng (bắt buộc), Chẩn đoán y khoa (bắt buộc), Ghi chú khám bệnh, Kết luận kê đơn và Lời dặn tái khám; Thao tác Lưu nháp bệnh án (RecordConsultation) và Hoàn tất ca khám (CompleteConsultation) có modal xác nhận tự động khóa vĩnh viễn hồ sơ bệnh án; Modal xem lại bệnh án đã khóa (Read-only Consultation Modal); Phân quyền kiểm soát (Protected views: DOCTOR hoặc ADMIN) với màn hình đăng nhập bác sĩ chuyên biệt và nút đăng nhập nhanh demo; Backend tests 57/57 tests liên quan PASS 100% (419/419 total solution tests PASS), Frontend Vite build 100% thành công.
 - `FEAT-048` (Admin frontend): Giao diện Trung tâm Quản trị Hệ thống toàn diện, phân quyền ADMIN chặt chẽ, tích hợp đối soát tài chính và quản lý danh mục (Module Frontend); Báo cáo và Dashboard đối soát (Dashboard and filters): Bộ lọc đa chiều khoảng ngày, bác sĩ, chuyên khoa, trạng thái ca khám; 4 thẻ đối soát tài chính (Doanh thu gộp GrossRevenue, Tiền đã thanh toán PaidAmount, Phí hủy thu được CancellationFeeCollected, Doanh thu thực nhận NetRevenue); Phân rã trạng thái ca khám (StatusBreakdown); Báo cáo hiệu suất theo Chuyên khoa và Bác sĩ kèm tỷ lệ hoàn thành CompletionRate %; Quản lý toàn diện danh mục và lịch làm việc (CRUD catalog/schedule): Quản lý Chuyên khoa (xem danh sách, modal tạo mới, bật/tắt kích hoạt), Quản lý Bác sĩ (xem danh sách, modal tạo hồ sơ bác sĩ kèm tài khoản đăng nhập staff DOCTOR, bật/tắt kích hoạt), Quản lý Dịch vụ khám (xem danh sách, modal tạo mới, thời lượng phút, đơn giá VND, bật/tắt kích hoạt), Quản lý Lịch làm việc định kỳ (chọn bác sĩ, xem ca định kỳ T2-CN, modal thiết lập ca mới kèm ngày hiệu lực, bật/tắt kích hoạt, xóa ca); Backend tests 65/65 tests liên quan PASS 100% (419/419 total solution tests PASS), Frontend Vite build 100% thành công.
+- `FEAT-049` (Backend unit tests): Bộ kiểm thử tự động chuyên sâu Domain và Application bao phủ 100% các ranh giới và quy tắc bất biến cốt lõi (Module QA); Kiểm thử ranh giới hoàn tiền (Refund boundaries - RefundBoundariesTests.cs): Kiểm thử chính xác mốc 60 phút bất biến (đúng 60 phút hoàn 100%, 60m 01s hoàn 100%, 59m 59s hoàn 50%, 1 phút trước giờ hẹn hoàn 50%, tại và sau giờ hẹn <=0m từ chối tự hủy CanCancel = false), bảo toàn tuyệt đối số tiền lẻ VND không mất đồng nào (Odd amounts: 155.555 VND, 333.333 VND, 999.999 VND) với RefundAmount + CancellationFeeAmount == PaidAmount, kiểm thử ca khám miễn phí (0 VND) và giá trị cao; Kiểm thử máy trạng thái ca khám và đổi lịch (State transitions - AppointmentStateMachineTests.cs): Chu trình chuẩn PendingConfirmation -> Confirmed -> CheckedIn -> InProgress -> Completed, tính bất biến tuyệt đối của Terminal States (Completed và Cancelled không thể đảo ngược, không thể hủy lại), kiểm tra nghiêm ngặt mọi bước chuyển đổi bất hợp lệ; Kiểm thử thuật toán đối soát định danh (Identity matcher - PatientIdentityMatcherTests.cs): Tuân thủ triệt để bất biến Strictly NO Auto-merge khi trùng Tên + Ngày sinh/Năm sinh, nhận diện an toàn số điện thoại dùng chung trong gia đình (SHARED_PHONE_DIFFERENT_NAME), chuẩn hóa tiếng Việt NormalizedFullName, và quy trình rà soát tại quầy với CONFIRMED_SAME_PERSON (gộp hồ sơ, snapshot JSON) và DIFFERENT_PERSON (giữ nguyên 2 hồ sơ độc lập); 46/46 test cases ĐẠT 100% (tổng 465/465 unit tests toàn solution PASS 100%).
 
 ## Next steps
-1. Triển khai FEAT-049 (Backend unit tests: Unit tests domain/application - Refund boundaries, State transitions, Identity matcher).
-2. Triển khai FEAT-050 (API integration tests).
+1. Triển khai FEAT-050 (API integration tests: WebApplicationFactory tests cho Guest booking, OTP challenge, Reschedule review).
+2. Triển khai FEAT-051 (PostgreSQL GiST concurrency test: Kiểm thử race condition đặt trùng ca đồng thời bằng exclusion constraint).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

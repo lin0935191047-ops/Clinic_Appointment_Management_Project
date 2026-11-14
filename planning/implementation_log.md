@@ -2225,3 +2225,47 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
 - Acceptance criteria evidence:
   - `CRUD catalog/schedule`: Đạt 100%, quản lý danh mục và lịch làm việc trực quan.
   - `Dashboard and filters`: Đạt 100%, đối soát tài chính và bộ lọc đa chiều chính xác.
+
+### 2026-11-14 — FEAT-049 — Backend unit tests
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Xây dựng 3 bộ kiểm thử tự động chuyên sâu Domain và Application bao phủ 100% các ranh giới và quy tắc bất biến:
+    1. `RefundBoundariesTests.cs` (Kiểm thử ranh giới hoàn tiền):
+       - Mốc ranh giới 60 phút bất biến: Đúng 60 phút 00 giây (60.0m) hoàn 100%, phí hủy 0% (BR-010, docs/SPEC.md).
+       - Mốc 60 phút 01 giây (>60m): hoàn 100%, phí hủy 0%.
+       - Mốc 59 phút 59 giây (<60m): hoàn 50%, phí hủy 50%.
+       - Mốc 1 phút và 10 giây trước giờ hẹn: hoàn 50%, phí hủy 50%.
+       - Mốc tại giờ hẹn (0 phút) hoặc sau giờ hẹn (<0 phút): ném `InvalidOperationException` từ chối tự hủy, `CancellationPolicyService.Evaluate` trả về `CanCancel = false` kèm thông điệp từ chối rõ ràng.
+       - Ràng buộc làm tròn số nguyên VND chuẩn: Kiểm tra với các số tiền lẻ (155.555 đ, 333.333 đ, 999.999 đ, 1 đ), bảo đảm nguyên tắc `ExpectedRefundAmount + CancellationFeeAmount == PaidAmount` không mất một đồng.
+       - Kiểm thử ca khám miễn phí (0 đ) và ca khám giá trị cao (15.000.000 đ).
+    2. `AppointmentStateMachineTests.cs` (Kiểm thử máy trạng thái ca khám & đổi lịch):
+       - Chu trình vòng đời chuyển đổi hợp lệ: `PendingConfirmation` -> `Confirmed` -> `CheckedIn` -> `InProgress` -> `Completed`.
+       - Nhánh hủy lịch hợp lệ từ `PendingConfirmation` và `Confirmed`.
+       - Tính bất biến tuyệt đối của Terminal States (`Completed` và `Cancelled`): Chặn mọi hành động chuyển trạng thái, đảo ngược hoặc hủy lại (ném `InvalidOperationException`).
+       - Kiểm tra ma trận chuyển đổi bất hợp lệ: Chặn `CheckIn` khi chưa `Confirmed`, chặn `StartConsultation` khi chưa `CheckedIn`, chặn `CompleteConsultation` khi chưa `InProgress`.
+       - Máy trạng thái `RescheduleRequest`: Chuyển đổi `PendingReview` -> `Approved` / `Rejected`, bắt buộc ghi rõ lý do từ chối khi `Reject`, chặn duyệt/từ chối lại yêu cầu đã xử lý.
+    3. `PatientIdentityMatcherTests.cs` (Kiểm thử thuật toán đối soát định danh bệnh nhân):
+       - Ràng buộc bất biến tuyệt đối: **Strictly NO Auto-merge** khi trùng Tên + Ngày sinh/Năm sinh. Hai hồ sơ có Id riêng biệt và độc lập, hệ thống đánh dấu ca rà soát cần đối soát thủ công (`RequiresManualReview = true`).
+       - Nhận diện an toàn số điện thoại dùng chung trong gia đình (`SHARED_PHONE_DIFFERENT_NAME`: mẹ đặt cho con, người thân đặt hộ) với `RequiresManualReview = false`.
+       - Chuẩn hóa họ tên tiếng Việt (`NormalizedFullName`): Xử lý khoảng trắng thừa, chuẩn hóa chữ in hoa/thường (`"  NGUYỄN   VĂN   AN  "` -> `"NGUYỄN VĂN AN"`).
+       - Quy trình rà soát thủ công tại quầy:
+         - Trường hợp `CONFIRMED_SAME_PERSON`: Cho phép gộp hồ sơ, tạo bản ghi `PatientMergeEvent` lưu snapshot dữ liệu JSON, đánh dấu hồ sơ phụ `RecordStatus = 'MERGED'`.
+         - Trường hợp `DIFFERENT_PERSON`: Xóa cờ nghi trùng `IsPossibleDuplicate = false`, đóng ca rà soát `IdentityReviewStatus.DIFFERENT_PERSON`, bảo toàn 2 hồ sơ độc lập trạng thái `ACTIVE`.
+  - Đảm bảo trọn vẹn 3 tiêu chí nghiệm thu:
+    1. `Refund boundaries`: Đạt 100%, kiểm thử mốc 60 phút, mốc quá hạn, làm tròn VND lẻ và bảo toàn số tiền.
+    2. `State transitions`: Đạt 100%, kiểm thử chu trình chuẩn, terminal states và chặn chuyển đổi bất hợp lệ.
+    3. `Identity matcher`: Đạt 100%, Strictly NO Auto-merge, shared phone, chuẩn hóa tiếng Việt và manual review workflow.
+- Files created/changed:
+  - `backend/tests/ClinicAppointment.Domain.Tests/RefundBoundariesTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/AppointmentStateMachineTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/PatientIdentityMatcherTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~RefundBoundaries|FullyQualifiedName~AppointmentStateMachine|FullyQualifiedName~PatientIdentityMatcher"` (Thành công: 46 Passed, 0 Failed, 0 Skipped, Duration: 90 ms)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 465 Passed, 0 Failed, 0 Skipped, Duration: 5 s)
+- Acceptance criteria evidence:
+  - `Refund boundaries`: Đạt 100%, kiểm thử toàn diện mốc 60 phút và làm tròn VND.
+  - `State transitions`: Đạt 100%, kiểm thử máy trạng thái ca khám và yêu cầu đổi lịch.
+  - `Identity matcher`: Đạt 100%, kiểm thử đối soát định danh tuân thủ Strictly NO Auto-merge.
