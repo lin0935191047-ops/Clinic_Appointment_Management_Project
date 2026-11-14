@@ -96,3 +96,46 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - FEAT-005, FEAT-006, FEAT-007 đều đạt đầy đủ tiêu chí nghiệm thu và có kết quả kiểm thử thực tế.
 - Documentation updated:
   - `planning/feature_list.json`, `planning/progress.md`, `planning/implementation_log.md`
+
+### 2026-11-14 — FEAT-008, FEAT-009, FEAT-010 — EF Core Migrations, GiST Exclusion, Idempotent Seeder & Users/Roles
+- Status before/after:
+  - FEAT-001 -> FEAT-004: not_started -> completed (Tất cả tiêu chuẩn nghiệm thu & tài liệu đã sẵn sàng)
+  - FEAT-008: not_started -> completed
+  - FEAT-009: not_started -> completed
+  - FEAT-010: not_started -> completed
+- Scope implemented:
+  - Cấu hình EF Core DbContext với Npgsql snake-case naming convention, chuỗi kết nối an toàn qua configuration/env.
+  - Cài đặt công cụ CLI `dotnet-ef` phiên bản 11.0.0.
+  - Khởi tạo migration `20261114062800_InitialCreate.cs` chứa đầy đủ 14 bảng dữ liệu cốt lõi, bổ sung câu lệnh kích hoạt extension `btree_gist` và ràng buộc chống trùng slot lịch khám của bác sĩ `ex_appointments_doctor_no_overlap` (EXCLUDE USING gist).
+  - Xuất kịch bản SQL idempotent `database/migrations/20261114_initial_schema.sql` (17.4 KB) chạy an toàn trên mọi môi trường PostgreSQL.
+  - Xây dựng `DatabaseSeeder.cs` idempotent để tự động khởi tạo 4 Roles hệ thống (ADMIN, DOCTOR, RECEPTIONIST, PATIENT), tài khoản Quản trị viên mặc định `admin@clinic.vn`, 5 chuyên khoa chuẩn và 5 dịch vụ khám cơ bản.
+  - Xây dựng hoàn chỉnh mô hình Identity trong `ClinicAppointment.Domain/Entities/Identity.cs` (`User`, `Role`, `UserRoleAssignment`, `RefreshToken`).
+  - Xây dựng `PasswordHasher.cs` mã hóa mật khẩu theo chuẩn PBKDF2 HMAC-SHA256 với salt 128-bit ngẫu nhiên và constant-time verification.
+  - Xây dựng `RoleAssignmentPolicy.cs` thực thi kiểm soát phân quyền: vai trò Bệnh nhân (PATIENT) cho phép tự gán khi đăng ký; các vai trò quản trị/chuyên môn (ADMIN, DOCTOR, RECEPTIONIST) bắt buộc phải do người dùng có vai trò ADMIN gán; chống gán trùng vai trò.
+  - Xây dựng bộ kiểm thử xUnit tự động `IdentityAndRoleTests.cs`: 11/11 test cases ĐẠT 100%, nâng tổng số test case xUnit của toàn solution lên 21/21 tests PASS.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/Identity.cs`
+  - `backend/src/ClinicAppointment.Domain/Services/RoleAssignmentPolicy.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IPasswordHasher.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Security/PasswordHasher.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/IdentityConfigurations.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/DatabaseSeeder.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114062800_InitialCreate.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/ApplicationDbContextModelSnapshot.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Api/Program.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/IdentityAndRoleTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj`
+  - `database/migrations/20261114_initial_schema.sql`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "$env:USERPROFILE\.dotnet\tools\dotnet-ef.exe" migrations add InitialCreate ...` (Thành công)
+  - `& "$env:USERPROFILE\.dotnet\tools\dotnet-ef.exe" migrations script --idempotent ...` (Thành công sinh SQL 17.4 KB)
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln" --no-restore` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln" --no-build` (Thành công: 21 Passed, 0 Failed)
+- Acceptance criteria evidence:
+  - Toàn bộ tiêu chí từ FEAT-001 đến FEAT-010 đã được kiểm tra, đáp ứng và có bằng chứng xác thực thực tế.

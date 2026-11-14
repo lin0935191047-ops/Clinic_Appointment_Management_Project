@@ -1,6 +1,8 @@
 using ClinicAppointment.Api.Middlewares;
 using ClinicAppointment.Application;
 using ClinicAppointment.Infrastructure;
+using ClinicAppointment.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,8 +46,26 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Clinic Appointment API v1.2");
-        c.RoutePrefix = string.Empty; // Mở Swagger ngay tại root URL
+        c.RoutePrefix = "swagger";
     });
+
+    // Tự động migrate và seed nếu PostgreSQL kết nối thành công
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        if (db.Database.CanConnect())
+        {
+            await db.Database.MigrateAsync();
+            await seeder.SeedAsync();
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Chưa thể kết nối tới cơ sở dữ liệu PostgreSQL để chạy migrate/seed tự động. Vui lòng kiểm tra mật khẩu kết nối.");
+    }
 }
 
 app.UseHttpsRedirection();
@@ -55,4 +75,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-

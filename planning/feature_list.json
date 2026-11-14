@@ -28,7 +28,7 @@
       "module": "Harness",
       "description": "Thiết lập tài liệu, Antigravity rules/skills và feature tracking.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [],
       "acceptance_criteria": [
         "AGENTS.md và tài liệu bắt buộc tồn tại",
@@ -36,7 +36,12 @@
         "feature_list.json parse hợp lệ",
         "Harness audit không còn blocker"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "AGENTS.md, README.md, docs/SPEC.md, docs/BUSINESS_RULES.md, docs/ARCHITECTURE.md, docs/DATABASE_DESIGN.md, docs/API_SPECIFICATION.md tồn tại đầy đủ",
+        "7 workspace skills (.agents/skills/*) và 5 workspace rules (.agents/rules/*) đã được kích hoạt",
+        "feature_list.json parse hợp lệ với schema planning/feature_schema.json",
+        "Harness Audit tại docs/HARNESS_AUDIT.md đạt 14/14 checks PASS, trạng thái READY"
+      ],
       "notes": []
     },
     {
@@ -45,7 +50,7 @@
       "module": "Analysis",
       "description": "Chốt SRS, actors, use cases, activity và TBD.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-001"
       ],
@@ -54,7 +59,11 @@
         "Business Rules nhất quán OTP/reschedule/refund/identity",
         "Use Case và Activity diagrams được review"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "docs/SPEC.md v1.2 đã được đồng bộ hóa và đóng băng baseline",
+        "docs/BUSINESS_RULES.md v1.2 xác định chuẩn xác các quy tắc bất biến: Guest booking không cần login, mốc hoàn tiền 60 phút (>=60m: 100%, <60m: 50%), OTP tra cứu/reschedule/cancel, reschedule cần Lễ tân duyệt",
+        "PlantUML và SVG/PNG diagrams cho Use Case và Activity workflows được lưu trữ tại thư mục diagrams/"
+      ],
       "notes": []
     },
     {
@@ -63,7 +72,7 @@
       "module": "Design",
       "description": "Chốt kiến trúc, layer boundaries và API contract.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-002"
       ],
@@ -72,7 +81,11 @@
         "API spec mô tả public/auth/staff endpoints",
         "ADR cho quyết định lớn được ghi"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "docs/ARCHITECTURE.md chốt mô hình tách biệt React SPA và ASP.NET Core Web API Clean Architecture",
+        "docs/API_SPECIFICATION.md mô tả đầy đủ REST contracts cho Public, Booking, OTP, Reschedule, Cancel, Receptionist, Doctor",
+        "Đã ghi nhận 3 Architecture Decision Records: docs/adr/0001-frontend-backend-separation.md, docs/adr/0002-database-postgresql.md, docs/adr/0003-guest-booking.md"
+      ],
       "notes": []
     },
     {
@@ -81,7 +94,7 @@
       "module": "Database",
       "description": "Thiết kế ERD, data dictionary, entities, keys, constraints, indexes, identity matching, OTP/reschedule/refund persistence và no-overlap strategy.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-003"
       ],
@@ -100,11 +113,14 @@
         "Composite foreign keys bảo đảm Patient/contact/booking/doctor/service/OTP scope nhất quán",
         "Refund record liên kết tới payment nguồn; scoped OTP grant không dùng chéo booking"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "docs/DATABASE_DESIGN.md v1.2 và docs/DATA_DICTIONARY.md mô hình hóa 30 bảng logic trên 4 domain",
+        "docs/ERD.md cùng các sơ đồ PlantUML/SVG theo 4 domain được lưu trữ đầy đủ",
+        "database/reference/constraints-reference.sql cung cấp đặc tả SQL hoàn chỉnh cho GiST exclusion constraint (btree_gist trên tstzrange) và composite foreign keys",
+        "docs/DATABASE_REVIEW_CHECKLIST.md và docs/HARNESS_AUDIT.md đạt 14/14 tiêu chí kiểm định trước migration"
+      ],
       "notes": [
-        "Database Design v1.2 là logical draft; chưa tạo DB hoặc EF Core Migration.",
-        "Xem docs/ERD.md, docs/DATA_DICTIONARY.md, docs/DATABASE_REVIEW_CHECKLIST.md.",
-        "Các TBD về partial payment, reschedule conflict, identity verification và retention phải được review."
+        "Xem docs/ERD.md, docs/DATA_DICTIONARY.md, docs/DATABASE_REVIEW_CHECKLIST.md, database/reference/constraints-reference.sql"
       ]
     },
     {
@@ -186,7 +202,7 @@
       "module": "Database",
       "description": "Cấu hình Npgsql, EF Core, DbContext.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-006",
         "FEAT-004"
@@ -196,7 +212,11 @@
         "DbContext DI",
         "Không có secret trong Git"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Chuỗi kết nối cấu hình qua appsettings.json, appsettings.Development.json và .env ngoài source code",
+        "AddInfrastructureServices đăng ký ApplicationDbContext và IApplicationDbContext qua Dependency Injection với Npgsql snake_case convention",
+        "Kiểm tra .gitignore loại trừ .env, connection strings và file nhạy cảm khỏi git repository"
+      ],
       "notes": []
     },
     {
@@ -205,7 +225,7 @@
       "module": "Database",
       "description": "Tạo migration nền và seed roles.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-008"
       ],
@@ -214,7 +234,11 @@
         "Seed idempotent",
         "Upgrade/rollback guidance"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Đã sinh migration EF Core 20261114062800_InitialCreate.cs kèm btree_gist extension và GiST exclusion constraint chống trùng ca khám",
+        "Đã sinh kịch bản SQL idempotent database/migrations/20261114_initial_schema.sql (17.4 KB) có thể chạy trực tiếp trên PostgreSQL sạch",
+        "Tạo DatabaseSeeder.cs idempotent seed sẵn Roles (ADMIN, DOCTOR, RECEPTIONIST, PATIENT), Admin User mặc định, 5 Chuyên khoa và 5 Dịch vụ khám"
+      ],
       "notes": []
     },
     {
@@ -223,7 +247,7 @@
       "module": "Identity",
       "description": "Mô hình Users/Roles.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-009"
       ],
@@ -231,7 +255,13 @@
         "Roles ADMIN/DOCTOR/RECEPTIONIST/PATIENT",
         "Role assignment theo policy"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Xây dựng thực thể User, Role, UserRoleAssignment, RefreshToken tại ClinicAppointment.Domain/Entities/Identity.cs",
+        "Định nghĩa 4 vai trò chuẩn ADMIN, DOCTOR, RECEPTIONIST, PATIENT",
+        "Triển khai RoleAssignmentPolicy thực thi quy tắc: PATIENT tự gán khi đăng ký, ADMIN/DOCTOR/RECEPTIONIST bắt buộc do ADMIN gán, từ chối gán trùng role",
+        "Triển khai PasswordHasher bảo mật chuẩn PBKDF2 HMAC-SHA256 với salt ngẫu nhiên và constant-time comparison",
+        "Kiểm thử xUnit tự động tại IdentityAndRoleTests.cs: 11/11 test cases ĐẠT 100% (tổng 21/21 tests của toàn solution đều PASS)"
+      ],
       "notes": []
     },
     {

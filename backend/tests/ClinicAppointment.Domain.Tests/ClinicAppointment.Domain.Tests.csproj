@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ClinicAppointment.Domain\ClinicAppointment.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ClinicAppointment.Application\ClinicAppointment.Application.csproj" />
+    <ProjectReference Include="..\..\src\ClinicAppointment.Infrastructure\ClinicAppointment.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

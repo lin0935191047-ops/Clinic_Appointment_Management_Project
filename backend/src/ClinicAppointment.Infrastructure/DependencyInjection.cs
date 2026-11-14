@@ -30,6 +30,7 @@ public static class DependencyInjection
         // Security & Policies
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IRoleAssignmentPolicy, RoleAssignmentPolicy>();
+        services.AddScoped<DatabaseSeeder>();
 
         return services;
     }
