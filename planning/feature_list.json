@@ -1196,7 +1196,7 @@
       "module": "Reporting",
       "description": "Dashboard bác sĩ.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-038",
         "FEAT-040"
@@ -1205,8 +1205,15 @@
         "Today schedule",
         "Assigned scope enforced"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — Today schedule: Cung cấp bức tranh toàn diện về lịch trình khám trong ngày của Bác sĩ (Doctor Dashboard); Thống kê phân rã số lượng theo trạng thái ca khám hôm nay (TotalAppointments, PendingConfirmationCount, ConfirmedCount, CheckedInCount, InProgressCount, CompletedCount, CancelledCount, NoShowCount, CompletionRate); Danh sách ca khám TodayAppointments hiển thị theo thứ tự thời gian với thông tin an toàn tối thiểu (tên bệnh nhân, số điện thoại được che giấu mặt nạ MaskedPhoneNumber, thời lượng, giờ khám chuẩn hóa giờ Việt Nam UTC+7); Tách biệt danh sách hàng đợi bệnh nhân đang chờ khám WaitingQueue (CheckedIn) và ca khám đang diễn ra CurrentActiveAppointment (InProgress) hỗ trợ bác sĩ tiếp nhận và xử lý nhanh chóng; Kiểm tra ca khám đã có hồ sơ bệnh án lâm sàng HasConsultation.",
+        "Acceptance Criteria 2 — Assigned scope enforced: Bảo đảm nguyên tắc Bác sĩ chỉ xem dữ liệu trong phạm vi được phân công (Assigned scope enforced, FR-066); DoctorId luôn được trích xuất từ tài khoản đăng nhập của Bác sĩ thông qua ICurrentUserService; Chặn đứng tuyệt đối việc Bác sĩ A xem ca khám hay dashboard của Bác sĩ B kể cả khi cố ý truyền DoctorId khác trên query string (chống IDOR triệt để); Quản trị viên (ADMIN) được phép tra cứu dashboard của từng bác sĩ cụ thể hoặc bác sĩ mặc định; Chặn toàn bộ người dùng khác (Lễ tân, Bệnh nhân, người dùng ẩn danh) với HTTP 403 Forbidden hoặc 401 Unauthorized; Endpoint GET /api/v1/doctor/dashboard được bảo vệ nghiêm ngặt bằng policy 'StaffOrDoctor'.",
+        "Bộ kiểm thử tự động tại DoctorDashboardTests.cs: 10/10 test cases ĐẠT 100% (tổng 419/419 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
+      "notes": [
+        "Bảo mật IDOR: Bác sĩ chỉ xem dashboard của chính mình, không cho phép truy cập ca khám của đồng nghiệp.",
+        "Múi giờ & Masking: Chuẩn hóa hiển thị theo giờ Việt Nam (UTC+7) và che giấu thông tin nhạy cảm của bệnh nhân (MaskedPhoneNumber dạng 098***4321)."
+      ]
     },
     {
       "id": "FEAT-045",

@@ -2000,3 +2000,51 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
 - Acceptance criteria evidence:
   - `Date/status/doctor/specialty filters`: Đạt 100%, hỗ trợ lọc đa chiều chính xác theo giờ Việt Nam UTC+7.
   - `Numbers reconcile`: Đạt 100%, bảo toàn số lượng tổng các trạng thái và đối soát doanh thu tài chính chặt chẽ.
+
+
+### 2026-11-14 — FEAT-044 — Doctor dashboard
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Thiết kế DTOs cho Dashboard Bác sĩ (`DoctorDashboardDtos.cs`):
+    - `DoctorDashboardAppointmentItemDto`: Thông tin ca khám hôm nay (AppointmentId, BookingCode, QueueNumber, PatientId, PatientName, MaskedPhoneNumber, ServiceName, DurationMinutes, StartAtUtc, EndAtUtc, LocalStartTime, LocalEndTime, Status, ReasonForVisit, HasConsultation, CheckedInAtUtc).
+    - `DoctorDashboardMetricsDto`: Thống kê số lượng ca khám hôm nay (TotalAppointments, PendingConfirmationCount, ConfirmedCount, CheckedInCount, InProgressCount, CompletedCount, CancelledCount, NoShowCount, CompletionRate).
+    - `DoctorDashboardDto`: Tổng hợp Dashboard gồm thông tin bác sĩ, chuyên khoa, phòng khám, TargetDate, Metrics, TodayAppointments, WaitingQueue (các ca CheckedIn đang chờ), CurrentActiveAppointment (ca InProgress đang khám).
+  - CQRS Query & QueryHandler (`GetDoctorDashboardQuery.cs`):
+    - Bảo đảm nguyên tắc Bác sĩ chỉ xem dữ liệu trong phạm vi phân công (`Assigned scope enforced`, FR-066).
+    - Chống IDOR tuyệt đối: `targetDoctorId` luôn trích xuất từ tài khoản bác sĩ đăng nhập (`_currentUserService.UserId -> Doctor.Id`), loại trừ mọi khả năng bác sĩ này xem ca của bác sĩ khác.
+    - Quản trị viên (`ADMIN`) có thể xem dashboard của bác sĩ cụ thể hoặc bác sĩ mặc định.
+    - Chặn toàn bộ người dùng khác (Lễ tân, Bệnh nhân, khách ẩn danh) với HTTP 403 Forbidden hoặc 401 Unauthorized.
+    - Múi giờ chuẩn hóa: Mặc định lấy ngày hôm nay theo giờ Việt Nam UTC+7, chuyển đổi sang khoảng thời gian UTC tương ứng trên server để lọc ca khám.
+    - Tách biệt hàng đợi bệnh nhân đang chờ (`WaitingQueue`) và ca đang khám (`CurrentActiveAppointment`).
+    - Bảo mật dữ liệu cá nhân: Che giấu số điện thoại `MaskedPhoneNumber` dạng `098***4321`, không lộ CCCD, OTP hay dữ liệu nhạy cảm.
+  - Web API Controller (`DoctorDashboardController.cs`):
+    - Endpoint `GET /api/v1/doctor/dashboard` với query params `date` (DateOnly) và `doctorId` (chỉ áp dụng cho Admin).
+    - Bảo vệ bằng policy `[Authorize(Policy = "StaffOrDoctor")]`.
+  - Bộ kiểm thử tự động xUnit (`DoctorDashboardTests.cs`):
+    - 10 test cases bao phủ 100% các tiêu chí nghiệm thu:
+      1. `DoctorDashboard_TodaySchedule_ReturnsCorrectMetricsAndAppointments`: Thống kê đầy đủ các trạng thái ca khám trong ngày, đối soát metrics, waiting queue và ca in progress.
+      2. `DoctorDashboard_AssignedScopeEnforced_DoctorCanOnlyViewOwnAppointments`: Bác sĩ chỉ xem ca khám của chính mình, chống IDOR khi truyền mã bác sĩ khác.
+      3. `DoctorDashboard_FilterByDifferentDate_ReturnsAppointmentsForThatDate`: Hỗ trợ lọc theo ngày khác.
+      4. `DoctorDashboard_AdminCanViewSpecificDoctorDashboard`: Quản trị viên tra cứu dashboard của bác sĩ cụ thể.
+      5. `DoctorDashboard_AdminWithoutDoctorId_ReturnsFirstDoctorDashboard`: Quản trị viên xem dashboard bác sĩ mặc định khi không truyền DoctorId.
+      6. `DoctorDashboard_NonDoctorNonAdmin_ThrowsForbidden`: Chặn tài khoản không có quyền (HTTP 403 Forbidden).
+      7. `DoctorDashboard_DoctorWithoutProfile_ThrowsForbidden`: Chặn tài khoản bác sĩ chưa có hồ sơ (HTTP 403 Forbidden).
+      8. `DoctorDashboard_UnauthenticatedUser_ThrowsUnauthorized`: Chặn người dùng chưa đăng nhập (HTTP 401 Unauthorized).
+      9. `DoctorDashboard_EmptyDay_HandlesZeroSafely`: Xử lý an toàn khi ngày không có ca khám nào (tránh chia cho 0).
+      10. `DoctorDashboardController_ProtectedWithStaffOrDoctorPolicy`: Kiểm tra chính sách phân quyền Controller.
+    - Toàn bộ 419/419 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Reporting/DTOs/DoctorDashboardDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Reporting/Queries/GetDoctorDashboard/GetDoctorDashboardQuery.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorDashboardController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/DoctorDashboardTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~DoctorDashboardTests"` (Thành công: 10 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 419 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.74s)
+- Acceptance criteria evidence:
+  - `Today schedule`: Đạt 100%, cung cấp thống kê số lượng hôm nay, hàng đợi khám và ca đang diễn ra.
+  - `Assigned scope enforced`: Đạt 100%, bảo đảm nguyên tắc phân quyền và chống IDOR tuyệt đối.
