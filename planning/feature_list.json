@@ -921,7 +921,7 @@
       "module": "Audit",
       "description": "Lưu actor/time/reason/refund decision.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-032"
       ],
@@ -930,8 +930,17 @@
         "No raw PII/OTP",
         "Audit tests"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "CancellationAuditTests.cs với 10/10 tests PASS (Cancellation_AuditLog_RecordedInSameTransaction, AuditLog_StoresAllRequiredFields, AuditLog_StrictlyNoRawPiiOrOtp, GetAppointmentCancellationAudit_ReturnsCompleteAuditTrail, StaffOnly_EnforcedForAuditQueries, GetCancellationAuditLogs_WithFiltersAndPagination_Succeeds, AuditLog_UnpaidCancellation_RecordsNoRefundDecision, AuditLog_Under60MinCancellation_Records50PercentDecision, AuditLog_AtOrAbove60MinCancellation_Records100PercentDecision, AuditTrail_ImmutableAndOrderedByTime)",
+        "AuditLog được ghi nhận trong cùng transaction khi hủy ca khám với đầy đủ thông tin: ActorType, OccurredAt, CancellationReason, RefundDecision, PolicyVersion, Rates, Amounts",
+        "Kiểm tra quét chuỗi khẳng định MetadataRedacted tuyệt đối KHÔNG chứa số điện thoại thô, mã OTP, CCCD, Token, Password",
+        "Endpoints GET /api/v1/reception/cancellation-audit và GET /api/v1/reception/cancellation-audit/{bookingCode} bảo vệ bằng quyền StaffOnly",
+        "Tổng bộ unit test suite: 284/284 tests PASS, frontend build thành công"
+      ],
+      "notes": [
+        "Lịch sử kiểm toán bất biến và được sắp xếp theo thời gian mới nhất đến cũ nhất",
+        "Truy vết đồng thời cả sự kiện CANCEL_APPOINTMENT và PROCESS_REFUND"
+      ]
     },
     {
       "id": "FEAT-035",

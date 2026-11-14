@@ -145,9 +145,28 @@ public class CancelAppointmentCommandHandler : IRequestHandler<CancelAppointment
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
 
+            string refundDecision;
+            if (appointment.PaidAmount <= 0)
+            {
+                refundDecision = "NO_REFUND_UNPAID";
+            }
+            else if (evaluation.RefundRate >= 1.0m)
+            {
+                refundDecision = "100%_REFUND";
+            }
+            else if (evaluation.RefundRate == 0.50m)
+            {
+                refundDecision = "50%_REFUND_50%_FEE";
+            }
+            else
+            {
+                refundDecision = "NO_REFUND";
+            }
+
             var metadata = new
             {
                 BookingCode = appointment.BookingCode,
+                ServiceNameSnapshot = appointment.ServiceNameSnapshot,
                 CancellationAcceptedAt = serverAcceptedAtUtc,
                 MinutesBeforeAppointment = evaluation.MinutesBeforeAppointment,
                 PaidAmount = appointment.PaidAmount,
@@ -156,6 +175,7 @@ public class CancelAppointmentCommandHandler : IRequestHandler<CancelAppointment
                 CancellationFeeAmount = evaluation.CancellationFeeAmount,
                 ExpectedRefundAmount = evaluation.ExpectedRefundAmount,
                 PolicyVersion = "v1.0",
+                RefundDecision = refundDecision,
                 RefundStatus = refundStatus.ToString(),
                 Reason = cancelReason
             };

@@ -1393,3 +1393,55 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.90s)
 - Acceptance criteria evidence:
   - FEAT-033 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+
+## 2026-11-14 — FEAT-034: Cancellation audit/history
+- Summary:
+  - Triển khai và hoàn thiện module ghi nhận và truy vấn lịch sử kiểm toán hủy lịch khám và quyết định hoàn tiền (Module Audit), tuân thủ nghiêm ngặt quy định bất biến của dự án (AGENTS.md, docs/SPEC.md v1.2, docs/BUSINESS_RULES.md BR-010, BR-014, BR-015, docs/DATABASE_DESIGN.md mục 4.7 & 6).
+  - Ghi nhận lịch sử kiểm toán (Audit recorded):
+    - Đảm bảo khi có sự kiện hủy ca khám (`CANCEL_APPOINTMENT`) hoặc nhân viên xử lý hoàn tiền (`PROCESS_REFUND`), một bản ghi `AuditLog` bất biến được lưu vào cơ sở dữ liệu trong cùng Database Transaction.
+    - Lưu trữ đầy đủ: `ActorType` (`GUEST`, `PATIENT`, `STAFF`, `ADMIN`), `ActorUserId`, `Action`, `EntityType`, `EntityId`, `OccurredAt` (theo Server Clock UTC), và `MetadataRedacted` JSON.
+    - Metadata lưu trữ chi tiết: `BookingCode`, `ServiceNameSnapshot`, `CancellationAcceptedAt`, `MinutesBeforeAppointment`, `PaidAmount`, `CancellationFeeRate`, `RefundRate`, `CancellationFeeAmount`, `ExpectedRefundAmount`, `PolicyVersion` ("v1.0"), `RefundDecision` ("100%_REFUND", "50%_REFUND_50%_FEE", "NO_REFUND_UNPAID", "NO_REFUND"), `RefundStatus`, `Reason`.
+  - Bảo mật tuyệt đối — Không lưu PII và OTP thô (No raw PII/OTP):
+    - Khẳng định và kiểm thử xác thực trường `MetadataRedacted` tuyệt đối:
+      - KHÔNG chứa số điện thoại cá nhân (không lưu raw phone number).
+      - KHÔNG chứa mã OTP thô (No raw OTP at rest or in logs).
+      - KHÔNG chứa số CCCD / CMND / Hộ chiếu / BHYT.
+      - KHÔNG chứa mật khẩu, password hash, hay access token / JWT / grant token bí mật.
+      - KHÔNG chứa chẩn đoán hay nội dung bệnh án y tế nhạy cảm.
+  - Cung cấp API truy vấn kiểm toán cho nhân viên (Audit queries):
+    - `GET /api/v1/reception/cancellation-audit/{bookingCode}`: Xem toàn bộ audit trail lịch sử hủy và các bước xử lý hoàn tiền của ca khám, sắp xếp theo thời gian mới nhất đến cũ nhất.
+    - `GET /api/v1/reception/cancellation-audit`: Xem danh sách nhật ký kiểm toán hủy/hoàn tiền toàn hệ thống có phân trang (`PaginatedList`), hỗ trợ lọc theo BookingCode, ActorType, khoảng ngày.
+    - Phân quyền chặt chẽ: Cả hai endpoint đều được bảo vệ nghiêm ngặt bằng policy `StaffOnly` (chỉ Receptionist hoặc Admin); từ chối truy cập từ Patient hoặc Anonymous với HTTP 403 Forbidden / 401 Unauthorized.
+  - Bộ kiểm thử tự động xUnit (`CancellationAuditTests.cs`):
+    - 10 test cases bao phủ đầy đủ toàn diện các tiêu chí nghiệm thu:
+      1. `Cancellation_AuditLog_RecordedInSameTransaction`: Ghi nhận AuditLog trong cùng transaction khi hủy lịch.
+      2. `AuditLog_StoresAllRequiredFields`: Lưu đầy đủ ActorType, Time, Reason, RefundDecision, PolicyVersion, Rates, Amounts.
+      3. `AuditLog_StrictlyNoRawPiiOrOtp`: Kiểm tra quét chuỗi metadata không chứa phone, raw OTP, CCCD, Token, Password.
+      4. `GetAppointmentCancellationAudit_ReturnsCompleteAuditTrail`: Truy vấn trả về toàn bộ audit trail gồm CANCEL_APPOINTMENT và PROCESS_REFUND.
+      5. `StaffOnly_EnforcedForAuditQueries`: Từ chối người dùng Patient hoặc Anonymous với HTTP 403/401.
+      6. `GetCancellationAuditLogs_WithFiltersAndPagination_Succeeds`: Lọc theo mã booking, actor type, khoảng ngày và phân trang chính xác.
+      7. `AuditLog_UnpaidCancellation_RecordsNoRefundDecision`: Ca khám chưa thanh toán ghi nhận `RefundDecision = "NO_REFUND_UNPAID"`, `ExpectedRefundAmount = 0`, `RefundStatus = "NotApplicable"`.
+      8. `AuditLog_Under60MinCancellation_Records50PercentDecision`: Hủy dưới 60 phút ghi nhận `RefundDecision = "50%_REFUND_50%_FEE"`, `RefundRate = 0.50`, `CancellationFeeRate = 0.50`.
+      9. `AuditLog_AtOrAbove60MinCancellation_Records100PercentDecision`: Hủy trước 60 phút ghi nhận `RefundDecision = "100%_REFUND"`, `RefundRate = 1.0`, `CancellationFeeRate = 0.0`.
+      10. `AuditTrail_ImmutableAndOrderedByTime`: Bản ghi audit log bất biến, sắp xếp theo thứ tự thời gian OccurredAtUtc giảm dần.
+    - Toàn bộ 284/284 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.32s, 0 Error.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CancelAppointment/CancelAppointmentCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Audit/DTOs/CancellationAuditDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Audit/Queries/GetAppointmentCancellationAudit/GetAppointmentCancellationAuditQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Audit/Queries/GetCancellationAuditLogs/GetCancellationAuditLogsQuery.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/CancellationAuditController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/CancellationAuditTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 284 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.32s)
+- Acceptance criteria evidence:
+  - FEAT-034 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

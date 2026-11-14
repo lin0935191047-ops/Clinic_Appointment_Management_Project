@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-033 Completed)
-- Current phase: Cancellation audit and history (FEAT-034)
+- Overall status: In progress (FEAT-001 through FEAT-034 Completed)
+- Current phase: Reception patient management (FEAT-035)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-033)
+## Features Completed (FEAT-001 -> FEAT-034)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -42,10 +42,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-031` (Cancellation policy calculation): Tính toán tỷ lệ hoàn phí và phí hủy theo mốc 60 phút và Server Clock (RefundCalculator, ICancellationPolicyService); minutesBefore >= 60 phút (gồm đúng 60 phút): hoàn 100%, phí hủy 0%; 0 < minutesBefore < 60 phút: hoàn 50%, phí hủy 50%; minutesBefore <= 0 (tại/sau giờ hẹn): từ chối tự hủy (CanCancel = false); Làm tròn tiền VND số nguyên chuẩn; Hỗ trợ endpoint preview chính sách hủy POST /api/v1/appointments/{bookingCode}/cancellation-preview; 254/254 unit tests PASS.
 - `FEAT-032` (Guest cancellation workflow): Bệnh nhân/Guest tự hủy lịch sau khi xác thực OTP thành công với Scoped Grant CANCEL; Không cần Lễ tân duyệt; Từ chối hủy tại hoặc sau thời điểm StartAt (HTTP 409); Tiêu thụ One-time use của Grant token; Chuyển trạng thái Appointment sang Cancelled; Tự động giải phóng slot khám của Bác sĩ trong cùng Database Transaction; Tính toán chính sách hoàn phí (100% khi >= 60 phút, 50% khi < 60 phút) và khởi tạo bản ghi Refund (Status = Pending); Ghi nhận AuditLog với Action = CANCEL_APPOINTMENT không chứa PII; Endpoint POST /api/v1/appointments/{bookingCode}/cancel; 264/264 unit tests PASS.
 - `FEAT-033` (Payment and refund tracking): Quản lý và theo dõi chi tiết giao dịch hoàn tiền sau hủy lịch (Module Finance); Sử dụng snapshot giá dịch vụ lúc đặt khám (ServicePriceSnapshot/PaidAmount); Lưu trữ phiên bản chính sách (PolicyVersion = 'v1.0'), tỷ lệ phí hủy, số tiền phí hủy và số tiền hoàn dự kiến; Tách biệt rạch ròi trạng thái hoàn tiền (Pending, Processing, Succeeded, Failed); Tuyệt đối không hiển thị hoặc báo Pending/Processing là Succeeded; Quy trình xử lý đối soát hoàn tiền độc lập cho Lễ tân/Kế toán (StaffOnly) không phụ thuộc fake payment gateway; Ngăn chặn chỉnh sửa khoản hoàn tiền đã Succeeded tránh double refund; Endpoints GET /api/v1/reception/refunds, GET /api/v1/reception/refunds/{id}, POST /api/v1/reception/refunds/{id}/process kèm ghi nhận AuditLog; Tích hợp hiển thị tóm tắt hoàn tiền an toàn trong tra cứu lịch khám; 274/274 unit tests PASS.
+- `FEAT-034` (Cancellation audit/history): Ghi nhận và truy vấn lịch sử kiểm toán hủy lịch và quyết định hoàn tiền (Module Audit); Lưu trữ đầy đủ Actor (Guest/Patient/Staff), Server Timestamp UTC, CancellationReason, RefundDecision, PolicyVersion, Rates và Amounts; Bảo đảm an toàn tuyệt đối No raw PII/OTP (không lưu số điện thoại thô, OTP, CCCD, Token, Password); Cung cấp API truy vấn lịch sử kiểm toán của ca khám (GET /api/v1/reception/cancellation-audit/{bookingCode}) và danh sách audit logs toàn hệ thống (GET /api/v1/reception/cancellation-audit) bảo vệ bằng policy StaffOnly; 284/284 unit tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-034 (Cancellation audit/history: Lưu actor/time/reason/refund decision trong audit logs).
-2. Triển khai FEAT-035 (Doctor appointment list: Bác sĩ xem danh sách các ca khám được phân công theo ngày/bộ lọc).
+1. Triển khai FEAT-035 (Reception patient management: Tìm/tạo/sửa hồ sơ và xử lý suspected duplicates).
+2. Triển khai FEAT-036 (Reception check-in workflow: Check-in ca khám tại quầy lễ tân).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.
