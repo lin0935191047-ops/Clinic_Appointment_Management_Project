@@ -714,3 +714,43 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-021 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-022 — PostgreSQL No-Overlap Constraint (GiST Exclusion Constraint, Chống Race Condition Đặt trùng & Ánh xạ HTTP 409 Conflict)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Database Constraint & Migration:
+    - Kích hoạt extension PostgreSQL `btree_gist` và ràng buộc loại trừ `ex_appointments_doctor_no_overlap` (`EXCLUDE USING gist (doctor_id WITH =, tstzrange(start_at, end_at, '[)') WITH &&) WHERE (status <> 'Cancelled')`) trong migration `20261114062800_InitialCreate.cs` và kịch bản idempotent `database/migrations/20261114_initial_schema.sql`.
+    - Kết hợp Unique Partial Index `ix_appointments_doctor_id_start_at` trên `appointments(doctor_id, start_at) WHERE (status NOT IN ('Cancelled', 'NoShow'))`.
+  - Xử lý Ngoại lệ và Ánh xạ HTTP 409 Conflict (BR-007):
+    - Tạo custom exception `AppointmentConflictException` trong `ClinicAppointment.Application.Common.Exceptions`.
+    - Cập nhật `ExceptionHandlingMiddleware` trong `ClinicAppointment.Api.Middlewares`:
+      - Bắt giữ trực tiếp `AppointmentConflictException` -> HTTP 409 Conflict.
+      - Bắt giữ `DbUpdateException` khi vi phạm exclusion constraint hoặc unique constraint trùng ca (mã lỗi PostgreSQL `23P01` exclusion_violation, constraint `ex_appointments_doctor_no_overlap`, hoặc `23505` unique_violation) -> HTTP 409 Conflict kèm thông điệp thân thiện: `"Khung giờ khám này vừa có người khác đặt trước. Vui lòng chọn khung giờ khác."`.
+      - Hỗ trợ thêm `KeyNotFoundException` -> HTTP 404 Not Found, `UnauthorizedAccessException` -> HTTP 403 Forbidden.
+  - Bộ kiểm thử tự động xUnit (`PostgreSqlNoOverlapConstraintTests.cs`):
+    - 7 test methods / 10 test cases kiểm tra:
+      1. Middleware chuyển `AppointmentConflictException` thành HTTP 409 Conflict với ApiResponse envelope chuẩn.
+      2. Middleware nhận diện `DbUpdateException` bọc lỗi vi phạm constraint PostgreSQL và trả về HTTP 409 Conflict.
+      3. Hàm `IsExclusionOrUniqueConstraintViolation` nhận diện chính xác các mã lỗi và chuỗi ràng buộc của PostgreSQL.
+      4. Chống race condition đặt trùng lịch: Cùng một bác sĩ, khi ca 1 đã lưu thì ca 2 cố gắng lưu đè trong khoảng thời gian giao nhau sẽ bị phát hiện và ném lỗi 409.
+      5. Hai ca cùng thời gian nhưng khác bác sĩ (`doctor_id`) đều được chấp nhận thành công độc lập.
+      6. Hai ca cùng bác sĩ nối tiếp nhau (ví dụ 08:30 - 09:00 và 09:00 - 09:30) không bị xung đột nhờ nửa khoảng `[)`.
+      7. Cuộc hẹn trước đó đã bị hủy (`Status = Cancelled`) giải phóng slot và cho phép đặt lại vào đúng khung giờ đó.
+    - Toàn bộ 168/168 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.08s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Application/Common/Exceptions/AppointmentConflictException.cs`
+  - `backend/src/ClinicAppointment.Api/Middlewares/ExceptionHandlingMiddleware.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj`
+  - `backend/tests/ClinicAppointment.Domain.Tests/PostgreSqlNoOverlapConstraintTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet test "backend/ClinicAppointment.sln"` (Thành công: 168 Passed, 0 Failed, 0 Skipped)
+  - `dotnet build "backend/ClinicAppointment.sln" --no-incremental` (Thành công: 0 Warnings, 0 Errors)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-022 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

@@ -572,7 +572,7 @@
       "module": "Scheduling Integrity",
       "description": "DB-level no-overlap constraint per doctor.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-008",
         "FEAT-021"
@@ -582,7 +582,15 @@
         "Concurrent same-slot only one succeeds",
         "Conflict maps to 409"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Acceptance Criteria 1 — Constraint migration applied: Extension btree_gist và GiST Exclusion Constraint 'ex_appointments_doctor_no_overlap' (EXCLUDE USING gist (doctor_id WITH =, tstzrange(start_at, end_at, '[)') WITH &&) WHERE (status <> 'Cancelled')) đã được áp dụng trong migration 20261114062800_InitialCreate.cs và kịch bản idempotent 20261114_initial_schema.sql; kết hợp Unique Partial Index ix_appointments_doctor_id_start_at",
+        "Acceptance Criteria 2 — Concurrent same-slot only one succeeds: Khi có 2 giao dịch đồng thời đặt trùng cùng một bác sĩ trong khoảng thời gian giao nhau, chỉ duy nhất 1 giao dịch thành công (commit), giao dịch còn lại bị chặn đứng ở mức DB và ứng dụng, ngăn chặn hoàn toàn race condition và tình trạng double booking",
+        "Xử lý nửa khoảng [) chuẩn xác: Hai ca khám liên tiếp của cùng một bác sĩ (ví dụ 08:30 - 09:00 và 09:00 - 09:30) không bị xung đột do 09:00 là điểm mút exclusive của ca trước và inclusive của ca sau",
+        "Cho phép khác bác sĩ cùng khung giờ: Hai ca khám có cùng thời gian nhưng khác doctor_id đều được ghi nhận thành công độc lập",
+        "Giải phóng slot khi hủy ca: Cuộc hẹn có status = 'Cancelled' bị loại trừ khỏi phạm vi exclusion constraint qua mệnh đề WHERE (status <> 'Cancelled'), cho phép đặt lại vào slot đó bình thường",
+        "Acceptance Criteria 3 — Conflict maps to 409 (BR-007): ExceptionHandlingMiddleware bắt giữ cả AppointmentConflictException và DbUpdateException (chứa PostgresException mã lỗi 23P01 exclusion_violation hoặc 23505 unique_violation trên appointments) và tự động ánh xạ thành HTTP 409 Conflict kèm ApiResponse chuẩn hóa ('Khung giờ khám này vừa có người khác đặt trước. Vui lòng chọn khung giờ khác.') thay vì lỗi 500",
+        "Bộ kiểm thử tự động tại PostgreSqlNoOverlapConstraintTests.cs: 7 test methods / 10 test cases ĐẠT 100% (tổng 168/168 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

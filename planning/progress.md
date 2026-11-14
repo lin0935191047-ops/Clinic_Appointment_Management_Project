@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-021 Completed)
-- Current phase: PostgreSQL no-overlap constraint (FEAT-022)
+- Overall status: In progress (FEAT-001 through FEAT-022 Completed)
+- Current phase: Guest booking API (FEAT-023)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-021)
+## Features Completed (FEAT-001 -> FEAT-022)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -30,10 +30,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-019` (Doctor working rules): Quản lý lịch làm việc định kỳ của Bác sĩ; Ràng buộc StartTime < EndTime (TimeOnly); Ràng buộc DayOfWeek 1..7 (ISO 8601); Ràng buộc EffectiveFrom <= EffectiveTo (DateOnly); Chống trùng lặp/chồng lấn ca (No-overlap) trên cùng bác sĩ; Hỗ trợ ca sáng/chiều độc lập; EF Core migration AddDoctorScheduleEffectiveDates; 139/139 unit tests PASS.
 - `FEAT-020` (Doctor time off and breaks): Quản lý ngày nghỉ, giờ nghỉ, thời gian bận (DoctorTimeOff & DoctorScheduleBlock); Bất biến không book overlap time off (FR-035); Bất biến schedule change không âm thầm xóa appointments (FR-055); Cảnh báo và bảo toàn nguyên vẹn appointments của bệnh nhân; EF Core migration AddDoctorTimeOffsAndScheduleBlocks; 148/148 unit tests PASS.
 - `FEAT-021` (Availability calculation): Thuật toán tính khung giờ khả dụng cho Bác sĩ; Chia slot theo thời lượng dịch vụ DurationMinutes; Không hiển thị ngoài lịch làm việc; Tự động loại trừ ngày nghỉ DoctorTimeOff, khung giờ bận DoctorScheduleBlock, và các ca khám đang hoạt động Appointments; Giải phóng slot cho lịch hẹn đã hủy Cancelled; Bảo mật tuyệt đối không lộ thông tin bệnh nhân; Endpoint công khai GET /api/v1/availability; 158/158 unit tests PASS.
+- `FEAT-022` (PostgreSQL no-overlap constraint): GiST Exclusion constraint (ex_appointments_doctor_no_overlap) trên appointments(doctor_id, tstzrange(start_at, end_at, '[)')) WHERE (status <> 'Cancelled') bảo vệ tầng cuối ở PostgreSQL; Chống race condition đặt trùng ca đồng thời; ExceptionHandlingMiddleware ánh xạ chuẩn xác ngoại lệ vi phạm constraint và AppointmentConflictException thành HTTP 409 Conflict; 168/168 unit tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-022 (PostgreSQL no-overlap constraint: Bảo vệ toàn vẹn lịch hẹn ở mức database qua btree_gist GiST exclusion constraint).
-2. Triển khai FEAT-023 (Guest booking form validation).
+1. Triển khai FEAT-023 (Guest booking API: Tạo lịch khám công khai không yêu cầu tài khoản/JWT, sinh BookingCode duy nhất khó đoán, lưu snapshot dịch vụ/giá/thời lượng).
+2. Triển khai FEAT-024 (OTP issuance and verification for lookup/reschedule/cancel).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.
