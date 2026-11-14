@@ -713,7 +713,7 @@
       "module": "Appointment",
       "description": "Guest lookup với BookingCode + OTP.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-023",
         "FEAT-026"
@@ -723,7 +723,16 @@
         "Summary tối thiểu",
         "Không trả consultation/raw PII"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Acceptance Criteria 1 — Không lookup chỉ bằng code (FR-030, BR-005, docs/API_SPECIFICATION.md): Bắt buộc phải có Grant token từ quy trình xác thực OTP thành công (mục đích LOOKUP); nếu chỉ cung cấp BookingCode mà không có Grant token, hệ thống từ chối ngay lập tức với mã HTTP 401 Unauthorized; nếu Grant token sai hoặc hết hạn hoặc không thuộc về cuộc hẹn, hệ thống từ chối với HTTP 403 Forbidden",
+        "Chống dùng sai mục đích (Purpose Binding): Grant token cấp cho mục đích CANCEL hoặc RESCHEDULE tuyệt đối không thể dùng để tra cứu (LOOKUP) — hệ thống từ chối với HTTP 403 Forbidden",
+        "Hỗ trợ nhận diện Grant linh hoạt: Nhận Grant token trực tiếp từ request body, hoặc header 'X-Appointment-Grant', hoặc header 'Authorization: Grant <token>'",
+        "Acceptance Criteria 2 — Summary tối thiểu: Trả về DTO PublicAppointmentSummaryDto gồm đầy đủ thông tin tóm tắt để bệnh nhân theo dõi: BookingCode, Status, StartAtUtc, EndAtUtc, PatientFullName, DoctorFullName, DoctorTitle, DoctorRoomNumber, SpecialtyName, ServiceName, ServiceDurationMinutes, ServicePrice, PaidAmount, ReasonForVisit, CanCancel, CanReschedule",
+        "Tính toán chính xác CanCancel và CanReschedule: Tự động tính toán CanCancel/CanReschedule = true khi ca khám ở trạng thái hợp lệ (PendingConfirmation/Confirmed) và giờ hẹn ở tương lai; tự động khóa (= false) khi ca khám đã hoàn tất/đã hủy hoặc giờ hẹn ở quá khứ",
+        "Acceptance Criteria 3 — Tuyệt đối không trả consultation hoặc raw PII (FR-030, AGENTS.md invariant): DTO trả về hoàn toàn KHÔNG chứa PatientId, không chứa nội dung khám bệnh Consultation (triệu chứng, chẩn đoán, ghi chú bác sĩ), không chứa CCCD/hộ chiếu/BHYT hay UserId nội bộ",
+        "Xử lý khi BookingCode không tồn tại: Trả về HTTP 404 Not Found kèm thông điệp chuẩn hóa",
+        "Bộ kiểm thử tự động tại AppointmentLookupTests.cs: 9/9 test cases ĐẠT 100% (tổng 217/217 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

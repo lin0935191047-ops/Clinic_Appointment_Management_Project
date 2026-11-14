@@ -1009,3 +1009,48 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.18s)
 - Acceptance criteria evidence:
   - FEAT-026 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-027 — Appointment Lookup (Tra Cứu Lịch Khám Công Khai Bằng BookingCode + OTP Grant LOOKUP, Summary Tối Thiểu & Bảo Vệ PII/Consultation)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - CQRS Query & DTO (`ClinicAppointment.Application.Features.Appointments.Queries.LookupAppointment`):
+    - `LookupAppointmentQuery`: Nhận `BookingCode` và `GrantToken`.
+    - `PublicAppointmentSummaryDto`: Trả về thông tin tóm tắt tối thiểu cho bệnh nhân: `BookingCode`, `Status`, `StartAtUtc`, `EndAtUtc`, `PatientFullName`, `DoctorFullName`, `DoctorTitle`, `DoctorRoomNumber`, `SpecialtyName`, `ServiceName`, `ServiceDurationMinutes`, `ServicePrice`, `PaidAmount`, `ReasonForVisit`, `CanCancel`, `CanReschedule`.
+    - Tuyệt đối bảo vệ PII và bí mật y tế: Hoàn toàn không chứa `PatientId`, không có `UserId`, không có `DoctorId`, không chứa nội dung bệnh án `Consultation` (triệu chứng, chẩn đoán, ghi chú bác sĩ), không chứa số CCCD/CMND/hộ chiếu/BHYT.
+    - `LookupAppointmentQueryValidator`: Kiểm tra bắt buộc cả `BookingCode` và `GrantToken`.
+    - `LookupAppointmentQueryHandler`:
+      1. Acceptance Criteria 1: Bắt buộc phải có `GrantToken`. Nếu thiếu, trả về HTTP 401 Unauthorized.
+      2. Tra cứu `Appointment` theo `BookingCode`. Nếu không tìm thấy, trả về HTTP 404 Not Found.
+      3. Xác thực quyền truy cập qua `_grantService.ValidateAndConsumeGrantAsync` với `expectedPurpose = LOOKUP` và `consume = false` (chỉ đọc, bảo toàn grant trong thời hạn 15 phút). Nếu sai mục đích, sai appointment, hoặc grant hết hạn, trả về HTTP 403 Forbidden.
+      4. Tính toán cờ khả năng thao tác: `CanCancel = true` và `CanReschedule = true` khi cuộc hẹn ở trạng thái `PendingConfirmation` hoặc `Confirmed` và thời gian bắt đầu ở tương lai; ngược lại là `false`.
+  - API Controller (`AppointmentsController.cs`):
+    - Endpoint `POST /api/v1/appointments/lookup` (`[AllowAnonymous]`).
+    - Hỗ trợ linh hoạt: Nhận `GrantToken` trực tiếp từ request body, hoặc header `X-Appointment-Grant`, hoặc header `Authorization: Grant <token>`.
+  - Bộ kiểm thử tự động xUnit (`AppointmentLookupTests.cs`):
+    - 9 test cases bao phủ toàn diện:
+      1. `Lookup_WithValidBookingCodeAndValidLookupGrant_ReturnsMinimalSummary`: Tra cứu thành công với code và grant LOOKUP hợp lệ, trả về đầy đủ tóm tắt ca khám.
+      2. `Lookup_WithoutGrantToken_FailsWith401`: Không cho phép tra cứu chỉ bằng code, trả về 401 Unauthorized khi thiếu grant.
+      3. `Lookup_WithInvalidOrExpiredGrantToken_FailsWith403`: Grant giả mạo hoặc hết hạn trả về 403 Forbidden.
+      4. `Lookup_WithGrantForWrongPurpose_FailsWith403`: Grant CANCEL/RESCHEDULE không thể dùng để LOOKUP, trả về 403 Forbidden.
+      5. `Lookup_WithGrantForDifferentAppointment_FailsWith403`: Grant của cuộc hẹn A không thể tra cứu cuộc hẹn B, trả về 403 Forbidden.
+      6. `Lookup_WithNonExistentBookingCode_Returns404NotFound`: BookingCode không tồn tại trả về 404 Not Found.
+      7. `Lookup_EnsuresNoConsultationOrRawPiiInResponse`: Kiểm tra phản chiếu kiểu dữ liệu xác nhận không lộ PatientId, Consultation, CCCD hay PII.
+      8. `Lookup_CanCancelAndCanReschedule_AreComputedAccurately`: Tính toán chính xác cờ hủy/đổi lịch dựa trên trạng thái và mốc thời gian.
+      9. `LookupAppointmentQueryValidator_RejectsMissingCodeOrGrant`: Validator bắt lỗi thiếu code hoặc grant.
+    - Toàn bộ 217/217 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 4.92s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/LookupAppointment/LookupAppointmentQuery.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/AppointmentLookupTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 217 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 4.92s)
+- Acceptance criteria evidence:
+  - FEAT-027 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
