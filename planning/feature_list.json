@@ -979,7 +979,7 @@
       "module": "Reception",
       "description": "Receptionist check-in.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-028"
       ],
@@ -988,8 +988,18 @@
         "Actor/time recorded",
         "Invalid state denied"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Chuyển trạng thái Confirmed sang CheckedIn (Confirmed to CheckedIn): Ca khám ở trạng thái Confirmed được Lễ tân hoặc Quản trị viên tiếp nhận tại quầy thành công, chuyển Appointment.Status sang CheckedIn và cập nhật Appointment.UpdatedAt theo Server Timestamp UTC (kiểm thử CheckIn_Confirmed_ByReceptionist_ShouldSucceed_AndChangeStatusToCheckedIn và CheckIn_Confirmed_ByAdmin_ShouldSucceed).",
+        "Ghi nhận người thực hiện và thời gian bất biến (Actor/time recorded): Khi check-in, hệ thống tự động ghi nhận một bản ghi AuditLog với Action = CHECK_IN_APPOINTMENT, ActorType = RECEPTIONIST hoặc ADMIN hoặc STAFF, ActorUserId = UserId của nhân viên, OccurredAt theo giờ UTC thực tế, và metadata JSON an toàn lưu BookingCode, DoctorId, PatientId, StartAt, CheckedInAt, Note; quét chuỗi metadata bảo đảm tuyệt đối không lộ OTP, mật khẩu hay số điện thoại thô (kiểm thử CheckIn_ShouldRecordAuditLog_WithAllRequiredFields).",
+        "Từ chối các trạng thái không hợp lệ (Invalid state denied): Hệ thống từ chối các ca khám có trạng thái không hợp lệ với HTTP 400 Bad Request kèm thông báo lỗi rõ ràng: Lịch hẹn PendingConfirmation bị từ chối yêu cầu xác nhận trước (CheckIn_PendingConfirmation_ShouldBeDenied_WithBadRequest); Lịch hẹn đã CheckedIn bị từ chối (CheckIn_AlreadyCheckedIn_ShouldBeDenied_WithBadRequest); Lịch hẹn Cancelled bị từ chối (CheckIn_Cancelled_ShouldBeDenied_WithBadRequest); Lịch hẹn Completed bị từ chối (CheckIn_Completed_ShouldBeDenied_WithBadRequest); Lịch hẹn InProgress bị từ chối (CheckIn_InProgress_ShouldBeDenied_WithBadRequest); Trả về HTTP 404 Not Found khi Id không tồn tại (CheckIn_NonExistentAppointment_ShouldReturnNotFound).",
+        "Phân quyền bảo vệ StaffOnly: Toàn bộ API check-in (POST /api/v1/reception/appointments/{id}/check-in và alias POST /api/v1/appointments/{id}/check-in) được bảo vệ nghiêm ngặt bằng policy StaffOnly. Người dùng Patient hoặc Anonymous bị từ chối với HTTP 403 Forbidden / 401 Unauthorized (kiểm thử CheckIn_ByPatientOrAnonymous_ShouldBeDenied_WithForbidden và CheckIn_ControllerEndpoints_HaveStaffOnlyAuthorizationAttribute).",
+        "Ràng buộc toàn vẹn ở tầng Domain Entity: Phương thức appointment.CheckIn() ném InvalidOperationException khi ca khám không ở trạng thái Confirmed (kiểm thử CheckIn_DomainEntity_CheckInMethod_ThrowsWhenNotConfirmed).",
+        "Bộ kiểm thử tự động tại PatientCheckInTests.cs: 12/12 test cases ĐẠT 100% (tổng 306/306 tests toàn solution PASS 100%)."
+      ],
+      "notes": [
+        "Hoàn thành trọn vẹn quy trình tiếp nhận check-in bệnh nhân tại quầy Lễ tân.",
+        "Tuân thủ nghiêm ngặt bảo mật phân quyền StaffOnly, bảo toàn dữ liệu và ghi vết kiểm toán đầy đủ."
+      ]
     },
     {
       "id": "FEAT-037",

@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-035 Completed)
-- Current phase: Reception check-in workflow (FEAT-036)
+- Overall status: In progress (FEAT-001 through FEAT-036 Completed)
+- Current phase: Doctor appointment queue (FEAT-037)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-035)
+## Features Completed (FEAT-001 -> FEAT-036)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -44,11 +44,12 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-033` (Payment and refund tracking): Quản lý và theo dõi chi tiết giao dịch hoàn tiền sau hủy lịch (Module Finance); Sử dụng snapshot giá dịch vụ lúc đặt khám (ServicePriceSnapshot/PaidAmount); Lưu trữ phiên bản chính sách (PolicyVersion = 'v1.0'), tỷ lệ phí hủy, số tiền phí hủy và số tiền hoàn dự kiến; Tách biệt rạch ròi trạng thái hoàn tiền (Pending, Processing, Succeeded, Failed); Tuyệt đối không hiển thị hoặc báo Pending/Processing là Succeeded; Quy trình xử lý đối soát hoàn tiền độc lập cho Lễ tân/Kế toán (StaffOnly) không phụ thuộc fake payment gateway; Ngăn chặn chỉnh sửa khoản hoàn tiền đã Succeeded tránh double refund; Endpoints GET /api/v1/reception/refunds, GET /api/v1/reception/refunds/{id}, POST /api/v1/reception/refunds/{id}/process kèm ghi nhận AuditLog; Tích hợp hiển thị tóm tắt hoàn tiền an toàn trong tra cứu lịch khám; 274/274 unit tests PASS.
 - `FEAT-034` (Cancellation audit/history): Ghi nhận và truy vấn lịch sử kiểm toán hủy lịch và quyết định hoàn tiền (Module Audit); Lưu trữ đầy đủ Actor (Guest/Patient/Staff), Server Timestamp UTC, CancellationReason, RefundDecision, PolicyVersion, Rates và Amounts; Bảo đảm an toàn tuyệt đối No raw PII/OTP (không lưu số điện thoại thô, OTP, CCCD, Token, Password); Cung cấp API truy vấn lịch sử kiểm toán của ca khám (GET /api/v1/reception/cancellation-audit/{bookingCode}) và danh sách audit logs toàn hệ thống (GET /api/v1/reception/cancellation-audit) bảo vệ bằng policy StaffOnly; 284/284 unit tests PASS.
 - `FEAT-035` (Reception patient management): Quản trị và tiếp nhận hồ sơ bệnh nhân tại quầy Lễ tân (Module Reception); Phân quyền nghiêm ngặt StaffOnly (chỉ Lễ tân hoặc Admin có quyền truy cập, chặn ẩn danh hoặc Bệnh nhân); Tìm kiếm đa tiêu chí (từ khóa, ngày sinh, cờ nghi trùng, trạng thái); Tạo mới và cập nhật hồ sơ bảo mật với mã hóa danh tính PII (CCCD/Hộ chiếu/BHYT qua AES-256-GCM + Keyed HMAC); Tuân thủ triệt để bất biến Không tự động gộp hồ sơ trùng Tên + Ngày sinh/Năm sinh (No auto-merge by name+DOB), tự động tạo hồ sơ độc lập và mở ca rà soát PatientIdentityReviewCase trạng thái OPEN; Quy trình xử lý ca nghi trùng có đối soát CCCD tại quầy và lưu vết kiểm toán đầy đủ (CONFIRMED_SAME_PERSON chuyển lịch hẹn, lưu PatientMergeEvent có beforeSnapshotJson và ghi AuditLog; DIFFERENT_PERSON xóa cờ nghi trùng và ghi AuditLog); Chặn chỉnh sửa hồ sơ MERGED; 294/294 unit tests PASS (10/10 tests FEAT-035 PASS 100%).
+- `FEAT-036` (Patient check-in): Lễ tân tiếp nhận và làm thủ tục check-in cho bệnh nhân tại quầy khi đến khám (Module Reception); Chuyển trạng thái Appointment từ Confirmed sang CheckedIn và cập nhật UpdatedAt theo Server Timestamp UTC; Ghi nhận người thực hiện (ActorUserId, ActorType = RECEPTIONIST/ADMIN/STAFF) và thời gian check-in bất biến trong AuditLog với Action = CHECK_IN_APPOINTMENT kèm metadata JSON an toàn không chứa PII; Từ chối các trạng thái không hợp lệ với HTTP 400 Bad Request (PendingConfirmation chưa duyệt, đã CheckedIn, Cancelled, Completed, InProgress); Phân quyền bảo vệ StaffOnly chặn Patient và Anonymous; 306/306 unit tests PASS (12/12 tests FEAT-036 PASS 100%).
 
 ## Next steps
-1. Triển khai FEAT-036 (Patient check-in: Lễ tân tiếp nhận check-in bệnh nhân tại quầy, cập nhật CheckedIn, xếp hàng khám).
-2. Triển khai FEAT-037 (Doctor appointment queue: Bác sĩ xem hàng đợi khám trong ngày).
-3. Triển khai FEAT-038 (Consultation start and notes: Bác sĩ bắt đầu khám và ghi chép chẩn đoán).
+1. Triển khai FEAT-037 (Doctor appointment queue: Bác sĩ xem danh sách hàng đợi khám theo ngày, phân quyền DoctorOnly, lọc trạng thái CheckedIn/InProgress/Completed).
+2. Triển khai FEAT-038 (Consultation start and notes: Bác sĩ bắt đầu khám, chuyển CheckedIn -> InProgress, ghi chép chẩn đoán ban đầu).
+3. Triển khai FEAT-039 (Consultation completion: Hoàn thành ca khám InProgress -> Completed, đơn thuốc và chỉ dẫn y tế).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

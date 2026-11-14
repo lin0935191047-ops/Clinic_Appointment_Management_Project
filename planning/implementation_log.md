@@ -1505,3 +1505,63 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~ReceptionPatientManagementTests"` (Thành công: 10 Passed, 0 Failed, 0 Skipped)
 - Acceptance criteria evidence:
   - FEAT-035 đạt toàn bộ tiêu chí nghiệm thu (Role guard, Merge case audited, No auto-merge by name+DOB) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+
+## 2026-11-14: FEAT-036 - Patient check-in
+- Triển khai và hoàn thiện quy trình Tiếp nhận và check-in bệnh nhân tại quầy Lễ tân (Module Reception), tuân thủ triệt để quy định trong AGENTS.md, docs/SPEC.md (FR-031, FR-034, FR-057), docs/BUSINESS_RULES.md (BR-006, BR-013, BR-014, BR-015), docs/API_SPECIFICATION.md mục Reception.
+- Chuyển trạng thái ca khám (Confirmed to CheckedIn):
+  - Lệnh `CheckInAppointmentCommand` tiếp nhận `AppointmentId` và `Note` (tùy chọn) từ nhân viên lễ tân.
+  - Kiểm tra trạng thái ca khám: chỉ cho phép check-in các ca khám đang ở trạng thái `Confirmed`.
+  - Gọi phương thức domain `appointment.CheckIn()`, cập nhật `Status = AppointmentStatus.CheckedIn` và `UpdatedAt = DateTime.UtcNow` theo Server Clock UTC.
+- Ghi nhận người thực hiện và thời gian bất biến (Actor/time recorded):
+  - Tự động lưu bản ghi `AuditLog` bất biến trong cùng Database Transaction:
+    - `Action`: `"CHECK_IN_APPOINTMENT"`
+    - `ActorType`: `"RECEPTIONIST"`, `"ADMIN"` hoặc `"STAFF"`
+    - `ActorUserId`: Id người dùng của nhân viên thực hiện
+    - `EntityType`: `"Appointment"`, `EntityId = appointment.Id`
+    - `OccurredAt`: Thời gian UTC thực tế từ Server
+    - `MetadataRedacted`: Chuỗi JSON chứa `BookingCode`, `DoctorId`, `PatientId`, `StartAt`, `CheckedInAt`, `Note`.
+    - Bảo mật tuyệt đối: Quét kiểm tra chuỗi metadata không chứa mật khẩu, OTP thô, hay số điện thoại chưa che giấu.
+- Từ chối các trạng thái không hợp lệ (Invalid state denied):
+  - `PendingConfirmation` (chưa xác nhận): Bị từ chối với HTTP 400 Bad Request ("Lịch hẹn đang ở trạng thái Chờ xác nhận (PendingConfirmation). Vui lòng xác nhận lịch hẹn trước khi làm thủ tục check-in.").
+  - `CheckedIn` (đã check-in rồi): Bị từ chối với HTTP 400 Bad Request ("Lịch hẹn đã được check-in tiếp nhận trước đó.").
+  - `Cancelled` (đã hủy): Bị từ chối với HTTP 400 Bad Request ("Không thể check-in cho lịch hẹn đã bị hủy.").
+  - `Completed` (đã khám xong): Bị từ chối với HTTP 400 Bad Request ("Không thể check-in cho lịch hẹn đã hoàn thành khám.").
+  - `InProgress` (đang khám): Bị từ chối với HTTP 400 Bad Request ("Không thể check-in cho lịch hẹn đang trong ca khám.").
+  - Id không tồn tại: Trả về HTTP 404 Not Found.
+- Phân quyền bảo vệ nghiêm ngặt (StaffOnly):
+  - Phân quyền policy `StaffOnly` cho toàn bộ endpoint check-in:
+    - `POST /api/v1/reception/appointments/{id}/check-in`
+    - `POST /api/v1/appointments/{id}/check-in`
+  - Người dùng `Patient` hoặc khách ẩn danh `Anonymous` cố tình gọi API bị từ chối với HTTP 403 Forbidden / 401 Unauthorized.
+- Bộ kiểm thử tự động xUnit (`PatientCheckInTests.cs`):
+  - 12 test cases bao phủ 100% các tiêu chí nghiệm thu:
+    1. `CheckIn_Confirmed_ByReceptionist_ShouldSucceed_AndChangeStatusToCheckedIn`: Tiếp nhận chuyển trạng thái sang `CheckedIn`, trả về 200 OK và `CheckedInAt`.
+    2. `CheckIn_Confirmed_ByAdmin_ShouldSucceed`: Quản trị viên cũng có quyền check-in tại quầy.
+    3. `CheckIn_ShouldRecordAuditLog_WithAllRequiredFields`: Ghi nhận AuditLog đầy đủ Actor, Time, Action, Metadata không chứa PII.
+    4. `CheckIn_ByPatientOrAnonymous_ShouldBeDenied_WithForbidden`: Bệnh nhân và khách ẩn danh bị chặn với HTTP 403 Forbidden.
+    5. `CheckIn_NonExistentAppointment_ShouldReturnNotFound`: Trả về HTTP 404 Not Found khi AppointmentId không tồn tại.
+    6. `CheckIn_PendingConfirmation_ShouldBeDenied_WithBadRequest`: Từ chối lịch hẹn chưa xác nhận với HTTP 400.
+    7. `CheckIn_AlreadyCheckedIn_ShouldBeDenied_WithBadRequest`: Từ chối lịch hẹn đã check-in trước đó với HTTP 400.
+    8. `CheckIn_Cancelled_ShouldBeDenied_WithBadRequest`: Từ chối lịch hẹn đã bị hủy với HTTP 400.
+    9. `CheckIn_Completed_ShouldBeDenied_WithBadRequest`: Từ chối lịch hẹn đã hoàn thành với HTTP 400.
+    10. `CheckIn_InProgress_ShouldBeDenied_WithBadRequest`: Từ chối lịch hẹn đang khám với HTTP 400.
+    11. `CheckIn_DomainEntity_CheckInMethod_ThrowsWhenNotConfirmed`: Domain Entity invariant ném `InvalidOperationException` khi gọi CheckIn không đúng trạng thái.
+    12. `CheckIn_ControllerEndpoints_HaveStaffOnlyAuthorizationAttribute`: Kiểm tra reflection thuộc tính `[Authorize(Policy = "StaffOnly")]` trên các Controller endpoints.
+  - Toàn bộ 306/306 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CheckInAppointment/CheckInAppointmentCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CheckInAppointment/CheckInAppointmentResponse.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CheckInAppointment/CheckInAppointmentCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/ReceptionAppointmentsController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/PatientCheckInTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build backend/ClinicAppointment.sln` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 306 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.61s)
+- Acceptance criteria evidence:
+  - FEAT-036 đạt toàn bộ tiêu chí nghiệm thu (Confirmed to CheckedIn, Actor/time recorded, Invalid state denied) và có đầy đủ bằng chứng kiểm thử tự động thực tế.

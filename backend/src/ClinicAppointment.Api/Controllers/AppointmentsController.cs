@@ -313,4 +313,24 @@ public class AppointmentsController : BaseApiController
         var result = await Mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
+
+    /// <summary>
+    /// Nhân viên Lễ tân tiếp nhận và check-in ca khám từ Confirmed sang CheckedIn
+    /// </summary>
+    [HttpPost("{id:guid}/check-in")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(typeof(ApiResponse<ClinicAppointment.Application.Features.Appointments.Commands.CheckInAppointment.CheckInAppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CheckInAppointment(
+        [FromRoute] Guid id,
+        [FromBody] CheckInAppointmentRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var command = new ClinicAppointment.Application.Features.Appointments.Commands.CheckInAppointment.CheckInAppointmentCommand(id, request?.Note);
+        var result = await Mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
 }
