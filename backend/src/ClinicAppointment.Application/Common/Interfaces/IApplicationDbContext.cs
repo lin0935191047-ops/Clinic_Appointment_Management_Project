@@ -5,6 +5,11 @@ namespace ClinicAppointment.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
+    DbSet<User> Users { get; }
+    DbSet<Role> Roles { get; }
+    DbSet<UserRoleAssignment> UserRoles { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
+
     DbSet<Patient> Patients { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<Doctor> Doctors { get; }
@@ -17,4 +22,3 @@ public interface IApplicationDbContext
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
-

@@ -11,6 +11,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
     }
 
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<UserRoleAssignment> UserRoles => Set<UserRoleAssignment>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
@@ -27,4 +32,3 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }
-
