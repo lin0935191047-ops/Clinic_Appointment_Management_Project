@@ -1,5 +1,6 @@
 using System.Text;
 using ClinicAppointment.Application.Common.Interfaces;
+using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Services;
 using ClinicAppointment.Infrastructure.Persistence;
 using ClinicAppointment.Infrastructure.Security;
@@ -66,6 +67,20 @@ public static class DependencyInjection
         services.AddSingleton<IPatientDuplicateDetectionService, PatientDuplicateDetectionService>();
         services.AddScoped<IRoleAssignmentPolicy, RoleAssignmentPolicy>();
         services.AddScoped<DatabaseSeeder>();
+
+        // Current User & Resource Authorization
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();
+
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminOnly", policy => policy.RequireRole(Role.AdminCode));
+            options.AddPolicy("StaffOnly", policy => policy.RequireRole(Role.AdminCode, Role.ReceptionistCode));
+            options.AddPolicy("DoctorOnly", policy => policy.RequireRole(Role.DoctorCode));
+            options.AddPolicy("PatientOnly", policy => policy.RequireRole(Role.PatientCode));
+            options.AddPolicy("StaffOrDoctor", policy => policy.RequireRole(Role.AdminCode, Role.ReceptionistCode, Role.DoctorCode));
+        });
 
         return services;
     }

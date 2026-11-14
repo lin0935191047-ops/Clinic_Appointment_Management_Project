@@ -375,7 +375,7 @@
       "module": "Security",
       "description": "Enforce role và ownership.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-014"
       ],
@@ -384,7 +384,16 @@
         "Doctor chỉ xem assigned appointments",
         "API tests 401/403/IDOR pass"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Triển khai ICurrentUserService và CurrentUserService trích xuất định danh UserId, Email, Roles, PatientProfileId, DoctorProfileId an toàn từ ClaimsPrincipal",
+        "Triển khai IResourceAuthorizationService và ResourceAuthorizationService kiểm soát quyền truy cập chi tiết (Resource-based Authorization & Ownership Check)",
+        "Patient chỉ xem own data: Bệnh nhân chỉ được xem hồ sơ và lịch hẹn của chính mình; kiểm tra nghiêm ngặt PatientProfileId hoặc UserId liên kết",
+        "Doctor chỉ xem assigned appointments: Bác sĩ chỉ được xem lịch khám được phân công cho chính mình (DoctorId == DoctorProfileId), không thể can thiệp lịch của bác sĩ khác",
+        "Bảo vệ chống lỗ hổng IDOR (Insecure Direct Object Reference): Ngăn chặn triệt để Bệnh nhân A truyền ID của Bệnh nhân B, hoặc Bác sĩ A truyền ID ca khám của Bác sĩ B (trả về 403 Forbidden)",
+        "Cấu hình ASP.NET Core Authorization Policies: AdminOnly, StaffOnly (ADMIN, RECEPTIONIST), DoctorOnly, PatientOnly, StaffOrDoctor; áp dụng lên PatientsController và AppointmentsController",
+        "Endpoints được bảo vệ: GET /api/v1/patients/{id} (Authorize + IDOR check), GET /api/v1/patients/review-cases (StaffOnly), GET /api/v1/appointments/{id} (Authorize + IDOR check), GET /api/v1/appointments/doctor/assigned (DoctorOnly), GET /api/v1/appointments/patient/my-appointments (PatientOnly)",
+        "Bộ kiểm thử tự động tại ResourceAuthorizationTests.cs: 12/12 test cases ĐẠT 100% bao quát Unauthenticated (401), Role mismatch (403), IDOR prevention (403) và truy cập hợp lệ (tổng 91/91 unit tests toàn solution PASS 100%)"
+      ],
       "notes": []
     },
     {

@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-014 Completed)
-- Current phase: Role/resource authorization (FEAT-015)
+- Overall status: In progress (FEAT-001 through FEAT-015 Completed)
+- Current phase: Specialty Management (FEAT-016)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-014)
+## Features Completed (FEAT-001 -> FEAT-015)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -23,10 +23,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-012` (Patient identifier encryption and lookup): Mã hóa xác thực AES-256-GCM; Keyed HMAC-SHA256 trên chuỗi chuẩn hóa cho exact search; Che giấu số điện thoại/CCCD/hộ chiếu/BHYT không log thô; Xử lý trùng định danh mạnh bảo đảm không auto-merge; 59/59 tests PASS.
 - `FEAT-013` (Patient duplicate detection/review): Candidate matching (NAME_DOB, NAME_BIRTH_YEAR, VERIFIED_IDENTIFIER, SHARED_PHONE_DIFFERENT_NAME); Không auto-merge khi trùng Name+DOB; Manual review workflow bởi Receptionist/Admin; Quy trình Merge có snapshot JSON & audit log bất biến; EF migration 20261114070558_AddPatientReviewAndMerge; 69/69 unit tests PASS.
 - `FEAT-014` (Authentication and password management): Băm mật khẩu PBKDF2 HMAC-SHA256; Cấp phát JWT Access Token & Refresh Token (Rotation, Revocation); Đăng ký Patient tùy chọn tự động gán role/profile/rà soát trùng; Login, Logout, ChangePassword, Forgot/Reset password, CurrentUser endpoints; Swagger Bearer auth; 79/79 unit tests PASS.
+- `FEAT-015` (Role/resource authorization): Enforce RBAC & Resource-based authorization; CurrentUserService; ResourceAuthorizationService; Patient chỉ xem own data; Doctor chỉ xem assigned appointments; Ngăn chặn triệt để lỗ hổng IDOR (403 Forbidden); ASP.NET Core Policies: AdminOnly, StaffOnly, DoctorOnly, PatientOnly; 91/91 unit tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-015 (Role/resource authorization: Enforce role và ownership, Patient own data, Doctor assigned appointments, 401/403/IDOR authorization tests).
-2. Triển khai FEAT-016 (Specialty management: Admin CRUD chuyên khoa, slug unique, public active list).
+1. Triển khai FEAT-016 (Specialty management: Admin CRUD chuyên khoa, slug unique, public active list).
+2. Triển khai FEAT-017 (Doctor management: Quản lý hồ sơ bác sĩ và tài khoản staff).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

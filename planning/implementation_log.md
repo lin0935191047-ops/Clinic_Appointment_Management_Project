@@ -331,3 +331,56 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-014 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-015 — Role/Resource Authorization (RBAC, Resource Ownership, IDOR Prevention & 401/403 Tests)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Triển khai `ICurrentUserService` và `CurrentUserService`:
+    - Sử dụng `IHttpContextAccessor` để trích xuất danh tính bảo mật từ JWT Claims: `UserId`, `Email`, `Roles`, `PatientProfileId`, `DoctorProfileId`.
+    - Cung cấp các cờ tiện ích kiểm tra vai trò: `IsAdmin`, `IsStaff` (Admin hoặc Receptionist), `IsDoctor`, `IsPatient`.
+  - Triển khai `IResourceAuthorizationService` và `ResourceAuthorizationService`:
+    - `CanAccessPatientAsync`: Bệnh nhân chỉ được xem hồ sơ của chính mình; Staff có quyền điều hành; Chống IDOR (403 Forbidden nếu Bệnh nhân A truyền ID của Bệnh nhân B).
+    - `CanAccessAppointmentAsync`: Bác sĩ chỉ xem ca khám được phân công (`DoctorId == DoctorProfileId`); Bệnh nhân chỉ xem ca khám của chính mình (`PatientId == PatientProfileId`); Staff có toàn quyền; Chống IDOR (403 Forbidden nếu Bác sĩ A xem ca khám của Bác sĩ B hoặc Bệnh nhân A xem ca khám của Bệnh nhân B).
+    - `CanAccessDoctorScheduleAsync`: Bác sĩ chỉ xem/quản lý lịch làm việc của chính mình; Staff có quyền quản lý lịch toàn phòng khám.
+  - Cấu hình ASP.NET Core Authorization Policies trong `DependencyInjection.cs`:
+    - `"AdminOnly"`: Role `ADMIN`.
+    - `"StaffOnly"`: Role `ADMIN` hoặc `RECEPTIONIST`.
+    - `"DoctorOnly"`: Role `DOCTOR`.
+    - `"PatientOnly"`: Role `PATIENT`.
+    - `"StaffOrDoctor"`: Role `ADMIN`, `RECEPTIONIST` hoặc `DOCTOR`.
+  - Bảo vệ các API Controllers chống IDOR:
+    - `PatientsController`:
+      - `GET /api/v1/patients/{id}`: `[Authorize]` + kiểm tra `CanAccessPatientAsync` (chống IDOR).
+      - `GET /api/v1/patients/code/{code}` & `POST /api/v1/patients/lookup-by-identifier`: `[Authorize(Policy = "StaffOnly")]`.
+      - `GET /api/v1/patients/review-cases` & `POST /api/v1/patients/review-cases/{id}/resolve`: `[Authorize(Policy = "StaffOnly")]` (chặn bệnh nhân can thiệp gộp hồ sơ).
+    - `AppointmentsController`:
+      - `GET /api/v1/appointments/{id}`: `[Authorize]` + kiểm tra `CanAccessAppointmentAsync` (chống IDOR).
+      - `GET /api/v1/appointments/doctor/assigned`: `[Authorize(Roles = "DOCTOR")]` (chỉ trả về danh sách ca khám phân công cho bác sĩ đang gọi).
+      - `GET /api/v1/appointments/patient/my-appointments`: `[Authorize(Roles = "PATIENT")]` (chỉ trả về danh sách lịch hẹn của chính bệnh nhân).
+  - Cài đặt package `Microsoft.EntityFrameworkCore.InMemory` (v8.0.10) cho test suite.
+  - Bộ kiểm thử tự động xUnit:
+    - Xây dựng 12 test cases mới trong `ResourceAuthorizationTests.cs` kiểm tra toàn diện các kịch bản: Unauthenticated (401), Staff full access, Patient own data, Patient IDOR violation (403), Doctor assigned appointment, Doctor IDOR violation (403), Doctor schedule ownership, CurrentUserService claims parsing.
+    - Toàn bộ 91/91 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch Frontend: `npm run build` chạy thành công 100% trong 5.38s.
+- Files changed:
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/ICurrentUserService.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IResourceAuthorizationService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Services/CurrentUserService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Services/ResourceAuthorizationService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/DTOs/AppointmentDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/AppointmentQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/PatientsController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ResourceAuthorizationTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet add package Microsoft.EntityFrameworkCore.InMemory --version 8.0.10` cho test project
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 91 Passed, 0 Failed)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-015 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
