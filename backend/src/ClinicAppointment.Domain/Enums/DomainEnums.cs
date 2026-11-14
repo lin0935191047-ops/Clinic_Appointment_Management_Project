@@ -62,3 +62,17 @@ public enum IdentityReviewStatus
     NEEDS_MORE_INFO
 }
 
+public enum TimeOffStatus
+{
+    Active,
+    Cancelled
+}
+
+public enum ScheduleBlockType
+{
+    Break,
+    Meeting,
+    Maintenance,
+    Other
+}
+

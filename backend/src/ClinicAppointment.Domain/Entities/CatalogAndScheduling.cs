@@ -1,4 +1,5 @@
 using ClinicAppointment.Domain.Common;
+using ClinicAppointment.Domain.Enums;
 
 namespace ClinicAppointment.Domain.Entities;
 
@@ -166,6 +167,8 @@ public class Doctor : BaseEntity
 
     public virtual Specialty? Specialty { get; set; }
     public virtual ICollection<DoctorSchedule> Schedules { get; set; } = new List<DoctorSchedule>();
+    public virtual ICollection<DoctorTimeOff> TimeOffs { get; set; } = new List<DoctorTimeOff>();
+    public virtual ICollection<DoctorScheduleBlock> ScheduleBlocks { get; set; } = new List<DoctorScheduleBlock>();
 
     public static Doctor Create(
         Guid userId, 
@@ -325,6 +328,107 @@ public class DoctorSchedule : BaseEntity
     public void SetStatus(bool isActive)
     {
         IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
+}
+
+public class DoctorTimeOff : BaseEntity
+{
+    public Guid DoctorId { get; set; }
+    public DateTime StartAt { get; set; }
+    public DateTime EndAt { get; set; }
+    public string? Reason { get; set; }
+    public TimeOffStatus Status { get; set; } = TimeOffStatus.Active;
+    public Guid CreatedByUserId { get; set; }
+
+    public virtual Doctor? Doctor { get; set; }
+    public virtual User? CreatedByUser { get; set; }
+
+    public static DoctorTimeOff Create(
+        Guid doctorId,
+        DateTime startAt,
+        DateTime endAt,
+        Guid createdByUserId,
+        string? reason = null)
+    {
+        if (doctorId == Guid.Empty)
+            throw new ArgumentException("Bác sĩ không hợp lệ.", nameof(doctorId));
+
+        if (createdByUserId == Guid.Empty)
+            throw new ArgumentException("Người tạo không hợp lệ.", nameof(createdByUserId));
+
+        if (startAt >= endAt)
+            throw new ArgumentException("Thời điểm bắt đầu nghỉ phải trước thời điểm kết thúc.", nameof(startAt));
+
+        return new DoctorTimeOff
+        {
+            DoctorId = doctorId,
+            StartAt = DateTime.SpecifyKind(startAt, DateTimeKind.Utc),
+            EndAt = DateTime.SpecifyKind(endAt, DateTimeKind.Utc),
+            CreatedByUserId = createdByUserId,
+            Reason = reason?.Trim(),
+            Status = TimeOffStatus.Active,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public void Cancel()
+    {
+        if (Status == TimeOffStatus.Cancelled)
+            return;
+
+        Status = TimeOffStatus.Cancelled;
+        UpdatedAt = DateTime.UtcNow;
+    }
+}
+
+public class DoctorScheduleBlock : BaseEntity
+{
+    public Guid DoctorId { get; set; }
+    public DateTime StartAt { get; set; }
+    public DateTime EndAt { get; set; }
+    public ScheduleBlockType BlockType { get; set; } = ScheduleBlockType.Other;
+    public string? Reason { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public bool IsActive { get; set; } = true;
+
+    public virtual Doctor? Doctor { get; set; }
+    public virtual User? CreatedByUser { get; set; }
+
+    public static DoctorScheduleBlock Create(
+        Guid doctorId,
+        DateTime startAt,
+        DateTime endAt,
+        Guid createdByUserId,
+        ScheduleBlockType blockType = ScheduleBlockType.Other,
+        string? reason = null,
+        bool isActive = true)
+    {
+        if (doctorId == Guid.Empty)
+            throw new ArgumentException("Bác sĩ không hợp lệ.", nameof(doctorId));
+
+        if (createdByUserId == Guid.Empty)
+            throw new ArgumentException("Người tạo không hợp lệ.", nameof(createdByUserId));
+
+        if (startAt >= endAt)
+            throw new ArgumentException("Thời điểm bắt đầu khung giờ bận phải trước thời điểm kết thúc.", nameof(startAt));
+
+        return new DoctorScheduleBlock
+        {
+            DoctorId = doctorId,
+            StartAt = DateTime.SpecifyKind(startAt, DateTimeKind.Utc),
+            EndAt = DateTime.SpecifyKind(endAt, DateTimeKind.Utc),
+            BlockType = blockType,
+            CreatedByUserId = createdByUserId,
+            Reason = reason?.Trim(),
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
         UpdatedAt = DateTime.UtcNow;
     }
 }

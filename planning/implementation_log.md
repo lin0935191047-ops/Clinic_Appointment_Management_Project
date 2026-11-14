@@ -591,3 +591,73 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-019 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-020 — Doctor Time Off and Breaks (Ngày nghỉ, Khung giờ bận, Chống overlap time off & Bảo toàn cuộc hẹn)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entities:
+    - `DoctorTimeOff`: Lưu trữ ngày nghỉ phép/công tác của bác sĩ với `StartAt` < `EndAt` (UTC), `Status` (Active/Cancelled), `CreatedByUserId`, và `Reason`.
+    - `DoctorScheduleBlock`: Lưu trữ khung giờ bận định kỳ hoặc đột xuất (Break, Meeting, Maintenance, Other) với `IsActive`.
+    - Enums `TimeOffStatus` (Active, Cancelled) và `ScheduleBlockType` (Break, Meeting, Maintenance, Other).
+    - Invariants: Bắt buộc `StartAt < EndAt`, `DoctorId != Guid.Empty`, `CreatedByUserId != Guid.Empty`.
+  - Cơ sở dữ liệu và EF Core:
+    - Bổ sung `DbSet<DoctorTimeOff>` và `DbSet<DoctorScheduleBlock>` vào `IApplicationDbContext` và `ApplicationDbContext`.
+    - Cấu hình `DoctorTimeOffConfiguration` và `DoctorScheduleBlockConfiguration` trong `CatalogConfigurations.cs` kèm Check Constraints (`chk_doctor_time_offs_time_order`, `chk_doctor_schedule_blocks_time_order`) và Composite Indexes.
+    - Tạo migration EF Core `20261114081000_AddDoctorTimeOffsAndScheduleBlocks.cs` và designer.
+  - Application Service & CQRS:
+    - `IDoctorTimeOffService` & `DoctorTimeOffService`:
+      - `HasTimeOffOrBlockConflictAsync`: Kiểm tra xem một slot khám có giao nhau với ngày nghỉ active hoặc giờ bận active của bác sĩ không (FR-035).
+      - `GetAffectedAppointmentsAsync`: Truy vấn các ca khám đang hoạt động (`PendingConfirmation`, `Confirmed`, `CheckedIn`, `InProgress`) của bác sĩ bị ảnh hưởng khi có yêu cầu xin nghỉ. Truy vấn an toàn tối ưu không phụ thuộc navigation inner join.
+    - Commands:
+      - `CreateDoctorTimeOffCommand`: Kiểm tra bác sĩ active, kiểm tra quyền (Doctor chỉ đăng ký cho chính mình; Staff toàn quyền), chống đăng ký 2 ngày nghỉ chồng lấn giờ.
+      - **Bảo toàn Invariant FR-055 (Schedule change không âm thầm xóa appointments)**: Nếu khoảng thời gian xin nghỉ có cuộc hẹn đã đặt trước và client không gửi cờ `AllowWithExistingAppointments = true`, hệ thống ném ngoại lệ cảnh báo số lượng và danh sách cuộc hẹn bị ảnh hưởng; khi có xác nhận cho phép, hệ thống bảo toàn 100% các cuộc hẹn trong database, tuyệt đối không tự động xóa hay hủy lịch.
+      - `CancelDoctorTimeOffCommand`: Hủy ngày nghỉ, giải phóng lịch cho bác sĩ.
+      - `CreateDoctorScheduleBlockCommand` & `DeactivateDoctorScheduleBlockCommand`: Quản lý khung giờ bận (Họp, nghỉ trưa, bảo trì).
+    - Queries:
+      - `GetDoctorTimeOffsQuery`: Lấy danh sách ngày nghỉ theo bác sĩ và khoảng thời gian.
+      - `GetDoctorScheduleBlocksQuery`: Lấy danh sách khung giờ bận.
+      - `CheckDoctorTimeOffConflictQuery`: Endpoint kiểm tra xung đột thời gian bận.
+  - FluentValidation: `CreateDoctorTimeOffRequestValidator` và `CreateDoctorScheduleBlockRequestValidator`.
+  - Web API Controller:
+    - `AdminDoctorTimeOffsController` (`/api/v1/admin/doctor-time-offs`): `[Authorize(Policy = "StaffOrDoctor")]` cho phép bác sĩ và nhân viên quản lý ngày nghỉ, khung giờ bận và kiểm tra xung đột.
+  - Bộ kiểm thử tự động xUnit (`DoctorTimeOffTests.cs`):
+    - 9 test cases kiểm tra:
+      1. Đăng ký ngày nghỉ hợp lệ thành công.
+      2. Validator từ chối `StartAt >= EndAt`.
+      3. Domain Entity invariants ném ngoại lệ khi vi phạm.
+      4. Ngăn chặn bác sĩ này xin nghỉ cho bác sĩ khác (IDOR protection).
+      5. Chống đăng ký 2 ngày nghỉ chồng lấn giờ nhau.
+      6. **Acceptance Criteria 1 (Không book overlap time off)**: `HasTimeOffOrBlockConflictAsync` phát hiện chính xác thời gian nghỉ/bận và trả về `true` để từ chối đặt lịch trùng.
+      7. **Acceptance Criteria 2 (Schedule change không âm thầm xóa appointments)**: Khi có 2 cuộc hẹn tồn tại trước, hệ thống cảnh báo từ chối khi chưa cho phép; khi có xác nhận cho phép, hệ thống tạo ngày nghỉ thành công và **bảo toàn nguyên vẹn cả 2 cuộc hẹn trong DB, không xóa bất kỳ bản ghi nào**.
+      8. Hủy ngày nghỉ giải phóng lịch làm việc.
+      9. Tạo và vô hiệu hóa khung giờ bận (Meeting/Break) quản lý chính xác trạng thái khả dụng.
+    - Toàn bộ 148/148 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.29s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Enums/DomainEnums.cs`
+  - `backend/src/ClinicAppointment.Domain/Entities/CatalogAndScheduling.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/CatalogConfigurations.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114081000_AddDoctorTimeOffsAndScheduleBlocks.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114081000_AddDoctorTimeOffsAndScheduleBlocks.Designer.cs`
+  - `backend/src/ClinicAppointment.Application/Features/TimeOffs/DTOs/TimeOffDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/TimeOffs/Services/IDoctorTimeOffService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/TimeOffs/Services/DoctorTimeOffService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/TimeOffs/Validators/TimeOffValidators.cs`
+  - `backend/src/ClinicAppointment.Application/Features/TimeOffs/Commands/TimeOffCommands.cs`
+  - `backend/src/ClinicAppointment.Application/Features/TimeOffs/Queries/TimeOffQueries.cs`
+  - `backend/src/ClinicAppointment.Application/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AdminDoctorTimeOffsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/DoctorTimeOffTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet test "backend/ClinicAppointment.sln"` (Thành công: 148 Passed, 0 Failed, 0 Skipped)
+  - `dotnet build "backend/ClinicAppointment.sln" --no-incremental` (Thành công: 0 Warnings, 0 Errors)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-020 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

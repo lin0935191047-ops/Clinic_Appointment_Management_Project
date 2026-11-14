@@ -515,7 +515,7 @@
       "module": "Scheduling",
       "description": "Ngày nghỉ, giờ nghỉ, thời gian bận.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-019"
       ],
@@ -523,7 +523,17 @@
         "Không book overlap time off",
         "Schedule change không âm thầm xóa appointments"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Domain Entities & Invariants: DoctorTimeOff và DoctorScheduleBlock bắt buộc StartAt < EndAt (UTC), kiểm tra DoctorId và CreatedByUserId hợp lệ",
+        "EF Core Mapping & Database Migration: Ánh xạ bảng doctor_time_offs và doctor_schedule_blocks với Check Constraints chk_doctor_time_offs_time_order và chk_doctor_schedule_blocks_time_order; Migration 20261114081000_AddDoctorTimeOffsAndScheduleBlocks",
+        "Acceptance Criteria 1 — Không book overlap time off (FR-035): IDoctorTimeOffService.HasTimeOffOrBlockConflictAsync phát hiện chính xác mọi slot khám rơi vào khoảng thời gian ngày nghỉ (trạng thái Active) hoặc khung giờ bận (is_active = true) của bác sĩ và trả về Conflict = true để ngăn chặn việc đặt lịch chồng lấn",
+        "Acceptance Criteria 2 — Schedule change không âm thầm xóa appointments (FR-055): Khi đăng ký ngày nghỉ hoặc khung giờ bận mà khoảng thời gian đó đã có appointments đang hoạt động (PendingConfirmation, Confirmed, CheckedIn, InProgress), hệ thống từ chối đăng ký và trả về cảnh báo chi tiết số lượng cùng danh sách các cuộc hẹn bị ảnh hưởng; khi có xác nhận cho phép, hệ thống bảo toàn 100% cuộc hẹn trong database, tuyệt đối không tự động xóa (silent deletion) hay hủy lịch của bệnh nhân",
+        "Chống trùng lặp ngày nghỉ: Từ chối đăng ký 2 ngày nghỉ hoặc 2 khung giờ bận giao nhau của cùng một bác sĩ",
+        "Hủy ngày nghỉ / Vô hiệu hóa block: CancelDoctorTimeOffCommand và DeactivateDoctorScheduleBlockCommand giải phóng khung giờ bận, cho phép đặt lịch bình thường trở lại",
+        "Bảo vệ phân quyền (IDOR Prevention): Bác sĩ chỉ có quyền đăng ký hoặc hủy lịch nghỉ/bận cho chính mình; Nhân viên lễ tân và Quản trị viên (Staff) có quyền quản lý lịch nghỉ cho mọi bác sĩ",
+        "RESTful API: AdminDoctorTimeOffsController hỗ trợ CRUD ngày nghỉ, khung giờ bận và endpoint kiểm tra xung đột check-conflict",
+        "Bộ kiểm thử tự động tại DoctorTimeOffTests.cs: 9/9 test cases ĐẠT 100% (tổng 148/148 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

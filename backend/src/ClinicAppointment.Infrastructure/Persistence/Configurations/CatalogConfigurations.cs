@@ -121,3 +121,70 @@ public class DoctorScheduleConfiguration : IEntityTypeConfiguration<DoctorSchedu
     }
 }
 
+public class DoctorTimeOffConfiguration : IEntityTypeConfiguration<DoctorTimeOff>
+{
+    public void Configure(EntityTypeBuilder<DoctorTimeOff> builder)
+    {
+        builder.ToTable("doctor_time_offs", t =>
+        {
+            t.HasCheckConstraint("chk_doctor_time_offs_time_order", "start_at < end_at");
+        });
+
+        builder.HasKey(t => t.Id);
+
+        builder.Property(t => t.StartAt).IsRequired();
+        builder.Property(t => t.EndAt).IsRequired();
+        builder.Property(t => t.Reason).HasColumnType("text");
+        builder.Property(t => t.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.HasOne(t => t.Doctor)
+            .WithMany(d => d.TimeOffs)
+            .HasForeignKey(t => t.DoctorId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(t => t.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(t => t.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(t => new { t.DoctorId, t.Status, t.StartAt, t.EndAt });
+    }
+}
+
+public class DoctorScheduleBlockConfiguration : IEntityTypeConfiguration<DoctorScheduleBlock>
+{
+    public void Configure(EntityTypeBuilder<DoctorScheduleBlock> builder)
+    {
+        builder.ToTable("doctor_schedule_blocks", t =>
+        {
+            t.HasCheckConstraint("chk_doctor_schedule_blocks_time_order", "start_at < end_at");
+        });
+
+        builder.HasKey(b => b.Id);
+
+        builder.Property(b => b.StartAt).IsRequired();
+        builder.Property(b => b.EndAt).IsRequired();
+        builder.Property(b => b.Reason).HasColumnType("text");
+        builder.Property(b => b.BlockType)
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .IsRequired();
+        builder.Property(b => b.IsActive).IsRequired();
+
+        builder.HasOne(b => b.Doctor)
+            .WithMany(d => d.ScheduleBlocks)
+            .HasForeignKey(b => b.DoctorId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(b => b.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(b => b.CreatedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(b => new { b.DoctorId, b.IsActive, b.StartAt, b.EndAt });
+    }
+}
+

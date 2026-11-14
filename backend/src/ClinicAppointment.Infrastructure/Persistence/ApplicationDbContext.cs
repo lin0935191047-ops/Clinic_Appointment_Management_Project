@@ -22,6 +22,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Specialty> Specialties => Set<Specialty>();
     public DbSet<Service> Services => Set<Service>();
     public DbSet<DoctorSchedule> DoctorSchedules => Set<DoctorSchedule>();
+    public DbSet<DoctorTimeOff> DoctorTimeOffs => Set<DoctorTimeOff>();
+    public DbSet<DoctorScheduleBlock> DoctorScheduleBlocks => Set<DoctorScheduleBlock>();
     public DbSet<RescheduleRequest> RescheduleRequests => Set<RescheduleRequest>();
     public DbSet<Refund> Refunds => Set<Refund>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();

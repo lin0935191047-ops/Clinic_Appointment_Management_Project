@@ -16,6 +16,8 @@ public interface IApplicationDbContext
     DbSet<Specialty> Specialties { get; }
     DbSet<Service> Services { get; }
     DbSet<DoctorSchedule> DoctorSchedules { get; }
+    DbSet<DoctorTimeOff> DoctorTimeOffs { get; }
+    DbSet<DoctorScheduleBlock> DoctorScheduleBlocks { get; }
     DbSet<RescheduleRequest> RescheduleRequests { get; }
     DbSet<Refund> Refunds { get; }
     DbSet<OtpChallenge> OtpChallenges { get; }
