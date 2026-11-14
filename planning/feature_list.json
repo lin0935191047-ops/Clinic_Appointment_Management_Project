@@ -113,7 +113,7 @@
       "module": "Foundation",
       "description": "Chuẩn bị .NET SDK, Node, PostgreSQL, TablePlus.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-003"
       ],
@@ -122,7 +122,12 @@
         "PowerShell runbook chạy trên Windows",
         "Không commit credentials"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Node.js v24.18.0 & npm 11.16.0 verified via CLI",
+        ".NET SDK 10.0.404 / runtime 10.0.15 verified at C:\\Program Files\\dotnet\\dotnet.exe",
+        "PostgreSQL 18 service postgresql-x64-18 verified running on port 5432",
+        ".env and .gitignore configured to protect credentials"
+      ],
       "notes": []
     },
     {
@@ -131,7 +136,7 @@
       "module": "Backend",
       "description": "Khởi tạo Web API và conventions.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-005"
       ],
@@ -141,7 +146,13 @@
         "Swagger trong Development",
         "Global exception handling"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "dotnet build backend/ClinicAppointment.sln passed with 0 errors and 0 warnings",
+        "dotnet test backend/tests/ClinicAppointment.Domain.Tests passed 10/10 unit tests",
+        "HTTP GET http://localhost:5000/health returned 200 OK Healthy with ApiResponse envelope",
+        "Swagger UI configured at /swagger in Development",
+        "ExceptionHandlingMiddleware registered in Web API pipeline"
+      ],
       "notes": []
     },
     {
@@ -150,7 +161,7 @@
       "module": "Frontend",
       "description": "Khởi tạo React SPA/router/layout.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-005"
       ],
@@ -159,7 +170,14 @@
         "Router cấu hình",
         "Build/lint pass"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Vite + React 18 + TypeScript + Tailwind CSS initialized in frontend/",
+        "React Router v6 configured: /, /doctors, /booking, /lookup, /receptionist",
+        "Implemented 4-step Guest Booking Wizard with DOB or BirthYear invariant and no login requirement",
+        "Implemented OTP Lookup & Management with 60-minute refund preview calculation",
+        "Implemented Receptionist Dashboard for confirmations, reschedule approvals, and check-in",
+        "npm run build (tsc && vite build) executed with 0 errors producing production bundle in frontend/dist"
+      ],
       "notes": []
     },
     {
