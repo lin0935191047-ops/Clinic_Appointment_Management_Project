@@ -2476,3 +2476,136 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `No secrets in logs`: Đạt 100%, kiểm thử lọc sạch password trong connection string, Bearer tokens, Grant tokens, và exception logging redaction.
 
 
+### 2026-11-14 — FEAT-054 — Deployment and environment configuration
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Thiết lập toàn diện hạ tầng triển khai Production, quản lý biến môi trường an toàn, HTTPS Reverse Proxy Gateway, Container hóa đa tầng và Quy trình vận hành sao lưu/phục hồi cơ sở dữ liệu:
+    1. Quản lý bí mật an toàn (No secrets in repo):
+       - Rà soát và cập nhật `.gitignore` loại bỏ tuyệt đối: `.env`, `secrets.json`, `appsettings.Production.json`, `*.dump`, `*.backup`, `*.sql.gz`, certificates `*.pem`, `*.key`.
+       - Cung cấp đầy đủ tệp cấu hình mẫu an toàn với giá trị placeholder:
+         - `.env.example`: Cấu hình cổng, credentials DB, JWT secret, CORS, v.v.
+         - `frontend/.env.example`: Cấu hình `VITE_API_BASE_URL`.
+         - `backend/src/ClinicAppointment.Api/appsettings.Production.json.example`: Cấu hình production Kestrel, DbContext connection string, Jwt, Cors.
+       - Cấu hình `.dockerignore` cho cả Backend và Frontend để tối ưu dung lượng build và ngăn sao chép nhầm mã nguồn bí mật.
+    2. Cấu hình HTTPS và bảo mật Nginx Reverse Proxy Gateway:
+       - Xây dựng tệp cấu hình Nginx chính `deployment/nginx/nginx.conf` (giao thức HTTP/1.1, worker processes, buffer sizes, gzip compression).
+       - Xây dựng cấu hình máy chủ ảo `deployment/nginx/conf.d/clinic.conf`:
+         - Lắng nghe cổng 80 và tự động chuyển hướng 100% sang HTTPS cổng 443 bằng HTTP 301 Moved Permanently (`return 301 https://$host$request_uri;`).
+         - Kích hoạt giao thức TLSv1.2, TLSv1.3 với cipher suites an toàn.
+         - Cấu hình tiêu chuẩn HTTP Strict Transport Security (HSTS): `add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`.
+         - Cấu hình bộ tiêu đề bảo mật nâng cao: `X-Frame-Options SAMEORIGIN`, `X-Content-Type-Options nosniff`, `X-XSS-Protection "1; mode=block"`, `Referrer-Policy strict-origin-when-cross-origin`.
+         - Tự động chuyển tiếp hoặc sinh mã Correlation ID: `proxy_set_header X-Correlation-ID $http_x_correlation_id;`.
+         - Định tuyến Reverse Proxy: `/api/` và `/health` chuyển tới Backend Kestrel non-root (cổng 8080); `/` chuyển tới Frontend Nginx Static SPA (cổng 80).
+    3. Container hóa đa tầng (Multi-stage Containerization) và Docker Compose:
+       - `backend/Dockerfile`:
+         - Stage 1: `mcr.microsoft.com/dotnet/sdk:8.0` build và publish release mode với cờ `--no-restore`.
+         - Stage 2: `mcr.microsoft.com/dotnet/aspnet:8.0` runtime tối giản, chạy dưới tài khoản không đặc quyền `appuser` (non-root UID 1000), lắng nghe cổng nội bộ 8080 (`ASPNETCORE_HTTP_PORTS=8080`).
+       - `frontend/Dockerfile`:
+         - Stage 1: `node:20-alpine` build static assets qua `npm run build` (`tsc && vite build`).
+         - Stage 2: `nginx:1.27-alpine` phục vụ file tĩnh với cấu hình fallback `try_files $uri $uri/ /index.html;` tại cổng 80.
+       - `docker-compose.prod.yml`:
+         - Kết nối an toàn 4 services: `postgres`, `backend`, `frontend`, `nginx`.
+         - Mạng nội bộ riêng biệt `clinic_internal_network` theo nguyên tắc Zero Trust; PostgreSQL tuyệt đối không mở cổng ra ngoài host.
+         - Khởi tạo Health Check cho cơ sở dữ liệu `pg_isready -U ${POSTGRES_USER:-postgres}` và ràng buộc `depends_on: condition: service_healthy`.
+    4. Kịch bản sao lưu và phục hồi cơ sở dữ liệu (Backup and Restore Scripts):
+       - `scripts/backup-database.ps1` & `scripts/backup-database.sh`: Tự động sao lưu PostgreSQL dạng nén nhị phân chuẩn `pg_dump -Fc` kèm timestamp.
+       - `scripts/restore-database.ps1` & `scripts/restore-database.sh`: Tự động phục hồi cơ sở dữ liệu với `pg_restore --clean --if-exists --no-owner --no-privileges`.
+       - Hướng dẫn kiểm tra tính toàn vẹn (Integrity verification drill) sau phục hồi: xác thực 15 bảng cơ sở dữ liệu, kiểm tra ràng buộc GiST `ex_appointments_doctor_no_overlap`, và kiểm tra nhật ký kiểm toán `audit_logs`.
+    5. Xây dựng tài liệu vận hành chi tiết `docs/DEPLOYMENT_RUNBOOK.md`:
+       - Hướng dẫn thiết lập môi trường, sinh TLS certificates, khởi chạy production, bảo trì, giám sát và xử lý sự cố.
+  - Xây dựng 9 test cases tự động xUnit (`DeploymentAndEnvironmentConfigurationTests.cs`):
+    - Kiểm tra loại trừ bí mật khỏi repository và sự tồn tại của các tệp mẫu `.env.example`, `frontend/.env.example`, `appsettings.Production.json.example`.
+    - Kiểm tra cấu hình Dockerfile Backend non-root appuser và cổng 8080.
+    - Kiểm tra cấu hình Dockerfile Frontend multi-stage và fallback Nginx.
+    - Kiểm tra cấu hình Nginx Reverse Proxy (Redirect 301, HSTS 1 năm, Security headers, X-Correlation-ID).
+    - Kiểm tra cấu hình `docker-compose.prod.yml` (chính sách mạng nội bộ không expose port 5432, healthcheck DB).
+    - Kiểm tra sự tồn tại và nội dung các kịch bản backup/restore cơ sở dữ liệu (`backup-database.ps1`, `restore-database.ps1`, `backup-database.sh`, `restore-database.sh`).
+    - Kiểm tra sự tồn tại và đầy đủ 5 phần trọng tâm của tài liệu vận hành `docs/DEPLOYMENT_RUNBOOK.md`.
+  - Kết quả kiểm thử thực tế:
+    - 9/9 tests FEAT-054 PASS 100% trong 34ms.
+    - 514/514 total solution backend tests PASS 100% trong 8s.
+    - 9/9 frontend tests PASS 100% trong 4.37s.
+    - Frontend production build hoàn tất 100% trong 6.92s.
+- Files created/changed:
+  - `.env.example`
+  - `frontend/.env.example`
+  - `backend/src/ClinicAppointment.Api/appsettings.Production.json.example`
+  - `backend/.dockerignore`
+  - `frontend/.dockerignore`
+  - `backend/Dockerfile`
+  - `frontend/Dockerfile`
+  - `frontend/nginx.conf`
+  - `deployment/nginx/nginx.conf`
+  - `deployment/nginx/conf.d/clinic.conf`
+  - `docker-compose.prod.yml`
+  - `scripts/backup-database.ps1`
+  - `scripts/backup-database.sh`
+  - `scripts/restore-database.ps1`
+  - `scripts/restore-database.sh`
+  - `docs/DEPLOYMENT_RUNBOOK.md`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Deployment/DeploymentAndEnvironmentConfigurationTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~DeploymentAndEnvironmentConfiguration"` (Thành công: 9 Passed, 0 Failed, Duration: 34ms)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 514 Passed, 0 Failed, 0 Skipped, Duration: 8s)
+  - `npm --prefix frontend test` (Thành công: 9 Passed, 0 Failed, Duration: 4.37s)
+  - `npm --prefix frontend run build` (Thành công: 0 Errors, built in 6.92s)
+- Acceptance criteria evidence:
+  - `No secrets in repo`: Đạt 100%, .gitignore loại trừ mọi secrets/passwords/dumps; đầy đủ 3 tệp ví dụ mẫu an toàn .env.example, frontend/.env.example, appsettings.Production.json.example; .dockerignore cho cả hai phía.
+  - `HTTPS in target env`: Đạt 100%, Nginx cấu hình Redirect 301 HTTP -> HTTPS, kích hoạt HSTS 1 năm (max-age=31536000), đầy đủ Security Headers, chuyển tiếp X-Correlation-ID, docker-compose.prod.yml không expose cổng DB 5432 ra ngoài.
+  - `Backup/restore guide`: Đạt 100%, docs/DEPLOYMENT_RUNBOOK.md bao phủ toàn diện; đầy đủ 4 scripts backup/restore (PowerShell và Bash) hỗ trợ định dạng pg_dump nén và pg_restore kèm quy trình integrity verification drill.
+
+
+### 2026-11-14 — FEAT-055 — Final documentation and handover
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Hoàn thiện toàn bộ hồ sơ tài liệu kỹ thuật, tài liệu vận hành và báo cáo nghiệm thu bàn giao dự án cho toàn bộ 55/55 tính năng (Module Documentation):
+    1. Xây dựng Báo cáo bàn giao và nghiệm thu dự án (`docs/HANDOVER.md`):
+       - Tổng quan hệ thống và sơ đồ phân tầng Clean Architecture (React 18 SPA -> Nginx Gateway -> Web API -> Application MediatR -> Domain Invariants -> EF Core PostgreSQL).
+       - Ma trận tiến độ 55/55 tính năng (Feature Matrix) với mức độ ưu tiên, trạng thái 100% Hoàn thành và bằng chứng kiểm thử tương ứng.
+       - Thống kê toàn bộ Test Suites và bằng chứng thực thi: 517 Backend xUnit Tests (100% PASS), 9 Frontend Vitest Journey Tests (100% PASS), Frontend Production Build (0 error, built in 6.29s).
+       - Bảng thông tin tài khoản mẫu Demo (Seeded Accounts) phân quyền đầy đủ: Admin, Receptionist, Doctor Nội tổng quát, Doctor Tim mạch, Patient có tài khoản, và Khách vãng lai Guest Booking không cần đăng nhập.
+       - Ghi nhận chi tiết các hạn chế đã biết và thành phần TBD theo quy định AGENTS.md: SMS Gateway Provider TBD (ISmsSender / DevStubSmsChannel), Cổng thanh toán trực tuyến TBD (bảng refunds / đối soát độc lập), Email SMTP Provider TBD (IEmailSender / DevStubEmailChannel), và chứng chỉ SSL/TLS Production.
+       - Hướng dẫn bàn giao vận hành và lệnh khởi chạy đã xác minh cho mọi môi trường (Local Dev, Testing, Docker Production, Backup/Restore database).
+    2. Nâng cấp toàn diện tài liệu `README.md` tại thư mục gốc:
+       - Huy hiệu trạng thái kiểm thử (514+ backend tests PASS, 9 frontend tests PASS, 55/55 Features Completed, Security PII Redaction & HTTPS HSTS).
+       - Tóm tắt các tính năng cốt lõi: Guest Booking 4 bước, OTP Scoped Grant, No Auto-merge, Hoàn phí 60 phút, PostgreSQL GiST Exclusion Constraint chống double booking, Che giấu PII Observability, Docker HTTPS Nginx Reverse Proxy.
+       - Bảng công nghệ sử dụng và cấu trúc thư mục toàn dự án.
+       - Hướng dẫn cài đặt và khởi chạy Local Development chi tiết theo từng bước (EF Core migration, Backend Web API Kestrel, Frontend React Vite).
+       - Hướng dẫn kiểm thử tự động hai lớp (Backend xUnit và Frontend Vitest).
+       - Hướng dẫn triển khai Production bằng Docker Compose (`docker compose -f docker-compose.prod.yml up -d`).
+       - Kịch bản sao lưu và phục hồi cơ sở dữ liệu (`backup-database.ps1`, `restore-database.ps1`).
+       - Bảng tài khoản demo và các hạng mục TBD.
+       - Danh mục liên kết trực tiếp tới các tài liệu kỹ thuật trong `docs/`.
+    3. Xây dựng bộ kiểm thử tự động xUnit `HandoverVerificationTests.cs`:
+       - `ReadmeFile_ExistsAndContainsVerifiedRunCommands`: Kiểm chứng sự tồn tại của README.md, các lệnh khởi chạy backend/frontend/docker, kiểm thử, tài khoản demo và các mục TBD.
+       - `HandoverDocument_ExistsAndCoversAll55FeaturesAndEvidence`: Kiểm chứng sự tồn tại của docs/HANDOVER.md, báo cáo 55 features, bằng chứng test backend/frontend, hạn chế đã biết TBD, và quy trình backup/restore.
+       - `FeatureListJson_ContainsExactly55FeaturesAndValidStructure`: Kiểm chứng cấu trúc tệp planning/feature_list.json với đúng 55 features, bắt đầu từ FEAT-001 đến FEAT-055.
+  - Kết quả kiểm thử thực tế:
+    - 3/3 tests FEAT-055 PASS 100% trong 70ms.
+    - 517/517 total solution backend tests PASS 100% trong 8s.
+    - 9/9 frontend journey tests PASS 100% trong 4.53s.
+    - Frontend production build hoàn tất 100% trong 6.29s.
+    - 55/55 features trong feature_list.json đạt trạng thái completed 100%.
+- Files created/changed:
+  - `docs/HANDOVER.md`
+  - `README.md`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Documentation/HandoverVerificationTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~HandoverVerification"` (Thành công: 3 Passed, 0 Failed, Duration: 70ms)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 517 Passed, 0 Failed, 0 Skipped, Duration: 8s)
+  - `npm --prefix frontend test` (Thành công: 9 Passed, 0 Failed, Duration: 4.53s)
+  - `npm --prefix frontend run build` (Thành công: 0 Errors, built in 6.29s)
+- Acceptance criteria evidence:
+  - `Install/run commands verified`: Đạt 100%, xác minh toàn bộ lệnh cài đặt và khởi chạy cho Backend Kestrel, Frontend Vite, PostgreSQL migration, Docker Compose production, kịch bản backup/restore cơ sở dữ liệu và kiểm thử tự động trong cả README.md và docs/HANDOVER.md.
+  - `Feature evidence complete`: Đạt 100%, tổng hợp bằng chứng kiểm thử của toàn bộ 55 tính năng (517 backend tests xUnit PASS 100%, 9 frontend journey tests Vitest PASS 100%, Frontend build PASS 0 errors) trong docs/HANDOVER.md và planning/feature_list.json.
+  - `Known limitations/TBD documented`: Đạt 100%, ghi nhận rõ ràng hiện trạng và hướng triển khai cho các dịch vụ bên thứ ba (SMS Gateway Provider TBD, Online Payment Gateway TBD, Email SMTP Provider TBD, và Chứng chỉ SSL/TLS Production) trong cả README.md, docs/HANDOVER.md và planning/feature_list.json.
+
+
+
+

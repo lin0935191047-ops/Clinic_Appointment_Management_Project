@@ -1,0 +1,15 @@
+**/.git
+**/.vs
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/TestResults
+**/*.user
+**/*.dump
+**/*.backup
+**/*.sql.gz
+appsettings.Development.json
+appsettings.Production.json
+.env
+.env.*

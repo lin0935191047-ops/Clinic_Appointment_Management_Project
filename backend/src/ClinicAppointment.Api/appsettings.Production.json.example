@@ -1,0 +1,20 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=postgres;Port=5432;Database=ClinicAppointmentDb;Username=postgres;Password=YOUR_SECURE_POSTGRES_PASSWORD_HERE;"
+  },
+  "JwtSettings": {
+    "SecretKey": "YOUR_PRODUCTION_JWT_SECRET_KEY_AT_LEAST_32_CHARACTERS_LONG!",
+    "Issuer": "ClinicAppointmentApi",
+    "Audience": "ClinicAppointmentClient",
+    "AccessTokenExpirationMinutes": 30,
+    "RefreshTokenExpirationDays": 7
+  }
+}

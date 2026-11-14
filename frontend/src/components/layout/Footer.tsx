@@ -66,7 +66,7 @@ export const Footer: React.FC = () => {
             <h4 className="text-white text-sm font-semibold tracking-wider uppercase mb-4">Thông Tin Phòng Khám</h4>
             <div className="flex items-start space-x-3 text-gray-400">
               <MapPin className="w-4 h-4 text-teal-400 mt-1 flex-shrink-0" />
-              <span>Số 123 Đường Y Tế, Phường Sức Khỏe, TP. Hồ Chí Minh</span>
+              <span>Số 123 Đường Y Tế, Phường Sức Khỏe, TP. Đà Nẵng</span>
             </div>
             <div className="flex items-center space-x-3 text-gray-400">
               <Phone className="w-4 h-4 text-teal-400 flex-shrink-0" />

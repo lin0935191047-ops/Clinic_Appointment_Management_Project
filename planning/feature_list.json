@@ -1479,7 +1479,7 @@
       "module": "Deployment",
       "description": "Deployment runbook and environment.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-050",
         "FEAT-051",
@@ -1491,8 +1491,18 @@
         "HTTPS in target env",
         "Backup/restore guide"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "9/9 Deployment, Environment and Runbook Tests PASS 100% (DeploymentAndEnvironmentConfigurationTests.cs in 34ms)",
+        "514/514 total solution backend tests PASS (dotnet test backend/ClinicAppointment.sln)",
+        "9/9 frontend tests PASS 100% (npm --prefix frontend test)",
+        "Frontend production build succeeded with 0 errors (tsc && vite build in 6.92s)"
+      ],
+      "notes": [
+        "Triển khai quản lý bí mật No secrets in repo: Cấu hình .gitignore chặt chẽ loại trừ .env, secrets.json, appsettings.Production.json, *.dump, *.backup, *.sql.gz; cung cấp đầy đủ tệp mẫu an toàn .env.example, frontend/.env.example, backend/src/ClinicAppointment.Api/appsettings.Production.json.example; cấu hình .dockerignore cho cả backend và frontend.",
+        "Triển khai cấu hình HTTPS và bảo mật Nginx Reverse Proxy Gateway: Cấu hình deployment/nginx/conf.d/clinic.conf tự động chuyển hướng HTTP cổng 80 sang HTTPS cổng 443 bằng mã 301 Moved Permanently, kích hoạt HSTS 1 năm max-age=31536000, thiết lập các Security Headers (X-Frame-Options SAMEORIGIN, X-Content-Type-Options nosniff, X-XSS-Protection), chuyển tiếp X-Correlation-ID và proxy pass an toàn tới Backend Kestrel non-root (port 8080) và Frontend React SPA Nginx (port 80).",
+        "Đóng gói container hóa toàn diện với Multi-stage Dockerfile cho Backend (SDK build -> aspnet non-root appuser), Frontend (Node 20 build -> Nginx alpine static assets), và docker-compose.prod.yml kết nối mạng nội bộ cô lập PostgreSQL không expose cổng public ra ngoài.",
+        "Xây dựng tài liệu vận hành chi tiết docs/DEPLOYMENT_RUNBOOK.md và bộ kịch bản tự động sao lưu/phục hồi cơ sở dữ liệu: scripts/backup-database.ps1, scripts/backup-database.sh, scripts/restore-database.ps1, scripts/restore-database.sh kèm hướng dẫn kiểm tra tính toàn vẹn (integrity verification drill: số bảng, ràng buộc GiST ex_appointments_doctor_no_overlap, audit logs)."
+      ]
     },
     {
       "id": "FEAT-055",
@@ -1500,7 +1510,7 @@
       "module": "Documentation",
       "description": "README/API/diagrams/operation guide.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-054"
       ],
@@ -1509,8 +1519,18 @@
         "Feature evidence complete",
         "Known limitations/TBD documented"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "3/3 Handover and Documentation Verification Tests PASS 100% (HandoverVerificationTests.cs: ReadmeFile_ExistsAndContainsVerifiedRunCommands, HandoverDocument_ExistsAndCoversAll55FeaturesAndEvidence, FeatureListJson_ContainsExactly55FeaturesAndValidStructure)",
+        "517/517 total solution backend tests PASS 100% (dotnet test backend/ClinicAppointment.sln in 8s)",
+        "9/9 frontend journey tests PASS 100% (npm --prefix frontend test in 4.53s)",
+        "Frontend production build succeeded with 0 errors (tsc && vite build in 6.29s)",
+        "Verified all local development, testing, migration, production docker compose, and backup/restore commands in README.md and docs/HANDOVER.md"
+      ],
+      "notes": [
+        "Xây dựng báo cáo bàn giao và nghiệm thu dự án docs/HANDOVER.md bao phủ toàn diện 55/55 tính năng, ma trận Feature Matrix, thống kê bằng chứng kiểm thử 517 backend tests + 9 frontend tests, bảng tài khoản mẫu phân quyền, danh mục hạn chế đã biết và thành phần TBD (SMS provider, Payment gateway, SMTP email), cùng hướng dẫn vận hành bảo trì và kịch bản phục hồi toàn vẹn cơ sở dữ liệu.",
+        "Đồng bộ và nâng cấp README.md tại thư mục gốc với đầy đủ hướng dẫn kiến trúc Clean Architecture, quy trình cài đặt và chạy môi trường dev (.NET 8 Kestrel port 5000, Vite port 5173, PostgreSQL 18 port 5432), lệnh kiểm thử tự động, bảng tài khoản demo có nút bấm nhanh, triển khai Docker Compose production an toàn Zero Trust, và liên kết tài liệu kỹ thuật.",
+        "Triển khai bộ kiểm thử tự động HandoverVerificationTests.cs kiểm chứng tính đầy đủ và tính chính xác của tài liệu bàn giao, số lượng 55 tính năng trong feature_list.json, và các lệnh vận hành hệ thống."
+      ]
     }
   ]
 }
