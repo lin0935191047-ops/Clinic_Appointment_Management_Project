@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, Clock, MapPin, Shield, CheckCircle } from 'lucide-react';
+import { Phone, Clock, MapPin, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Footer: React.FC = () => {

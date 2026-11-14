@@ -1419,7 +1419,7 @@
       "module": "QA",
       "description": "Test forms and journeys.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-045",
         "FEAT-046",
@@ -1431,8 +1431,18 @@
         "Reschedule approval",
         "Refund boundary display"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "9/9 Frontend Component & User Journey Tests PASS 100% (GuestBookingJourney.test.tsx: 3 tests, RescheduleApprovalJourney.test.tsx: 4 tests, RefundBoundaryDisplay.test.tsx: 2 tests)",
+        "Vitest 5.1.0 suite execution succeeded with 0 errors across 3 test files in 4.37s (npm --prefix frontend test)",
+        "Frontend production build succeeded with 0 errors (tsc && vite build in 6.56s)",
+        "489/489 total solution backend tests PASS (dotnet test backend/ClinicAppointment.sln)"
+      ],
+      "notes": [
+        "Triển khai Vitest 5.1.0 cùng React Testing Library và @testing-library/jest-dom cho ứng dụng React frontend.",
+        "Kiểm thử hành trình Guest Booking: chọn chuyên khoa/dịch vụ/bác sĩ/khung giờ, validation chặt chẽ 3 trường bắt buộc FullName, DOB/BirthYear, Phone regex, submit thành công hiển thị mã booking và màn hình xác nhận.",
+        "Kiểm thử hành trình Receptionist Reschedule: hiển thị danh sách yêu cầu đổi lịch, phê duyệt chuyển slot, modal từ chối bắt buộc có lý do từ chối để giữ 100% lịch cũ, xác nhận lịch khám mới.",
+        "Kiểm thử ranh giới hoàn tiền BR-010: tra cứu OTP 2 bước, hiển thị ranh giới >= 60 phút hoàn 100% (phí hủy 0%) và ranh giới < 60 phút hoàn 50% (phí hủy 50%), bảo toàn tổng tiền refundAmount + cancellationFee == paidAmount."
+      ]
     },
     {
       "id": "FEAT-053",

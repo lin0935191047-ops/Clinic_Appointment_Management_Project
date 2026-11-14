@@ -2358,3 +2358,54 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `Transaction rollback on conflict and slot release on cancelled`: Đạt 100%, kiểm thử rollback ACID và giải phóng slot khi hủy ca hẹn.
   - `RBAC and role boundary enforcement (401/403)`: Đạt 100%, kiểm thử toàn diện Anonymous (401), Lễ tân/Bác sĩ gọi chéo quyền (403), Bác sĩ truy cập phạm vi phân công (200).
   - `No sensitive output or secret leak in responses`: Đạt 100%, không rò rỉ secret, mật khẩu, hay thông tin kỹ thuật nhạy cảm trong response.
+
+
+### 2026-11-14 — FEAT-052 — Frontend component and E2E tests
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Thiết lập hạ tầng kiểm thử Frontend với Vitest v5.1.0, JSDOM, React Testing Library và `@testing-library/jest-dom`:
+    - Cài đặt `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`.
+    - Cấu hình Vitest trong `frontend/vite.config.ts` (`globals: true`, `environment: 'jsdom'`, `setupFiles: './src/test/setup.ts'`).
+    - Cấu hình TypeScript definitions trong `frontend/tsconfig.json` và `frontend/src/test/setup.ts`.
+    - Thêm test script `"test": "vitest run"` vào `frontend/package.json`.
+  - Xây dựng 3 bộ kiểm thử Component và User Journey chuyên sâu bao phủ trọn vẹn 3 tiêu chí nghiệm thu:
+    1. `GuestBookingJourney.test.tsx` (3 test cases kiểm thử luồng Đặt lịch khám khách vãng lai):
+       - `renders booking step 1 and validates service selection`: Kiểm thử render Bước 1 wizard Đặt lịch khám trực tuyến, kiểm tra chế độ Guest Booking không yêu cầu đăng nhập, chọn Chuyên khoa -> Dịch vụ khám -> chuyển thành công sang Bước 2.
+       - `validates required fields on step 3 (Patient Info) according to SRS rules`: Kiểm thử validation 3 trường thông tin bệnh nhân cốt lõi theo bất biến dự án:
+         - Không điền họ tên -> Báo lỗi `Họ và tên bệnh nhân là bắt buộc.`
+         - Điền họ tên nhưng thiếu ngày sinh/năm sinh -> Báo lỗi `Vui lòng nhập Ngày tháng năm sinh đầy đủ, hoặc chuyển sang chế độ Chỉ biết năm sinh.`
+         - Điền ngày sinh nhưng sai định dạng số điện thoại liên hệ (regex) -> Báo lỗi `Số điện thoại liên hệ không hợp lệ (cần từ 9 đến 11 số để nhận OTP).`
+       - `completes guest booking happy path and shows confirmation screen`: Luồng đặt lịch happy path hoàn chỉnh từ Bước 1 đến Bước 4: Gọi API `appointmentApi.bookGuest`, chuyển sang Bước 4 hiển thị thông báo `Đặt Lịch Khám Thành Công!` và mã đặt lịch `APT-TEST-2026` nổi bật.
+    2. `RescheduleApprovalJourney.test.tsx` (4 test cases kiểm thử luồng Duyệt đổi lịch quầy Lễ tân):
+       - `renders receptionist dashboard and lists pending reschedule requests`: Hiển thị Bàn tiếp nhận lễ tân, hiển thị yêu cầu đổi lịch chờ duyệt với đầy đủ mã booking `APT-RESCHED-01`, họ tên bệnh nhân, thời gian cũ và thời gian đề xuất mới kèm lý do.
+       - `approves a reschedule request and triggers refresh`: Lễ tân nhấn nút `Duyệt Đổi Lịch`, gọi API `receptionApi.approveReschedule` kèm ghi chú phê duyệt, hiển thị thông báo thành công và làm mới dữ liệu.
+       - `opens reject modal and requires reject reason before submission`: Lễ tân nhấn `Từ Chối`, mở Modal từ chối yêu cầu; nhấn xác nhận khi chưa nhập lý do bị chặn và hiển thị thông báo lỗi `Vui lòng nhập lý do từ chối yêu cầu đổi lịch`; nhập lý do hợp lệ gọi API `rejectReschedule` bảo lưu 100% ca khám cũ ban đầu của bệnh nhân.
+       - `allows receptionist to confirm a pending appointment`: Lễ tân nhấn `Xác Nhận Lịch` cho ca khám mới `APT-NEW-02`, gọi API `receptionApi.confirmAppointment` thành công và chuyển trạng thái sang `Confirmed`.
+    3. `RefundBoundaryDisplay.test.tsx` (2 test cases kiểm thử hiển thị ranh giới hoàn tiền 60 phút theo BR-010):
+       - `displays 100% refund rate when cancelled >= 60 minutes before appointment (BR-010)`: Tra cứu lịch khám bằng OTP 2 bước (gửi OTP -> nhập 6 số OTP -> hiển thị chi tiết ca hẹn); mở modal hủy khám trước giờ hẹn 120 phút (>= 60 phút); kiểm tra hiển thị chính xác bảng tính: số tiền đã thanh toán (300.000 VND), thời gian còn lại (120 phút), tỷ lệ hoàn tiền (100%), số tiền hoàn (300.000 VND), phí hủy (0 VND), cùng ghi chú chính sách `Hủy trước 60 phút: Hoàn 100% phí dịch vụ đã thanh toán (phí hủy 0%).`
+       - `displays 50% refund rate when cancelled < 60 minutes before appointment (BR-010)`: Mở modal hủy khám trước giờ hẹn 45 phút (< 60 phút); kiểm tra hiển thị chính xác bảng tính: số tiền đã thanh toán (300.000 VND), thời gian còn lại (45 phút), tỷ lệ hoàn tiền (50%), số tiền hoàn (150.000 VND), phí hủy (150.000 VND), bảo toàn nguyên tắc tài chính `refundAmount + cancellationFee == paidAmount`.
+  - Kết quả kiểm thử thực tế:
+    - Frontend tests: 9/9 test cases PASS 100% trên 3 suites trong 4.37s.
+    - Frontend bundle: `npm --prefix frontend run build` (`tsc && vite build`) hoàn tất 100% không lỗi / không warning trong 6.56s.
+    - Backend regression: 489/489 solution tests PASS 100% trong 7s.
+- Files created/changed:
+  - `frontend/package.json`
+  - `frontend/vite.config.ts`
+  - `frontend/tsconfig.json`
+  - `frontend/src/test/setup.ts`
+  - `frontend/src/test/GuestBookingJourney.test.tsx`
+  - `frontend/src/test/RescheduleApprovalJourney.test.tsx`
+  - `frontend/src/test/RefundBoundaryDisplay.test.tsx`
+  - `frontend/src/components/layout/Footer.tsx`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `npm --prefix frontend test` (Thành công: 9 Passed, 0 Failed, 3 Test Files, Duration: 4.37s)
+  - `npm --prefix frontend run build` (Thành công: 0 Errors, built in 6.56s, 1649 modules transformed)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln --no-build` (Thành công: 489 Passed, 0 Failed, 0 Skipped, Duration: 7 s)
+- Acceptance criteria evidence:
+  - `Guest booking`: Đạt 100%, kiểm thử chọn catalog, validation 3 trường bắt buộc, submit và hiển thị confirmation booking code.
+  - `Reschedule approval`: Đạt 100%, kiểm thử dashboard Lễ tân, approve đổi slot, reject modal bắt buộc lý do giữ slot cũ, và confirm ca khám.
+  - `Refund boundary display`: Đạt 100%, kiểm thử tra cứu OTP, hiển thị ranh giới >= 60 phút (hoàn 100%, phí 0%) và < 60 phút (hoàn 50%, phí 50%), bảo toàn tổng tiền.
+
