@@ -1,5 +1,9 @@
 using ClinicAppointment.Application.Common.Models;
 using ClinicAppointment.Application.Features.Appointments.Queries.GetDoctorAppointments;
+using ClinicAppointment.Application.Features.Consultations.Commands.RecordConsultation;
+using ClinicAppointment.Application.Features.Consultations.Commands.StartConsultation;
+using ClinicAppointment.Application.Features.Consultations.DTOs;
+using ClinicAppointment.Application.Features.Consultations.Queries.GetConsultationByAppointmentId;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +26,67 @@ public class DoctorAppointmentsController : BaseApiController
         [FromQuery] GetDoctorAppointmentsQuery query,
         CancellationToken cancellationToken)
     {
+        var result = await Mediator.Send(query, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Bác sĩ bắt đầu ca khám (chuyển CheckedIn -> InProgress)
+    /// </summary>
+    [HttpPost("{id:guid}/start")]
+    [ProducesResponseType(typeof(ApiResponse<StartConsultationResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> StartConsultation(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var command = new StartConsultationCommand(id);
+        var result = await Mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Bác sĩ ghi chép thông tin chẩn đoán và thăm khám (Consultation record)
+    /// </summary>
+    [HttpPost("{id:guid}/consultation")]
+    [ProducesResponseType(typeof(ApiResponse<ConsultationDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RecordConsultation(
+        [FromRoute] Guid id,
+        [FromBody] RecordConsultationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new RecordConsultationCommand(
+            AppointmentId: id,
+            Symptoms: request.Symptoms,
+            Diagnosis: request.Diagnosis,
+            ExaminationNotes: request.ExaminationNotes,
+            Conclusion: request.Conclusion,
+            FollowUpInstructions: request.FollowUpInstructions
+        );
+        var result = await Mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Bác sĩ xem nội dung thăm khám của ca khám được phân công
+    /// </summary>
+    [HttpGet("{id:guid}/consultation")]
+    [ProducesResponseType(typeof(ApiResponse<ConsultationDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetConsultation(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetConsultationByAppointmentIdQuery(id);
         var result = await Mediator.Send(query, cancellationToken);
         return HandleResult(result);
     }

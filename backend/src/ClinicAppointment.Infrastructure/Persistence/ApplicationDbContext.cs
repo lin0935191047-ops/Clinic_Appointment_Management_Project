@@ -32,6 +32,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<OtpVerificationGrant> OtpVerificationGrants => Set<OtpVerificationGrant>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Consultation> Consultations => Set<Consultation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

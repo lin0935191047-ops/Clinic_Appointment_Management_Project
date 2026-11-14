@@ -26,6 +26,7 @@ public interface IApplicationDbContext
     DbSet<IdempotencyRecord> IdempotencyRecords { get; }
     DbSet<OtpVerificationGrant> OtpVerificationGrants { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<Consultation> Consultations { get; }
 
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
 

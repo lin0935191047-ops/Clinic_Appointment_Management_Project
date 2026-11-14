@@ -32,6 +32,7 @@ public class Appointment : BaseEntity
     public virtual Patient? Patient { get; set; }
     public virtual Doctor? Doctor { get; set; }
     public virtual Service? Service { get; set; }
+    public virtual Consultation? Consultation { get; set; }
 
     public static Appointment CreateGuest(
         Guid doctorId,
@@ -81,6 +82,24 @@ public class Appointment : BaseEntity
 
         Status = AppointmentStatus.CheckedIn;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void StartConsultation(DateTime? serverTimestampUtc = null)
+    {
+        if (Status != AppointmentStatus.CheckedIn)
+            throw new InvalidOperationException($"Không thể bắt đầu ca khám cho lịch hẹn ở trạng thái {Status}. Chỉ có thể bắt đầu khi bệnh nhân đã được tiếp nhận (CheckedIn).");
+
+        Status = AppointmentStatus.InProgress;
+        UpdatedAt = serverTimestampUtc ?? DateTime.UtcNow;
+    }
+
+    public void CompleteConsultation(DateTime? serverTimestampUtc = null)
+    {
+        if (Status != AppointmentStatus.InProgress)
+            throw new InvalidOperationException($"Không thể hoàn thành ca khám cho lịch hẹn ở trạng thái {Status}. Chỉ có thể hoàn thành khi ca khám đang diễn ra (InProgress).");
+
+        Status = AppointmentStatus.Completed;
+        UpdatedAt = serverTimestampUtc ?? DateTime.UtcNow;
     }
 
     public void Cancel(string reason, DateTime serverTimestampUtc)

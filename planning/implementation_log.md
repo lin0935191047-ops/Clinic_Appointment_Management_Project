@@ -1675,3 +1675,73 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 9.61s)
 - Acceptance criteria evidence:
   - FEAT-038 đạt toàn bộ tiêu chí nghiệm thu (Assigned doctor only, Minimum patient data, Pagination/date filter) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+## 2026-11-14 — FEAT-039: Consultation start and record
+- Feature: FEAT-039 (Consultation start and record)
+- Status: Completed
+- Context: Triển khai luồng nghiệp vụ bắt đầu ca khám y khoa và ghi nhận kết quả khám lâm sàng của Bác sĩ theo phân hệ Consultation, tuân thủ nghiêm ngặt quy chuẩn bảo mật y tế và AGENTS.md.
+- Actions taken:
+  - Domain Model & Entity (`Consultation.cs` & `Appointment.cs`):
+    - Tạo thực thể `Consultation` kế thừa `BaseEntity` với các trường: `AppointmentId` (Guid, Unique), `DoctorId` (Guid), `Symptoms` (string, max 2000 ký tự), `Diagnosis` (string, max 2000 ký tự), `ExaminationNotes` (string?, max 4000 ký tự), `Conclusion` (string?, max 2000 ký tự), `FollowUpInstructions` (string?, max 2000 ký tự), `ConsultedAt` (DateTime UTC).
+    - Thêm phương thức Domain trong `Appointment.cs`: `StartConsultation()` (chuyển `CheckedIn` -> `InProgress`, cập nhật `UpdatedAt = DateTime.UtcNow`) và `CompleteConsultation()` (chuyển `InProgress` -> `Completed`).
+  - EF Core Configuration & Migration:
+    - Tạo `ConsultationConfiguration.cs` cấu hình mapping Fluent API cho PostgreSQL: table `consultations`, index unique trên `appointment_id`, foreign keys tới `appointments` và `doctors`.
+    - Tạo migration EF Core `20261114093000_AddConsultations.cs` và cập nhật `IApplicationDbContext` & `ApplicationDbContext`.
+  - CQRS Commands & Handlers (`ClinicAppointment.Application.Features.Consultations`):
+    - `StartConsultationCommand`: Bác sĩ bắt đầu ca khám; kiểm tra quyền bác sĩ được phân công (`Assigned doctor only`) qua so sánh `DoctorProfile.Id == Appointment.DoctorId`; chống IDOR tuyệt đối; từ chối bác sĩ khác với HTTP 403 Forbidden; từ chối ca khám chưa `CheckedIn` với HTTP 400 Bad Request; chuyển trạng thái sang `InProgress`; ghi nhận `AuditLog` với `Action = "START_CONSULTATION"`.
+    - `RecordConsultationCommand`: Ghi nhận kết quả khám lâm sàng; bắt buộc ca khám phải ở trạng thái `InProgress`; chỉ cho phép bác sĩ phụ trách ca khám thực hiện; hỗ trợ tạo mới bản ghi `Consultation` hoặc cập nhật thông tin khám đang có; cập nhật `UpdatedAt`; ghi nhận `AuditLog` với `Action = "RECORD_CONSULTATION"`.
+    - Bảo mật bệnh án trong AuditLog theo quy định `AGENTS.md`: TUYỆT ĐỐI KHÔNG ghi nhận nội dung `Symptoms` và `Diagnosis` vào `AuditLog.MetadataJson`, chỉ lưu cờ boolean `HasSymptoms`, `HasDiagnosis` và timestamp.
+    - `GetConsultationByAppointmentIdQuery`: Truy vấn kết quả khám theo ca khám, bảo vệ theo quyền phân công (Bác sĩ được phân công hoặc Quản trị viên).
+  - Validation qua FluentValidation:
+    - `RecordConsultationCommandValidator`: Bắt buộc `Symptoms` không được rỗng (tối đa 2000 ký tự), `Diagnosis` không được rỗng (tối đa 2000 ký tự), các trường ghi chú không vượt quá giới hạn độ dài.
+  - Web API Controllers (`ClinicAppointment.Api`):
+    - Mở rộng `DoctorAppointmentsController`:
+      - `POST /api/v1/doctor/appointments/{id}/start`: Bắt đầu ca khám (`[Authorize(Policy = "StaffOrDoctor")]`).
+      - `POST /api/v1/doctor/appointments/{id}/consultation`: Ghi chép kết quả khám (`[Authorize(Policy = "StaffOrDoctor")]`).
+      - `GET /api/v1/doctor/appointments/{id}/consultation`: Lấy chi tiết kết quả khám (`[Authorize(Policy = "StaffOrDoctor")]`).
+    - Tạo mới `DoctorConsultationsController` (`/api/v1/doctor/consultations`): alias endpoint `POST /api/v1/doctor/consultations` tiện lợi cho các client.
+  - Bộ kiểm thử tự động xUnit (`ConsultationStartAndRecordTests.cs`):
+    - 15 test cases bao phủ toàn diện 100% các tiêu chí nghiệm thu:
+      1. `StartConsultation_WithCheckedInAppointment_SucceedsAndTransitionsToInProgress`: Chuyển trạng thái `CheckedIn` -> `InProgress` thành công.
+      2. `StartConsultation_WhenNotCheckedIn_ThrowsValidationException`: Từ chối khi trạng thái là `Confirmed`, `PendingConfirmation`, `Cancelled`, `Completed`.
+      3. `StartConsultation_ByUnassignedDoctor_ThrowsForbidden`: Bác sĩ khác gọi API bị từ chối với HTTP 403 Forbidden.
+      4. `StartConsultation_ByDoctorWithoutProfile_ThrowsForbidden`: Tài khoản Doctor chưa có hồ sơ bị từ chối 403.
+      5. `StartConsultation_WritesAuditLog_WithoutPii`: Ghi nhận AuditLog với `Action = START_CONSULTATION` và không chứa PII.
+      6. `RecordConsultation_WithValidData_CreatesConsultationRecord`: Ghi nhận kết quả khám thành công khi ở trạng thái `InProgress`.
+      7. `RecordConsultation_WhenAppointmentNotInProgress_ThrowsValidationException`: Từ chối khi ca khám chưa bắt đầu hoặc đã kết thúc.
+      8. `RecordConsultation_ByUnassignedDoctor_ThrowsForbidden`: Bác sĩ không được phân công bị từ chối khi cố ghi kết quả.
+      9. `RecordConsultation_UpdatesExistingConsultation_IfAlreadyExists`: Cập nhật an toàn kết quả khám đã ghi chép trước đó.
+      10. `RecordConsultation_AuditLog_DoesNotContainMedicalDiagnosisOrSymptoms`: Kiểm tra nghiêm ngặt AuditLog KHÔNG chứa nội dung triệu chứng hoặc chẩn đoán.
+      11. `RecordConsultationValidator_RequiresSymptomsAndDiagnosis`: Validator từ chối khi thiếu `Symptoms` hoặc `Diagnosis`.
+      12. `RecordConsultationValidator_RejectsExcessiveLength`: Validator từ chối khi nội dung vượt quá giới hạn độ dài.
+      13. `GetConsultation_ByAssignedDoctor_ReturnsDetails`: Bác sĩ phụ trách xem được chi tiết kết quả khám.
+      14. `GetConsultation_ByUnassignedDoctor_ThrowsForbidden`: Bác sĩ khác bị từ chối khi cố xem kết quả khám.
+      15. `DoctorConsultationsController_ProtectedWithStaffOrDoctorPolicy`: Phân quyền Controller bảo vệ bằng `StaffOrDoctor`.
+    - Toàn bộ 349/349 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/Consultation.cs`
+  - `backend/src/ClinicAppointment.Domain/Entities/Appointment.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/ConsultationConfiguration.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114093000_AddConsultations.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/DTOs/ConsultationDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Validators/ConsultationValidators.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Commands/StartConsultation/StartConsultationCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Commands/StartConsultation/StartConsultationCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Commands/RecordConsultation/RecordConsultationCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Commands/RecordConsultation/RecordConsultationCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Queries/GetConsultationByAppointmentId/GetConsultationByAppointmentIdQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Consultations/Queries/GetConsultationByAppointmentId/GetConsultationByAppointmentIdQueryHandler.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorAppointmentsController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/DoctorConsultationsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ConsultationStartAndRecordTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~ConsultationStartAndRecordTests"` (Thành công: 15 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 349 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.92s)
+- Acceptance criteria evidence:
+  - FEAT-039 đạt toàn bộ tiêu chí nghiệm thu (CheckedIn to InProgress, Consultation protected, Required field validation) và có đầy đủ bằng chứng kiểm thử tự động thực tế.

@@ -1062,7 +1062,7 @@
       "module": "Consultation",
       "description": "Doctor bắt đầu và ghi kết quả.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-038"
       ],
@@ -1071,8 +1071,16 @@
         "Consultation protected",
         "Required field validation"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — CheckedIn to InProgress: Khi Bác sĩ bắt đầu ca khám (StartConsultationCommand), trạng thái Appointment chuyển từ CheckedIn sang InProgress thành công, cập nhật UpdatedAt; ghi AuditLog với Action = START_CONSULTATION; từ chối chuyển trạng thái nếu Appointment chưa CheckedIn (Confirmed, Pending, Cancelled, Completed) với HTTP 400 Bad Request.",
+        "Acceptance Criteria 2 — Consultation protected: Kiểm soát phân quyền nghiêm ngặt theo bác sĩ được phân công (Assigned doctor only); Bác sĩ không được phân công ca khám bị từ chối với HTTP 403 Forbidden; Chống IDOR tuyệt đối; AuditLog tuân thủ quy chuẩn bảo mật y tế và AGENTS.md: TUYỆT ĐỐI KHÔNG log triệu chứng hay chẩn đoán bệnh án y tế (chỉ lưu cờ HasSymptoms, HasDiagnosis và timestamp).",
+        "Acceptance Criteria 3 — Required field validation: Khi ghi chép kết quả khám (RecordConsultationCommand), bắt buộc phải có Symptoms (Triệu chứng) và Diagnosis (Chẩn đoán sơ bộ/xác định) qua FluentValidation; từ chối request nếu ca khám chưa ở trạng thái InProgress; hỗ trợ tạo mới hoặc cập nhật thông tin khám của Appointment; hỗ trợ API truy vấn chi tiết kết quả khám (GetConsultationByAppointmentIdQuery).",
+        "Bộ kiểm thử tự động tại ConsultationStartAndRecordTests.cs: 15/15 test cases ĐẠT 100% (tổng 349/349 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
+      "notes": [
+        "Bảo mật thông tin bệnh án trong AuditLog: Tuyệt đối không log nội dung Symptoms và Diagnosis vào AuditLog, chỉ lưu cờ boolean.",
+        "Chống IDOR: Tự động trích xuất hồ sơ Bác sĩ từ UserId của JWT và đối soát với Appointment.DoctorId."
+      ]
     },
     {
       "id": "FEAT-040",
