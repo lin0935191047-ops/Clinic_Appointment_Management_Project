@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-045 Completed)
-- Current phase: Frontend guest reschedule and cancel (FEAT-046)
+- Overall status: In progress (FEAT-001 through FEAT-047 Completed)
+- Current phase: Admin frontend (FEAT-048)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-045)
+## Features Completed (FEAT-001 -> FEAT-047)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -54,10 +54,12 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-043` (Admin dashboard/reporting): Báo cáo quản trị đa chiều và đối soát số liệu hệ thống (Module Reporting); Bộ lọc linh hoạt theo Ngày khám (FromDate, ToDate chuẩn hóa múi giờ Việt Nam UTC+7 sang UTC), Bác sĩ phụ trách (DoctorId), Chuyên khoa (SpecialtyId), và Trạng thái ca khám (Status); Bảo toàn số liệu và đối soát tài chính toàn diện (Numbers reconcile: TotalAppointments == tổng các trạng thái, TotalNetRevenue == GrossRevenue + CancellationFeeCollected); Phân rã báo cáo theo Chuyên khoa và Bác sĩ kèm tỷ lệ hoàn thành CompletionRate; Endpoints GET /api/v1/admin/reports/dashboard và GET /api/v1/admin/reports/appointments được bảo vệ nghiêm ngặt bằng policy 'AdminOnly' (chặn 403 Forbidden đối với Doctor, Receptionist, Patient); 409/409 unit tests PASS (10/10 tests FEAT-043 PASS 100%).
 - `FEAT-044` (Doctor dashboard): Dashboard và lịch trình khám trong ngày của Bác sĩ (Module Reporting); Thống kê phân rã số lượng theo trạng thái trong ngày (TotalAppointments, PendingConfirmationCount, ConfirmedCount, CheckedInCount, InProgressCount, CompletedCount, CancelledCount, NoShowCount, CompletionRate); Danh sách ca khám hôm nay hiển thị theo giờ khám chuẩn hóa giờ Việt Nam (UTC+7) với thông tin tối thiểu an toàn (số điện thoại được che giấu MaskedPhoneNumber dạng 098***4321); Tách biệt rõ ràng hàng đợi bệnh nhân đang chờ khám WaitingQueue (CheckedIn) và ca khám đang diễn ra CurrentActiveAppointment (InProgress); Bảo đảm nguyên tắc Bác sĩ chỉ xem dữ liệu trong phạm vi được phân công (Assigned scope enforced, FR-066, chống IDOR tuyệt đối); Endpoint GET /api/v1/doctor/dashboard bảo vệ bởi policy 'StaffOrDoctor'; 419/419 unit tests PASS (10/10 tests FEAT-044 PASS 100%).
 - `FEAT-045` (Frontend public booking and lookup): Tích hợp hoàn thiện giao diện React công khai cho luồng Đặt lịch khám Guest và Tra cứu lịch hẹn (Module Frontend); Khách vãng lai truy cập tự do không cần tài khoản, hoàn toàn không chuyển hướng đăng nhập (No auth redirect); Xử lý toàn diện mọi trạng thái giao diện Loading (spinner, disable controls), Error (hiển thị Alert lỗi validation hoặc từ chối từ backend), Success (hiển thị mã BookingCode nổi bật có nút copy, tóm tắt ca khám, chi phí và hướng dẫn tiếp đón; hiển thị chi tiết ca khám khi tra cứu); Kiểm soát dữ liệu hai lớp Client và Server chặt chẽ (validation họ tên, ngày sinh/năm sinh, số điện thoại regex 10 số, chọn chuyên khoa/bác sĩ/dịch vụ/slot); Tích hợp API chuẩn hóa ASP.NET Core Backend qua apiClient (/specialties, /doctors, /services, /availability, /appointments/guest, /appointment-access/otp/*, /appointments/lookup); Kiểm thử backend 21/21 tests PASS, Frontend Vite build 100% thành công.
+- `FEAT-046` (Reception frontend): Giao diện Quầy Lễ tân trực quan, phân quyền chặt chẽ và tích hợp API thật (Module Frontend); Xử lý yêu cầu đổi lịch (Approve/reject reschedule) với modal bắt buộc nhập lý do từ chối và bảo lưu 100% slot cũ khi từ chối; Xác nhận ca khám mới (Confirm appointment) từ PendingConfirmation sang Confirmed; Tiếp đón bệnh nhân tại quầy (Check-in) chuyển sang CheckedIn vào hàng đợi khám; Bộ lọc đa tiêu chí theo ngày, trạng thái, và từ khóa tìm kiếm (mã booking, tên, số điện thoại); Kiểm soát quyền truy cập Role-aware (chỉ RECEPTIONIST hoặc ADMIN) với màn hình đăng nhập lễ tân chuyên biệt và interceptor tự động gắn Bearer Token; Backend tests 49/49 tests liên quan PASS 100% (419/419 total solution tests PASS), Frontend Vite build 100% thành công.
+- `FEAT-047` (Doctor frontend): Giao diện Bác sĩ lâm sàng trực quan, phân quyền chặt chẽ và tích hợp luồng thăm khám toàn diện (Module Frontend); Hiển thị lịch khám trong ngày được phân công (Assigned schedule), thống kê chỉ số ca khám, hàng đợi bệnh nhân đang chờ khám (WaitingQueue các ca CheckedIn với số thứ tự QueueNumber), và ca khám đang diễn ra (CurrentActiveAppointment các ca InProgress); Luồng khám bệnh hoàn chỉnh (Consultation workflow): Thao tác Bắt đầu khám (StartConsultation) chuyển CheckedIn sang InProgress; Form ghi chép bệnh án lâm sàng chuẩn y tế gồm Triệu chứng lâm sàng (bắt buộc), Chẩn đoán y khoa (bắt buộc), Ghi chú khám bệnh, Kết luận kê đơn và Lời dặn tái khám; Thao tác Lưu nháp bệnh án (RecordConsultation) và Hoàn tất ca khám (CompleteConsultation) có modal xác nhận tự động khóa vĩnh viễn hồ sơ bệnh án; Modal xem lại bệnh án đã khóa (Read-only Consultation Modal); Phân quyền kiểm soát (Protected views: DOCTOR hoặc ADMIN) với màn hình đăng nhập bác sĩ chuyên biệt và nút đăng nhập nhanh demo; Backend tests 57/57 tests liên quan PASS 100% (419/419 total solution tests PASS), Frontend Vite build 100% thành công.
 
 ## Next steps
-1. Triển khai FEAT-046 (Frontend guest reschedule and cancel: Giao diện yêu cầu đổi lịch và tự hủy lịch có xác thực OTP).
-2. Triển khai FEAT-047 (Frontend receptionist desk: Giao diện tiếp đón và hàng đợi khám của Lễ tân).
+1. Triển khai FEAT-048 (Admin frontend: UI Quản trị viên, CRUD danh mục/lịch làm việc, Dashboard & báo cáo).
+2. Triển khai FEAT-049 (Backend unit tests: Unit tests domain/application).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

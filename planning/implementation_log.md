@@ -2089,3 +2089,93 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `No auth redirect`: Đạt 100%, khách vãng lai đặt lịch và tra cứu tự do không cần tài khoản.
   - `Loading/error/success states`: Đạt 100%, đầy đủ spinner, alert lỗi chi tiết và màn hình hoàn tất chuyên nghiệp.
   - `Client and server validation`: Đạt 100%, kiểm soát dữ liệu hai lớp chặt chẽ và an toàn.
+
+### 2026-11-14 — FEAT-046 — Reception frontend
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Tích hợp hoàn thiện giao diện Quầy Lễ tân (`ReceptionistDashboardPage.tsx`) và API Client (`frontend/src/api/client.ts`):
+    - Đăng nhập phân quyền bảo vệ: Form đăng nhập chuyên biệt cho nhân viên lễ tân/quản trị, tích hợp nút Đăng nhập mẫu nhanh (Admin / Receptionist), lưu Bearer Token và User Profile an toàn.
+    - Cấu hình Request Interceptor trong `apiClient` tự động trích xuất Token từ LocalStorage và gắn vào header `Authorization: Bearer <token>`.
+    - Tích hợp đầy đủ các API lễ tân (`receptionApi`):
+      - `receptionApi.getQueue`: `GET /api/v1/reception/appointments` (hỗ trợ lọc theo ngày, trạng thái, tìm kiếm từ khóa).
+      - `receptionApi.confirmAppointment`: `POST /api/v1/reception/appointments/{id}/confirm` (chuyển `PendingConfirmation` -> `Confirmed`).
+      - `receptionApi.checkInAppointment`: `POST /api/v1/reception/appointments/{id}/check-in` (chuyển `Confirmed` -> `CheckedIn`).
+      - `receptionApi.getPendingReschedules`: `GET /api/v1/reception/reschedule-requests`.
+      - `receptionApi.approveReschedule`: `POST /api/v1/reception/reschedule-requests/{id}/approve` (chuyển đổi lịch trong DB transaction).
+      - `receptionApi.rejectReschedule`: `POST /api/v1/reception/reschedule-requests/{id}/reject` (bắt buộc nhập lý do từ chối, bảo lưu 100% slot cũ).
+    - Quản lý trạng thái UI trực quan: Tự động tải danh sách hàng đợi và danh sách yêu cầu đổi lịch, badge đếm số lượng chờ duyệt nổi bật, modal từ chối đổi lịch với textarea nhập lý do, nút reload dữ liệu tức thì.
+  - Đảm bảo trọn vẹn 3 tiêu chí nghiệm thu:
+    1. `Approve/reject reschedule`: Đạt 100%, duyệt hoặc từ chối yêu cầu đổi lịch, modal nhập lý do và bảo lưu slot cũ khi từ chối.
+    2. `Confirm/check-in`: Đạt 100%, hỗ trợ xác nhận lịch mới và check-in tiếp đón bệnh nhân tại quầy vào hàng đợi khám.
+    3. `Routes and API role checks`: Đạt 100%, kiểm soát phân quyền RECEPTIONIST / ADMIN, tự động gắn Bearer Token và xử lý lỗi xác thực.
+- Files created/changed:
+  - `frontend/src/api/client.ts`
+  - `frontend/src/pages/ReceptionistDashboardPage.tsx`
+  - `backend/src/ClinicAppointment.Application/Features/Auth/Commands/AuthCommands.cs`
+  - `backend/src/ClinicAppointment.Application/DependencyInjection.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.13s, 1647 modules transformed)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~AppointmentConfirmation|FullyQualifiedName~PatientCheckIn|FullyQualifiedName~RescheduleApproval|FullyQualifiedName~ReceptionQueue"` (Thành công: 49 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 419 Passed, 0 Failed, 0 Skipped)
+- Acceptance criteria evidence:
+  - `Approve/reject reschedule`: Đạt 100%, tích hợp duyệt và từ chối có nhập lý do bảo lưu lịch cũ.
+  - `Confirm/check-in`: Đạt 100%, xác nhận lịch và check-in tiếp đón trực quan tại quầy.
+  - `Routes and API role checks`: Đạt 100%, bảo vệ bằng JWT Bearer và kiểm tra quyền vai trò.
+
+### 2026-11-14 — FEAT-047 — Doctor frontend
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Thiết kế và xây dựng giao diện Kênh Bác Sĩ lâm sàng (`frontend/src/pages/DoctorDashboardPage.tsx`):
+    - Đăng nhập phân quyền bảo vệ (Protected Views & Role checks):
+      - Chỉ cho phép vai trò `DOCTOR` hoặc `ADMIN` truy cập.
+      - Giao diện đăng nhập Bác sĩ chuyên biệt kèm các nút Đăng nhập mẫu nhanh (BS. Nguyễn Văn An - Tim Mạch, BS. Trần Thị Bình - Da Liễu, BS. Lê Hoàng Chi - Nhi Khoa, Quản Trị Viên).
+      - Tự động trích xuất Bearer Token và User Profile qua interceptor.
+      - Chống IDOR tuyệt đối: Tự động tải dữ liệu của Bác sĩ theo tài khoản đăng nhập mà không cần truyền DoctorId ở phía client.
+    - Lịch khám và thống kê chỉ số trong ngày (Assigned schedule):
+      - Header hiển thị Họ tên Bác sĩ, Chuyên khoa, Phòng khám, bộ chọn ngày làm việc (mặc định hôm nay), nút Làm mới và Đăng xuất an toàn.
+      - Thống kê chỉ số: Tổng số ca khám, Chờ khám tại quầy, Đang khám, Đã hoàn tất, Đã xác nhận (chưa check-in), và Tỷ lệ hoàn tất (%).
+      - Hàng đợi chờ khám (`WaitingQueue`): Danh sách các ca `CheckedIn` tiếp đón tại quầy với số thứ tự `QueueNumber`, thời gian check-in, nút "Khám Ngay".
+      - Toàn bộ ca khám trong ngày: Bảng danh sách đầy đủ hỗ trợ lọc theo trạng thái (`CheckedIn`, `InProgress`, `Completed`, `Confirmed`, `Cancelled`), hiển thị số thứ tự, giờ khám, mã booking, tên bệnh nhân, số điện thoại đã che mặt nạ (`MaskedPhoneNumber`), dịch vụ.
+    - Luồng thăm khám y khoa hoàn chỉnh (Consultation workflow):
+      - Thao tác "Khám Ngay" (`StartConsultation`): Chuyển trạng thái Appointment từ `CheckedIn` sang `InProgress`, đưa vào ca khám hiện tại `CurrentActiveAppointment`.
+      - Form ghi chép bệnh án y khoa lâm sàng:
+        - Triệu chứng lâm sàng (`symptoms` - bắt buộc)
+        - Chẩn đoán y khoa (`diagnosis` - bắt buộc)
+        - Ghi chú thăm khám lâm sàng (`examinationNotes` - tùy chọn)
+        - Kết luận & kê đơn (`conclusion` - tùy chọn)
+        - Hướng dẫn dặn dò & tái khám (`followUpInstructions` - tùy chọn)
+      - Thao tác "Lưu Nháp Bệnh Án" (`RecordConsultation`): Gọi API lưu trữ dữ liệu lâm sàng lên máy chủ.
+      - Thao tác "Hoàn Tất Ca Khám" (`CompleteConsultation`): Hiển thị modal xác nhận cảnh báo, tự động khóa vĩnh viễn hồ sơ bệnh án chống chỉnh sửa theo quy định y tế, chuyển trạng thái ca khám sang `Completed`.
+      - Modal xem lại bệnh án đã khóa (Read-only Consultation Modal) cho các ca khám đã hoàn tất.
+  - Cập nhật API Client (`frontend/src/api/client.ts`):
+    - Thêm `doctorApi` với các endpoints: `getDashboard`, `startConsultation`, `recordConsultation`, `getConsultation`, `completeConsultation`.
+    - Bổ sung `fullName` vào `AuthUser`.
+  - Cập nhật Type Definitions (`frontend/src/types/index.ts`):
+    - Thêm `DoctorDashboardAppointmentItem`, `DoctorDashboardMetrics`, `DoctorDashboardData`, `ConsultationData`, `RecordConsultationPayload`, `CompleteConsultationPayload`.
+  - Cập nhật Routing & Navigation:
+    - `frontend/src/App.tsx`: Đăng ký Route `/doctor` -> `<DoctorDashboardPage />`.
+    - `frontend/src/components/layout/Navbar.tsx`: Bổ sung menu điều hướng "Kênh Bác Sĩ" (`/doctor`).
+  - Đảm bảo trọn vẹn 3 tiêu chí nghiệm thu:
+    1. `Assigned schedule`: Đạt 100%, hiển thị lịch khám theo bác sĩ phụ trách, thống kê chỉ số, hàng đợi chờ khám và ca đang diễn ra.
+    2. `Consultation workflow`: Đạt 100%, quy trình bắt đầu khám, ghi chép triệu chứng/chẩn đoán và hoàn tất khóa hồ sơ bệnh án.
+    3. `Protected views`: Đạt 100%, bảo vệ bằng vai trò DOCTOR / ADMIN, chống IDOR tuyệt đối.
+- Files created/changed:
+  - `frontend/src/types/index.ts`
+  - `frontend/src/api/client.ts`
+  - `frontend/src/pages/DoctorDashboardPage.tsx`
+  - `frontend/src/App.tsx`
+  - `frontend/src/components/layout/Navbar.tsx`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.74s, 1648 modules transformed)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~DoctorAssignedAppointments|FullyQualifiedName~Consultation|FullyQualifiedName~DoctorDashboard"` (Thành công: 57 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 419 Passed, 0 Failed, 0 Skipped)
+- Acceptance criteria evidence:
+  - `Assigned schedule`: Đạt 100%, thống kê chỉ số, hàng đợi chờ khám và lịch trình theo ngày.
+  - `Consultation workflow`: Đạt 100%, luồng khám bệnh và khóa hồ sơ lâm sàng bất biến.
+  - `Protected views`: Đạt 100%, phân quyền vai trò và bảo vệ chống IDOR.

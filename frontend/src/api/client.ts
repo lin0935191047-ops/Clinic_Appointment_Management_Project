@@ -9,6 +9,10 @@ import {
   BookingConfirmation,
   AppointmentDetail,
   RefundPreview,
+  DoctorDashboardData,
+  ConsultationData,
+  RecordConsultationPayload,
+  CompleteConsultationPayload,
 } from '../types';
 
 export const apiClient = axios.create({
@@ -17,6 +21,15 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000,
+});
+
+// Tự động gắn Bearer Token nếu người dùng đã đăng nhập (Staff / Doctor / Admin)
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 apiClient.interceptors.response.use(
@@ -324,6 +337,247 @@ export const appointmentApi = {
         policyNote: 'Đã đến hoặc qua giờ hẹn: Không được phép hủy lịch trực tuyến.',
       };
     }
+  },
+};
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  fullName?: string;
+  roles: string[];
+}
+
+export const authApi = {
+  login: async (email: string, password: string): Promise<{ token: string; user: AuthUser }> => {
+    const res = await apiClient.post<ApiResponse<any>>('/auth/login', {
+      email: email.trim(),
+      password,
+    });
+    if (res.data.data) {
+      const data = res.data.data;
+      const token = data.accessToken || data.token;
+      const user: AuthUser = {
+        id: data.user?.id || 'user-1',
+        email: data.user?.email || email,
+        fullName: data.user?.fullName || data.user?.name || email,
+        roles: data.user?.roles || ['RECEPTIONIST'],
+      };
+      localStorage.setItem('token', token);
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      return { token, user };
+    }
+    throw new Error(res.data.message || 'Đăng nhập không thành công.');
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('currentUser');
+  },
+
+  getStoredUser: (): AuthUser | null => {
+    const raw = localStorage.getItem('currentUser');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  },
+
+  getStoredToken: (): string | null => {
+    return localStorage.getItem('token');
+  },
+};
+
+export interface ReceptionAppointmentItem {
+  id: string;
+  bookingCode: string;
+  queueNumber: number;
+  doctorId: string;
+  doctorName: string;
+  doctorTitle?: string;
+  roomNumber?: string;
+  patientId: string;
+  patientName: string;
+  patientCode: string;
+  dateOfBirth?: string;
+  birthYear?: number;
+  gender?: string;
+  maskedPhoneNumber: string;
+  serviceName: string;
+  servicePrice: number;
+  startAt: string;
+  endAt: string;
+  status: string;
+  reasonForVisit?: string;
+  checkedInAt?: string;
+  isGuest: boolean;
+  isDuplicateCandidate?: boolean;
+}
+
+export interface RescheduleRequestItem {
+  requestId: string;
+  appointmentId: string;
+  bookingCode: string;
+  patientFullName: string;
+  patientPhoneNumber: string;
+  serviceName: string;
+  currentDoctorFullName: string;
+  currentStartAtUtc: string;
+  currentEndAtUtc: string;
+  requestedDoctorFullName: string;
+  proposedStartAtUtc: string;
+  proposedEndAtUtc: string;
+  reason?: string;
+}
+
+export const receptionApi = {
+  getQueue: async (params?: {
+    date?: string;
+    doctorId?: string;
+    status?: string;
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<ReceptionAppointmentItem[]> => {
+    try {
+      const res = await apiClient.get<ApiResponse<any>>('/reception/appointments', {
+        params,
+      });
+      const data = res.data.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
+      if (data && Array.isArray(data.items)) {
+        return data.items.map((item: any) => ({
+          id: item.appointmentId || item.id,
+          bookingCode: item.bookingCode,
+          queueNumber: item.queueNumber,
+          doctorId: item.doctorId,
+          doctorName: item.doctorName,
+          doctorTitle: item.doctorTitle,
+          roomNumber: item.roomNumber,
+          patientId: item.patientId,
+          patientName: item.patientName,
+          patientCode: item.patientCode,
+          dateOfBirth: item.dateOfBirth,
+          birthYear: item.birthYear,
+          gender: item.gender,
+          maskedPhoneNumber: item.maskedPhoneNumber,
+          serviceName: item.serviceName,
+          servicePrice: item.servicePrice,
+          startAt: item.startAt,
+          endAt: item.endAt,
+          status: item.status,
+          reasonForVisit: item.reasonForVisit,
+          checkedInAt: item.checkedInAt,
+          isGuest: item.isGuest,
+          isDuplicateCandidate: item.isDuplicateCandidate || false,
+        }));
+      }
+      return [];
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        throw err;
+      }
+      return [];
+    }
+  },
+
+  confirmAppointment: async (appointmentId: string, note?: string): Promise<any> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/reception/appointments/${appointmentId}/confirm`, {
+      note,
+    });
+    return res.data;
+  },
+
+  checkInAppointment: async (appointmentId: string, note?: string): Promise<any> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/reception/appointments/${appointmentId}/check-in`, {
+      note,
+    });
+    return res.data;
+  },
+
+  getPendingReschedules: async (): Promise<RescheduleRequestItem[]> => {
+    try {
+      const res = await apiClient.get<ApiResponse<RescheduleRequestItem[]>>('/reception/reschedule-requests');
+      return res.data.data || [];
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        throw err;
+      }
+      return [];
+    }
+  },
+
+  approveReschedule: async (requestId: string, reviewNotes?: string): Promise<any> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/reception/reschedule-requests/${requestId}/approve`, {
+      reviewNotes,
+    });
+    return res.data;
+  },
+
+  rejectReschedule: async (requestId: string, reviewNotes: string): Promise<any> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/reception/reschedule-requests/${requestId}/reject`, {
+      reviewNotes,
+    });
+    return res.data;
+  },
+};
+
+export const doctorApi = {
+  getDashboard: async (date?: string, doctorId?: string): Promise<DoctorDashboardData> => {
+    const res = await apiClient.get<ApiResponse<DoctorDashboardData>>('/doctor/dashboard', {
+      params: { date, doctorId },
+    });
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Không thể tải dữ liệu ca khám của bác sĩ.');
+    }
+    return res.data.data;
+  },
+
+  startConsultation: async (appointmentId: string): Promise<any> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/doctor/appointments/${appointmentId}/start`);
+    return res.data;
+  },
+
+  recordConsultation: async (
+    appointmentId: string,
+    payload: RecordConsultationPayload
+  ): Promise<ConsultationData> => {
+    const res = await apiClient.post<ApiResponse<ConsultationData>>(
+      `/doctor/appointments/${appointmentId}/consultation`,
+      payload
+    );
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Không thể lưu bản ghi chẩn đoán.');
+    }
+    return res.data.data;
+  },
+
+  getConsultation: async (appointmentId: string): Promise<ConsultationData> => {
+    const res = await apiClient.get<ApiResponse<ConsultationData>>(
+      `/doctor/appointments/${appointmentId}/consultation`
+    );
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Chưa có thông tin khám bệnh cho ca này.');
+    }
+    return res.data.data;
+  },
+
+  completeConsultation: async (
+    appointmentId: string,
+    payload?: CompleteConsultationPayload
+  ): Promise<any> => {
+    const res = await apiClient.post<ApiResponse<any>>(
+      `/doctor/appointments/${appointmentId}/complete`,
+      payload || {}
+    );
+    return res.data;
   },
 };
 

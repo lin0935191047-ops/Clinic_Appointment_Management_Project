@@ -73,6 +73,18 @@ export const Navbar: React.FC = () => {
               <ShieldCheck className="w-4 h-4 mr-1 text-teal-600" />
               <span>Kênh Lễ Tân</span>
             </Link>
+
+            <Link
+              to="/doctor"
+              className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                isActive('/doctor')
+                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              <Stethoscope className="w-4 h-4 mr-1 text-blue-600" />
+              <span>Kênh Bác Sĩ</span>
+            </Link>
           </nav>
 
           {/* Action CTAs */}

@@ -112,3 +112,73 @@ export interface RefundPreview {
   minutesUntilAppointment: number;
   policyNote: string;
 }
+
+export interface DoctorDashboardAppointmentItem {
+  appointmentId: string;
+  bookingCode: string;
+  queueNumber: number;
+  patientId: string;
+  patientName: string;
+  maskedPhoneNumber: string;
+  serviceName: string;
+  durationMinutes: number;
+  startAtUtc: string;
+  endAtUtc: string;
+  localStartTime: string;
+  localEndTime: string;
+  status: AppointmentStatus;
+  reasonForVisit?: string;
+  hasConsultation: boolean;
+  checkedInAtUtc?: string;
+}
+
+export interface DoctorDashboardMetrics {
+  totalAppointments: number;
+  pendingConfirmationCount: number;
+  confirmedCount: number;
+  checkedInCount: number;
+  inProgressCount: number;
+  completedCount: number;
+  cancelledCount: number;
+  noShowCount: number;
+  completionRate: number;
+}
+
+export interface DoctorDashboardData {
+  doctorId: string;
+  doctorName: string;
+  specialtyName: string;
+  roomNumber?: string;
+  date: string;
+  metrics: DoctorDashboardMetrics;
+  todayAppointments: DoctorDashboardAppointmentItem[];
+  waitingQueue: DoctorDashboardAppointmentItem[];
+  currentActiveAppointment?: DoctorDashboardAppointmentItem | null;
+  generatedAtUtc: string;
+}
+
+export interface ConsultationData {
+  id: string;
+  appointmentId: string;
+  doctorId: string;
+  symptoms: string;
+  diagnosis: string;
+  examinationNotes?: string;
+  conclusion?: string;
+  followUpInstructions?: string;
+  createdAtUtc: string;
+  completedAtUtc?: string;
+}
+
+export interface RecordConsultationPayload {
+  symptoms: string;
+  diagnosis: string;
+  examinationNotes?: string;
+  conclusion?: string;
+  followUpInstructions?: string;
+}
+
+export interface CompleteConsultationPayload {
+  conclusion?: string;
+  followUpInstructions?: string;
+}
