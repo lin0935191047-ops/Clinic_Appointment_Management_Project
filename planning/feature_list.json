@@ -1007,7 +1007,7 @@
       "module": "Reception",
       "description": "Queue theo doctor/day.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-036"
       ],
@@ -1015,8 +1015,17 @@
         "Filter/sort works",
         "Data access limited"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Lọc và sắp xếp hàng đợi khám linh hoạt (Filter/sort works): Hỗ trợ lọc theo Bác sĩ (DoctorId), lọc theo Ngày khám (Date - chuẩn hóa múi giờ Asia/Ho_Chi_Minh sang khoảng UTC tương ứng), lọc theo Trạng thái (Status: CheckedIn, Confirmed, InProgress, Completed, Cancelled), lọc theo Từ khóa (Keyword: họ tên, số điện thoại, mã booking); sắp xếp thời gian tăng dần/giảm dần (time_asc/time_desc) hoặc ưu tiên trạng thái (status: CheckedIn và InProgress lên đầu); hỗ trợ phân trang chuẩn PaginatedList (kiểm thử FilterByDoctor_ReturnsOnlyDoctorAppointments, FilterByDate_ReturnsOnlyAppointmentsOnThatDate, FilterByStatus_ReturnsOnlyMatchingStatusAppointments, FilterByKeyword_MatchesPatientNameAndBookingCode, SortByTime_AscendingAndDescending_OrdersCorrectly, SortByStatus_PrioritizesCheckedInAndInProgress, Pagination_WorksCorrectly).",
+        "Đánh số thứ tự hàng đợi tuần tự (QueueNumber assigned): Đánh số thứ tự tiếp nhận tuần tự (1, 2, 3...) theo danh sách điều phối trong ngày của bác sĩ để Lễ tân dễ dàng gọi bệnh nhân vào khám (kiểm thử QueueNumber_AssignedSequentially).",
+        "Giới hạn dữ liệu và bảo mật an toàn (Data access limited): Toàn bộ API hàng đợi (GET /api/v1/reception/appointments và alias GET /api/v1/reception/queue) được bảo vệ bằng policy StaffOnly (chỉ Receptionist hoặc Admin); Bệnh nhân hoặc Anonymous bị chặn với HTTP 403 Forbidden / 401 Unauthorized (kiểm thử StaffOnly_EnforcedForReceptionQueue_PatientDenied, StaffOnly_EnforcedForReceptionQueue_AnonymousDenied, ReceptionistAndAdmin_AllowedAccessToQueue, ReceptionAppointmentsController_Endpoints_ProtectedWithStaffOnlyPolicy).",
+        "Bảo vệ dữ liệu bệnh nhân tối đa: DTO hàng đợi ReceptionQueueItemDto chỉ trả về thông tin cần thiết phục vụ tiếp đón tại quầy (tên, mã bệnh nhân, phòng khám, dịch vụ, giờ khám, trạng thái); số điện thoại bắt buộc che giấu mặt nạ (MaskedPhoneNumber dạng 091***5678); TUYỆT ĐỐI không trả về CCCD/Hộ chiếu thô, mật khẩu, mã OTP, hay bệnh án chẩn đoán chuyên sâu (kiểm thử DataAccessLimited_PhoneIsMasked_NoPiiLeakage).",
+        "Bộ kiểm thử tự động tại ReceptionQueueTests.cs: 13/13 test cases ĐẠT 100% (tổng 319/319 tests toàn solution PASS 100%)."
+      ],
+      "notes": [
+        "Hoàn thành trọn vẹn màn hình và API điều phối hàng đợi khám bệnh tại quầy Lễ tân theo Bác sĩ và Ngày khám.",
+        "Tuân thủ triệt để phân quyền StaffOnly, bảo đảm an toàn dữ liệu và che giấu PII."
+      ]
     },
     {
       "id": "FEAT-038",

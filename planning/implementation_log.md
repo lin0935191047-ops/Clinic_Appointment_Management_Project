@@ -1565,3 +1565,57 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.61s)
 - Acceptance criteria evidence:
   - FEAT-036 đạt toàn bộ tiêu chí nghiệm thu (Confirmed to CheckedIn, Actor/time recorded, Invalid state denied) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+
+## 2026-11-14: FEAT-037 - Reception queue
+- Triển khai và hoàn thiện màn hình và API điều phối Hàng đợi khám bệnh tại quầy Lễ tân theo Bác sĩ và Ngày khám (Module Reception), tuân thủ triệt để các quy định trong AGENTS.md, docs/SPEC.md (FR-058), docs/BUSINESS_RULES.md (BR-013, BR-014), docs/API_SPECIFICATION.md mục Reception.
+- Lọc và sắp xếp hàng đợi khám linh hoạt (Filter/sort works):
+  - Lệnh truy vấn `GetReceptionQueueQuery` hỗ trợ đầy đủ các tiêu chí lọc:
+    - `DoctorId`: Lọc theo bác sĩ phụ trách.
+    - `Date`: Lọc theo ngày khám. Xử lý chuẩn hóa múi giờ Việt Nam GMT+7 (Asia/Ho_Chi_Minh) từ 00:00:00 đến 23:59:59.999 sang khoảng thời gian tương ứng theo giờ UTC (-7 hours), đảm bảo chính xác tuyệt đối thời gian ca khám.
+    - `Status`: Lọc theo trạng thái ca khám (`CheckedIn`, `Confirmed`, `InProgress`, `Completed`, `Cancelled`, `PendingConfirmation`).
+    - `Keyword`: Tìm kiếm từ khóa theo mã booking (`BookingCode`), họ tên bệnh nhân, số điện thoại, hoặc tên bác sĩ.
+    - `SortBy`: Hỗ trợ sắp xếp thời gian tăng dần (`time_asc` - mặc định), giảm dần (`time_desc`), hoặc ưu tiên trạng thái hàng đợi (`status`: đưa các ca đã tiếp nhận `CheckedIn` và đang khám `InProgress` lên đầu danh sách phục vụ điều phối tại quầy).
+    - `Pagination`: Phân trang chuẩn với `PaginatedList<ReceptionQueueItemDto>`, tính toán đầy đủ `TotalItems`, `TotalPages`, `Page`, `PageSize`, `HasPreviousPage`, `HasNextPage`.
+- Đánh số thứ tự tiếp nhận tuần tự (QueueNumber assigned):
+  - Hệ thống tự động gán số thứ tự khám `QueueNumber` (1, 2, 3...) theo thứ tự danh sách điều phối trong ngày của bác sĩ để Lễ tân dễ dàng gọi bệnh nhân vào phòng khám.
+- Giới hạn dữ liệu và bảo mật an toàn (Data access limited):
+  - Toàn bộ endpoint xem hàng đợi tiếp nhận:
+    - `GET /api/v1/reception/appointments`
+    - `GET /api/v1/reception/queue`
+  - Được bảo vệ nghiêm ngặt bằng policy `StaffOnly` (chỉ cho phép `RECEPTIONIST` hoặc `ADMIN`). Người dùng `PATIENT` hoặc khách ẩn danh `Anonymous` bị từ chối với HTTP 403 Forbidden / 401 Unauthorized.
+  - Bảo vệ dữ liệu bệnh nhân tối đa:
+    - `ReceptionQueueItemDto` chỉ trả về thông tin cần thiết phục vụ tiếp đón tại quầy (tên, mã bệnh nhân, phòng khám, dịch vụ, giờ khám, trạng thái, thời gian check-in).
+    - Số điện thoại bắt buộc được che giấu mặt nạ qua `IIdentifierMaskingService.MaskPhone` (dạng `091***5678`).
+    - TUYỆT ĐỐI không trả về số CCCD/Hộ chiếu thô, mật khẩu, mã OTP, hay ghi chép chẩn đoán bệnh án y tế chuyên sâu.
+- Bộ kiểm thử tự động xUnit (`ReceptionQueueTests.cs`):
+  - 13 test cases bao phủ 100% các tiêu chí nghiệm thu:
+    1. `StaffOnly_EnforcedForReceptionQueue_PatientDenied`: Bệnh nhân bị từ chối với HTTP 403 Forbidden.
+    2. `StaffOnly_EnforcedForReceptionQueue_AnonymousDenied`: Khách ẩn danh bị từ chối với HTTP 403 Forbidden.
+    3. `ReceptionistAndAdmin_AllowedAccessToQueue`: Lễ tân và Admin truy cập thành công 200 OK.
+    4. `FilterByDoctor_ReturnsOnlyDoctorAppointments`: Lọc chính xác ca khám theo DoctorId.
+    5. `FilterByDate_ReturnsOnlyAppointmentsOnThatDate`: Lọc chính xác ca khám theo ngày (chuẩn hóa múi giờ Asia/Ho_Chi_Minh).
+    6. `FilterByStatus_ReturnsOnlyMatchingStatusAppointments`: Lọc chính xác ca khám theo trạng thái CheckedIn.
+    7. `FilterByKeyword_MatchesPatientNameAndBookingCode`: Tìm kiếm chính xác theo họ tên bệnh nhân và mã booking.
+    8. `SortByTime_AscendingAndDescending_OrdersCorrectly`: Sắp xếp chính xác theo thời gian tăng dần và giảm dần.
+    9. `SortByStatus_PrioritizesCheckedInAndInProgress`: Sắp xếp ưu tiên các ca đã tiếp nhận CheckedIn và InProgress lên trước.
+    10. `Pagination_WorksCorrectly`: Kiểm tra phân trang hoạt động chính xác với TotalItems và TotalPages.
+    11. `QueueNumber_AssignedSequentially`: Đánh số thứ tự tiếp nhận tuần tự (1, 2, 3...) theo danh sách điều phối.
+    12. `DataAccessLimited_PhoneIsMasked_NoPiiLeakage`: Kiểm tra số điện thoại bị mask, không lộ CCCD, mật khẩu hay OTP.
+    13. `ReceptionAppointmentsController_Endpoints_ProtectedWithStaffOnlyPolicy`: Kiểm tra reflection phân quyền StaffOnly trên Controller endpoints.
+  - Toàn bộ 319/319 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/GetReceptionQueue/ReceptionQueueItemDto.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/GetReceptionQueue/GetReceptionQueueQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/GetReceptionQueue/GetReceptionQueueQueryHandler.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/ReceptionAppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ReceptionQueueTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build backend/ClinicAppointment.sln` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 319 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.60s)
+- Acceptance criteria evidence:
+  - FEAT-037 đạt toàn bộ tiêu chí nghiệm thu (Filter/sort works, Data access limited) và có đầy đủ bằng chứng kiểm thử tự động thực tế.

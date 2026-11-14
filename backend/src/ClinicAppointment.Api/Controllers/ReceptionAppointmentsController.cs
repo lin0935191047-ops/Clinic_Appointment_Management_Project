@@ -1,6 +1,7 @@
 using ClinicAppointment.Application.Common.Models;
 using ClinicAppointment.Application.Features.Appointments.Commands.CheckInAppointment;
 using ClinicAppointment.Application.Features.Appointments.Commands.ConfirmAppointment;
+using ClinicAppointment.Application.Features.Appointments.Queries.GetReceptionQueue;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,22 @@ public record CheckInAppointmentRequest(string? Note = null);
 [Authorize(Policy = "StaffOnly")]
 public class ReceptionAppointmentsController : BaseApiController
 {
+    /// <summary>
+    /// Lễ tân tra cứu danh sách và hàng đợi ca khám theo bác sĩ và ngày (Reception queue)
+    /// </summary>
+    [HttpGet]
+    [HttpGet("/api/v1/reception/queue")]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedList<ReceptionQueueItemDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetReceptionQueue(
+        [FromQuery] GetReceptionQueueQuery query,
+        CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(query, cancellationToken);
+        return HandleResult(result);
+    }
+
     /// <summary>
     /// Lễ tân xác nhận ca khám từ trạng thái Chờ xác nhận (PendingConfirmation) sang Đã xác nhận (Confirmed)
     /// </summary>
