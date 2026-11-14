@@ -535,4 +535,37 @@ BEGIN
     VALUES ('20261114084500_AddOtpVerificationGrants', '8.0.10');
     END IF;
 END $EF$;
+
+-- -------------------------------------------------------------
+-- BẢNG AUDIT LOGS (FEAT-028: Audit trail cho xác nhận, đổi lịch, hủy lịch)
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id uuid NOT NULL,
+    actor_type character varying(30) NOT NULL,
+    actor_user_id uuid NULL,
+    action character varying(100) NOT NULL,
+    entity_type character varying(80) NOT NULL,
+    entity_id uuid NULL,
+    correlation_id character varying(80) NULL,
+    metadata_redacted text NULL,
+    occurred_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NULL,
+    CONSTRAINT pk_audit_logs PRIMARY KEY (id),
+    CONSTRAINT fk_audit_logs_users_actor_user_id FOREIGN KEY (actor_user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_audit_logs_entity_type_entity_id_occurred_at 
+ON audit_logs (entity_type, entity_id, occurred_at);
+
+CREATE INDEX IF NOT EXISTS ix_audit_logs_actor_user_id_occurred_at 
+ON audit_logs (actor_user_id, occurred_at);
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261114090000_AddAuditLogs') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261114090000_AddAuditLogs', '8.0.10');
+    END IF;
+END $EF$;
 COMMIT;

@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-027 Completed)
-- Current phase: Appointment confirmation (FEAT-028)
+- Overall status: In progress (FEAT-001 through FEAT-028 Completed)
+- Current phase: Reschedule request submission (FEAT-029)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-027)
+## Features Completed (FEAT-001 -> FEAT-028)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -36,10 +36,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-025` (OTP challenge service): Dịch vụ cấp phát và xác thực OTP gắn chặt mục đích (Purpose Binding: LOOKUP, RESCHEDULE, CANCEL); Mã OTP 6 chữ số CSPRNG; Database CHỈ LƯU OtpHash (HMAC-SHA256 kết hợp ChallengeId làm salt); TTL 5 phút, giới hạn 5 lần thử; Khóa vĩnh viễn khi vượt số lần thử sai; Resend cooldown 60 giây; Phản hồi generic an toàn chống tấn công dò tìm (Anti-enumeration); Adapter ISmsSender trừu tượng hóa SMS provider (TBD) bảo đảm No OTP in logs (chỉ log số điện thoại đã mask); Endpoints POST /api/v1/appointment-access/otp/request và POST /api/v1/appointment-access/otp/verify ([AllowAnonymous]); 199/199 unit tests PASS.
 - `FEAT-026` (OTP scoped access grant): Cơ chế cấp phát Scoped Access Grant tạm thời sau khi verify OTP thành công; Thực thể OtpVerificationGrant gắn chặt 1:1 với ChallengeId, AppointmentId và Purpose; Thời hạn ngắn TTL 15 phút; Cơ chế tiêu thụ một lần (One-time use qua ConsumedAt) cho các tác vụ thay đổi tài chính/lịch khám (RESCHEDULE/CANCEL); Hỗ trợ thu hồi (RevokeGrantAsync); Token an toàn mật mã CSPRNG 256-bit (prefix 'grnt_'), TUYỆT ĐỐI không phải là User JWT session; Database chỉ lưu binary hash SHA-256 (GrantTokenHash); Tích hợp tự động cấp grant vào POST /api/v1/appointment-access/otp/verify; 208/208 unit tests PASS.
 - `FEAT-027` (Appointment lookup): Endpoint tra cứu lịch khám công khai POST /api/v1/appointments/lookup ([AllowAnonymous]); Bắt buộc phải có Grant token từ xác thực OTP mục đích LOOKUP (không cho phép tra cứu chỉ bằng BookingCode, trả về HTTP 401 nếu thiếu hoặc 403 nếu sai/hết hạn); Trả về tóm tắt PublicAppointmentSummaryDto tối thiểu (thời gian, bác sĩ, phòng khám, dịch vụ, giá tiền, CanCancel, CanReschedule); Tuyệt đối không trả về PatientId, Consultation/bệnh án y tế, hay số CCCD/hộ chiếu/BHYT; 217/217 unit tests PASS.
+- `FEAT-028` (Appointment confirmation): Xác nhận ca khám từ PendingConfirmation sang Confirmed; Bảo vệ nghiêm ngặt bằng policy StaffOnly (chỉ Receptionist hoặc Admin); Từ chối xác nhận ca khám ở trạng thái không hợp lệ (Confirmed, Cancelled, Completed, CheckedIn - HTTP 400); Ghi nhận lịch sử kiểm toán toàn vẹn trong bảng audit_logs (ActorType, ActorUserId, Action='CONFIRM_APPOINTMENT', EntityType='Appointment', EntityId, OccurredAt, MetadataRedacted an toàn không chứa PII); Endpoint POST /api/v1/reception/appointments/{id}/confirm và alias POST /api/v1/appointments/{id}/confirm; EF migration 20261114090000_AddAuditLogs; 226/226 unit tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-028 (Appointment confirmation: Receptionist xác nhận lịch khám PendingConfirmation sang Confirmed, kiểm toán và bảo vệ trạng thái).
-2. Triển khai FEAT-029 (Guest reschedule request: Khách đề xuất khung giờ mới với OTP grant RESCHEDULE).
+1. Triển khai FEAT-029 (Reschedule request submission: Bệnh nhân/Guest đề xuất slot mới bằng OTP grant RESCHEDULE; slot cũ giữ nguyên, tạo RescheduleRequest PendingReview).
+2. Triển khai FEAT-030 (Reception reschedule review: Lễ tân duyệt hoặc từ chối yêu cầu đổi lịch; duyệt trong transaction kiểm tra lại availability).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

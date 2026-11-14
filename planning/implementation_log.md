@@ -1054,3 +1054,63 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 4.92s)
 - Acceptance criteria evidence:
   - FEAT-027 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+## 2026-11-14 — FEAT-028: Appointment confirmation
+- Summary:
+  - Triển khai toàn diện chức năng xác nhận lịch hẹn (Appointment confirmation) dành cho bộ phận Lễ tân / Quản trị viên (Module Reception), chuyển đổi trạng thái từ `PendingConfirmation` sang `Confirmed`.
+  - Thực thi nghiêm ngặt phân quyền theo vai trò (Role/Policy Authorization):
+    - Áp dụng Policy `StaffOnly` (yêu cầu role `RECEPTIONIST` hoặc `ADMIN`).
+    - Kiểm tra tại Application Handler qua `ICurrentUserService.IsStaff`: nếu tài khoản không có quyền lễ tân hoặc admin (ví dụ bệnh nhân hoặc bác sĩ không phân quyền), hệ thống từ chối và trả về HTTP 403 Forbidden.
+  - Kiểm soát máy trạng thái cuộc hẹn (State Machine Validation):
+    - Chỉ cho phép xác nhận khi cuộc hẹn đang ở trạng thái `PendingConfirmation`.
+    - Từ chối mọi yêu cầu xác nhận khi ca khám ở các trạng thái khác (`Confirmed`, `Cancelled`, `Completed`, `CheckedIn`, `NoShow`), trả về HTTP 400 Bad Request kèm thông điệp rõ ràng: `"Không thể xác nhận lịch hẹn ở trạng thái {Status}. Chỉ có thể xác nhận lịch hẹn ở trạng thái Chờ xác nhận (PendingConfirmation)."`.
+    - Nếu `AppointmentId` không tồn tại, trả về HTTP 404 Not Found.
+  - Nhật ký kiểm toán & Lịch sử thao tác (Audit Trail Logging):
+    - Tạo thực thể `AuditLog` lưu trong bảng `audit_logs` với các trường: `ActorType` (RECEPTIONIST/ADMIN/STAFF), `ActorUserId`, `Action = "CONFIRM_APPOINTMENT"`, `EntityType = "Appointment"`, `EntityId`, `OccurredAt = DateTime.UtcNow`.
+    - Thuộc tính `MetadataRedacted` lưu JSON metadata tóm tắt ca khám (BookingCode, DoctorId, PatientId, StartAt, ConfirmedAt, Note) bằng UTF-8 an toàn (`JavaScriptEncoder.UnsafeRelaxedJsonEscaping`), tuyệt đối KHÔNG chứa PII nhạy cảm (mật khẩu, OTP, CCCD, Token).
+    - Cập nhật thời điểm `Appointment.UpdatedAt = DateTime.UtcNow`.
+  - Endpoint API:
+    - `POST /api/v1/reception/appointments/{id}/confirm` (Scoped theo module Receptionist)
+    - `POST /api/v1/appointments/{id}/confirm` (Alias tiện ích trên AppointmentsController)
+    - Cả 2 endpoint đều được bảo vệ bởi `[Authorize(Policy = "StaffOnly")]`.
+  - Cơ sở dữ liệu & Migration:
+    - Tạo migration EF Core `20261114090000_AddAuditLogs.cs` & `.Designer.cs`.
+    - Cập nhật kịch bản SQL khởi tạo `database/migrations/20261114_initial_schema.sql` thêm bảng `audit_logs` và các chỉ mục liên quan.
+  - Bộ kiểm thử tự động xUnit (`AppointmentConfirmationTests.cs`):
+    - 9 test cases bao phủ đầy đủ toàn diện các tiêu chí nghiệm thu:
+      1. `Confirm_PendingConfirmation_ByReceptionist_ShouldSucceed_AndRecordAuditLog`: Lễ tân xác nhận thành công ca khám `PendingConfirmation`, trạng thái đổi sang `Confirmed`, `UpdatedAt` được cập nhật, audit log được ghi đầy đủ.
+      2. `Confirm_PendingConfirmation_ByAdmin_ShouldSucceed_AndRecordAdminAuditLog`: Admin xác nhận thành công, `AuditLog.ActorType == "ADMIN"`.
+      3. `Confirm_AlreadyConfirmed_ShouldFailWith400`: Từ chối xác nhận ca khám đã `Confirmed`, trả về 400 Bad Request, không ghi thêm audit log.
+      4. `Confirm_CancelledAppointment_ShouldFailWith400`: Từ chối xác nhận ca khám đã `Cancelled`, trả về 400 Bad Request.
+      5. `Confirm_CompletedAppointment_ShouldFailWith400`: Từ chối xác nhận ca khám đã `Completed`, trả về 400 Bad Request.
+      6. `Confirm_NonExistentAppointment_ShouldFailWith404`: Trả về 404 Not Found khi `AppointmentId` không tồn tại.
+      7. `Confirm_ByNonStaffUser_ShouldFailWith403`: Từ chối người dùng không thuộc StaffOnly (role `PATIENT`), trả về 403 Forbidden.
+      8. `Controller_Endpoints_ShouldHave_AuthorizeStaffOnlyPolicy`: Reflection test xác nhận cả `ReceptionAppointmentsController` và method `ConfirmAppointment` đều có `[Authorize(Policy = "StaffOnly")]`.
+      9. `AuditLog_ShouldNotContainSensitivePii`: Xác nhận MetadataRedacted không chứa Password, Otp, Secret, CCCD hay AccessToken.
+    - Toàn bộ 226/226 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.30s, 0 Error.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/AuditLog.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/AuditLogConfiguration.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114090000_AddAuditLogs.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114090000_AddAuditLogs.Designer.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ConfirmAppointment/ConfirmAppointmentCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ConfirmAppointment/ConfirmAppointmentResponse.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ConfirmAppointment/ConfirmAppointmentCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/ReceptionAppointmentsController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/AppointmentConfirmationTests.cs`
+  - `database/migrations/20261114_initial_schema.sql`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 226 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.30s)
+- Acceptance criteria evidence:
+  - FEAT-028 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

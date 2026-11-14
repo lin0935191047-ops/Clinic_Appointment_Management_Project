@@ -25,6 +25,7 @@ public interface IApplicationDbContext
     DbSet<PatientMergeEvent> PatientMergeEvents { get; }
     DbSet<IdempotencyRecord> IdempotencyRecords { get; }
     DbSet<OtpVerificationGrant> OtpVerificationGrants { get; }
+    DbSet<AuditLog> AuditLogs { get; }
 
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
 

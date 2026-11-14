@@ -739,9 +739,9 @@
       "id": "FEAT-028",
       "name": "Appointment confirmation",
       "module": "Reception",
-      "description": "Receptionist xác nhận PendingConfirmation.",
+      "description": "Receptionist xác nhận PendingConfirmation sang Confirmed, từ chối trạng thái không hợp lệ và ghi nhận nhật ký kiểm toán (Audit Log).",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-023",
         "FEAT-015"
@@ -751,8 +751,18 @@
         "Invalid state rejected",
         "History/audit recorded"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "backend/tests/ClinicAppointment.Domain.Tests/AppointmentConfirmationTests.cs: 9 tests (Confirm_PendingConfirmation_ByReceptionist_ShouldSucceed_AndRecordAuditLog, Confirm_PendingConfirmation_ByAdmin_ShouldSucceed_AndRecordAdminAuditLog, Confirm_AlreadyConfirmed_ShouldFailWith400, Confirm_CancelledAppointment_ShouldFailWith400, Confirm_CompletedAppointment_ShouldFailWith400, Confirm_NonExistentAppointment_ShouldFailWith404, Confirm_ByNonStaffUser_ShouldFailWith403, Controller_Endpoints_ShouldHave_AuthorizeStaffOnlyPolicy, AuditLog_ShouldNotContainSensitivePii)",
+        "dotnet test ClinicAppointment.Domain.Tests: 226/226 passed",
+        "frontend: npm run build passed"
+      ],
+      "notes": [
+        "Endpoint POST /api/v1/reception/appointments/{id}/confirm và alias POST /api/v1/appointments/{id}/confirm được bảo vệ bởi Authorize(Policy = 'StaffOnly')",
+        "Entity AuditLog lưu trữ lịch sử kiểm toán trong bảng audit_logs với ActorType, ActorUserId, Action='CONFIRM_APPOINTMENT', EntityType='Appointment', EntityId, OccurredAt, MetadataRedacted (JSON không PII)",
+        "Từ chối trạng thái không hợp lệ: trả về HTTP 400 Bad Request nếu ca khám không ở PendingConfirmation",
+        "Từ chối ca khám không tồn tại: trả về HTTP 404 Not Found",
+        "Từ chối người dùng không có quyền Staff/Receptionist/Admin: trả về HTTP 403 Forbidden"
+      ]
     },
     {
       "id": "FEAT-029",

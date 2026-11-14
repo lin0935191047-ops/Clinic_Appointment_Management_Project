@@ -168,4 +168,24 @@ public class AppointmentsController : BaseApiController
         var list = await Mediator.Send(new GetPatientAppointmentsQuery(patientProfileId.Value), cancellationToken);
         return Ok(ApiResponse<List<AppointmentDetailDto>>.Ok(list));
     }
+
+    /// <summary>
+    /// Nhân viên Lễ tân xác nhận ca khám từ PendingConfirmation sang Confirmed
+    /// </summary>
+    [HttpPost("{id:guid}/confirm")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(typeof(ApiResponse<ClinicAppointment.Application.Features.Appointments.Commands.ConfirmAppointment.ConfirmAppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ConfirmAppointment(
+        [FromRoute] Guid id,
+        [FromBody] ConfirmAppointmentRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var command = new ClinicAppointment.Application.Features.Appointments.Commands.ConfirmAppointment.ConfirmAppointmentCommand(id, request?.Note);
+        var result = await Mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
 }
