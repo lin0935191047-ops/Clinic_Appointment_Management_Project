@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<PatientIdentityReviewCase> PatientIdentityReviewCases { get; }
     DbSet<PatientMergeEvent> PatientMergeEvents { get; }
     DbSet<IdempotencyRecord> IdempotencyRecords { get; }
+    DbSet<OtpVerificationGrant> OtpVerificationGrants { get; }
 
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
 

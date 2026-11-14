@@ -949,3 +949,63 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.00s)
 - Acceptance criteria evidence:
   - FEAT-025 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-026 — OTP Scoped Access Grant (Cấp Quyền Truy Cập Tạm Thời Sau Xác Thực OTP, Ràng Buộc Cuộc Hẹn & Mục Đích, One-Time Use, Not a User JWT)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entity `OtpVerificationGrant` (`ClinicAppointment.Domain.Entities.OtpVerificationGrant`):
+    - Cấu trúc: `ChallengeId`, `AppointmentId`, `Purpose` (`LOOKUP`, `RESCHEDULE`, `CANCEL`), `GrantTokenHash` (SHA-256 bytea 32 bytes), `ExpiresAt` (TTL 15 phút), `ConsumedAt`, `CreatedAt`.
+    - Phương thức bảo mật:
+      - `ComputeTokenHash(string rawToken)`: Băm SHA-256 binary hash lưu DB; tuyệt đối không lưu raw grant token.
+      - `Issue(...)`: Sinh mã token ngẫu nhiên an toàn mật mã CSPRNG 256-bit định dạng `grnt_{hex}`; TUYỆT ĐỐI không phải là User JWT session (không có cấu trúc 3 phần header.payload.signature, không claims người dùng, không roles).
+      - `IsValidFor(...)`: Kiểm tra nghiêm ngặt `AppointmentId`, `Purpose`, `ExpiresAt`, và `ConsumedAt`.
+      - `Consume(...)`: Đánh dấu đã tiêu thụ cho các thao tác nhạy cảm một lần (One-time only).
+      - `Revoke(...)`: Thu hồi quyền truy cập.
+  - Cấu hình EF Core & Database Migration:
+    - `OtpVerificationGrantConfiguration.cs`: Bảng `otp_verification_grants`, Unique index trên `challenge_id` (ràng buộc 1:1), Unique index trên `grant_token_hash`, Index trên `(id, appointment_id)`.
+    - Migration `20261114084500_AddOtpVerificationGrants.cs` và `Designer.cs`.
+    - Đồng bộ kịch bản SQL idempotent trong `database/migrations/20261114_initial_schema.sql`.
+  - Dịch vụ Ứng dụng (`IOtpGrantService` & `OtpGrantService`):
+    - `IssueGrantAsync`: Cấp grant khi challenge đã verify thành công (`IsUsed = true`), bảo đảm không cấp trùng 2 lần cho cùng một challenge.
+    - `ValidateAndConsumeGrantAsync`: Kiểm tra tính hợp lệ của grant; hỗ trợ cờ `consume = true` cho các thao tác thay đổi lịch (RESCHEDULE/CANCEL) hoặc `consume = false` cho tra cứu (LOOKUP).
+    - `RevokeGrantAsync`: Thu hồi token khi cần thiết.
+  - Tích hợp API Controller (`AppointmentAccessController.cs`):
+    - Endpoint `POST /api/v1/appointment-access/otp/verify` sau khi xác thực OTP thành công tự động phát hành Grant token và trả về `GrantToken`, `GrantExpiresAt`, `TokenType = "ScopedAppointmentGrant"`.
+  - Bộ kiểm thử tự động xUnit (`OtpScopedAccessGrantTests.cs`):
+    - 9 test cases bao phủ toàn diện:
+      1. `IssueGrant_WhenChallengeVerified_IssuesCryptographicOpaqueToken_StoresOnlyHash`: Cấp grant token `grnt_...`, DB chỉ lưu hash 32 bytes, không phải User JWT.
+      2. `IssueGrant_WhenChallengeNotVerified_Fails`: Challenge chưa verify bị từ chối cấp grant.
+      3. `IssueGrant_WhenChallengeAlreadyGranted_Fails`: Cùng 1 challenge không thể cấp grant lần 2.
+      4. `ValidateGrant_WhenValidAndMatchesAppointmentAndPurpose_Succeeds`: Khớp appointment và purpose thành công.
+      5. `ValidateGrant_WhenPurposeMismatch_Fails`: Dùng grant LOOKUP để CANCEL bị từ chối ngay lập tức.
+      6. `ValidateGrant_WhenAppointmentMismatch_Fails`: Grant của cuộc hẹn A không thể dùng cho cuộc hẹn B.
+      7. `ValidateGrant_OneTimeUse_Consume_CannotBeReused`: Grant CANCEL/RESCHEDULE sau khi dùng 1 lần bị từ chối ở lần gọi tiếp theo.
+      8. `ValidateGrant_WhenExpired_Fails`: Grant quá hạn 15 phút bị từ chối.
+      9. `RevokeGrant_SuccessfullyRevokes_AndBlocksFurtherUsage`: Grant bị thu hồi không thể sử dụng lại.
+    - Toàn bộ 208/208 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.18s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/OtpVerificationGrant.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IOtpGrantService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Otp/DTOs/OtpDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Otp/Services/OtpGrantService.cs`
+  - `backend/src/ClinicAppointment.Application/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/OtpVerificationGrantConfiguration.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114084500_AddOtpVerificationGrants.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114084500_AddOtpVerificationGrants.Designer.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentAccessController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/OtpScopedAccessGrantTests.cs`
+  - `database/migrations/20261114_initial_schema.sql`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 208 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.18s)
+- Acceptance criteria evidence:
+  - FEAT-026 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

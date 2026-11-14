@@ -24,7 +24,10 @@ public record VerifyOtpResponse(
     string? Message,
     Guid? ChallengeId,
     Guid? AppointmentId,
-    OtpPurpose? Purpose);
+    OtpPurpose? Purpose,
+    string? GrantToken = null,
+    DateTime? GrantExpiresAt = null,
+    string TokenType = "ScopedAppointmentGrant");
 
 public class RequestOtpRequestValidator : AbstractValidator<RequestOtpRequest>
 {

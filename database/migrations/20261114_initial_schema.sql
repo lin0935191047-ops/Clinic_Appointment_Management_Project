@@ -500,3 +500,39 @@ BEGIN
     END IF;
 END $EF$;
 COMMIT;
+
+
+-- Migration: 20261114084500_AddOtpVerificationGrants
+START TRANSACTION;
+CREATE TABLE IF NOT EXISTS otp_verification_grants (
+    id uuid NOT NULL,
+    challenge_id uuid NOT NULL,
+    appointment_id uuid NOT NULL,
+    purpose character varying(20) NOT NULL,
+    grant_token_hash bytea NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    consumed_at timestamp with time zone NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NULL,
+    CONSTRAINT pk_otp_verification_grants PRIMARY KEY (id),
+    CONSTRAINT fk_otp_verification_grants_otp_challenges_challenge_id FOREIGN KEY (challenge_id) REFERENCES otp_challenges (id) ON DELETE CASCADE,
+    CONSTRAINT fk_otp_verification_grants_appointments_appointment_id FOREIGN KEY (appointment_id) REFERENCES appointments (id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ix_otp_verification_grants_challenge_id 
+ON otp_verification_grants (challenge_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ix_otp_verification_grants_grant_token_hash 
+ON otp_verification_grants (grant_token_hash);
+
+CREATE INDEX IF NOT EXISTS ix_otp_verification_grants_id_appointment_id 
+ON otp_verification_grants (id, appointment_id);
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261114084500_AddOtpVerificationGrants') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261114084500_AddOtpVerificationGrants', '8.0.10');
+    END IF;
+END $EF$;
+COMMIT;

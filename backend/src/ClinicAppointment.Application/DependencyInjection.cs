@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IDoctorTimeOffService, DoctorTimeOffService>();
         services.AddScoped<IAvailabilityService, AvailabilityService>();
         services.AddScoped<ClinicAppointment.Application.Common.Interfaces.IOtpChallengeService, ClinicAppointment.Application.Features.Otp.Services.OtpChallengeService>();
+        services.AddScoped<ClinicAppointment.Application.Common.Interfaces.IOtpGrantService, ClinicAppointment.Application.Features.Otp.Services.OtpGrantService>();
         services.AddSingleton<ClinicAppointment.Domain.Services.IPatientDuplicateDetectionService, ClinicAppointment.Domain.Services.PatientDuplicateDetectionService>();
 
         return services;

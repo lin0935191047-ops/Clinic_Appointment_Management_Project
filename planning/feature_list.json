@@ -687,7 +687,7 @@
       "module": "OTP",
       "description": "Cấp grant tạm sau OTP verify.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-025"
       ],
@@ -696,7 +696,15 @@
         "Expiry and one-time/revocation behavior",
         "Not a User JWT"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Acceptance Criteria 1 — Grant bound booking and purpose (docs/DATABASE_DESIGN.md, docs/SPEC.md): Thực thể OtpVerificationGrant gắn chặt 1:1 với ChallengeId, AppointmentId và Purpose (LOOKUP, RESCHEDULE, CANCEL); grant của cuộc hẹn A tuyệt đối không thể dùng cho cuộc hẹn B; grant cấp cho mục đích LOOKUP không thể sử dụng cho RESCHEDULE hoặc CANCEL (bị từ chối ngay lập tức)",
+        "Acceptance Criteria 2 — Expiry and one-time/revocation behavior: Grant có thời hạn hiệu lực ngắn (TTL 15 phút, ExpiresAt); hỗ trợ cơ chế One-time use qua ConsumedAt cho các thao tác thay đổi trạng thái (RESCHEDULE và CANCEL) — sau khi tiêu thụ một lần sẽ bị từ chối ở lần gọi tiếp theo; hỗ trợ hàm RevokeGrantAsync thu hồi quyền truy cập khi cần thiết",
+        "Chỉ lưu SHA-256 binary hash trong DB: GrantTokenHash có độ dài 32 bytes SHA-256; cơ sở dữ liệu tuyệt đối không lưu raw grant token; đảm bảo an toàn kể cả khi database bị dump",
+        "Acceptance Criteria 3 — Not a User JWT: Grant token là chuỗi opaque cryptographic random token (tiền tố 'grnt_' + 256-bit CSPRNG hex), không có cấu trúc JWT header.payload.signature, không chứa claims người dùng hay roles; hoàn toàn tách biệt với User authentication session",
+        "Tích hợp API Verify OTP: Endpoint POST /api/v1/appointment-access/otp/verify tự động phát hành Scoped Access Grant và trả về GrantToken, GrantExpiresAt và TokenType = 'ScopedAppointmentGrant'",
+        "EF Core Migration & Idempotent SQL: Tạo migration 20261114084500_AddOtpVerificationGrants.cs với index Unique trên challenge_id và grant_token_hash; đồng bộ kịch bản SQL idempotent trong database/migrations/20261114_initial_schema.sql",
+        "Bộ kiểm thử tự động tại OtpScopedAccessGrantTests.cs: 9/9 test cases ĐẠT 100% (tổng 208/208 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

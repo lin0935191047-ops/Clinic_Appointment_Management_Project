@@ -30,6 +30,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PatientIdentityReviewCase> PatientIdentityReviewCases => Set<PatientIdentityReviewCase>();
     public DbSet<PatientMergeEvent> PatientMergeEvents => Set<PatientMergeEvent>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+    public DbSet<OtpVerificationGrant> OtpVerificationGrants => Set<OtpVerificationGrant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

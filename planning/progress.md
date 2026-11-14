@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-025 Completed)
-- Current phase: OTP scoped access grant (FEAT-026)
+- Overall status: In progress (FEAT-001 through FEAT-026 Completed)
+- Current phase: Appointment lookup (FEAT-027)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-025)
+## Features Completed (FEAT-001 -> FEAT-026)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -34,10 +34,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-023` (Guest booking API): Tạo lịch khám công khai không yêu cầu tài khoản/JWT ([AllowAnonymous]); Hồ sơ bệnh nhân độc lập (UserId = null); Strictly NO Auto-merge: quét ứng viên trùng lặp mở PatientIdentityReviewCase trạng thái OPEN để lễ tân đối soát tại quầy; Sinh BookingCode ngẫu nhiên duy nhất khó đoán (format APT-yyyyMMdd-XXXXXX); Lưu snapshot bất biến của dịch vụ (tên, giá, thời lượng); Kiểm tra Availability và ca làm việc; Bọc trong Database Transaction với rollback khi lỗi; 179/179 unit tests PASS.
 - `FEAT-024` (Booking idempotency and abuse protection): Hỗ trợ Idempotency Key qua Header 'Idempotency-Key'/'X-Idempotency-Key' hoặc body; Thực thể IdempotencyRecord với KeyHash và RequestHash SHA-256; Chống duplicate booking khi retry mạng hoặc click đúp (giữ nguyên duy nhất 1 booking record); Phát hiện và ném IdempotencyConflictException (HTTP 409 Conflict) khi tái sử dụng key với payload khác; Quản lý thời hạn TTL 24h; Abuse Protection & Rate Limiting (IAbuseProtectionService): giới hạn 3 lần/5 phút theo số điện thoại (chống spam SMS OTP/flood booking) và 10 lần/5 phút theo IP; Generic Safe Errors qua ExceptionHandlingMiddleware bắt lỗi 500 giấu chi tiết nhạy cảm (không lộ stack trace/connection string/password); 189/189 unit tests PASS.
 - `FEAT-025` (OTP challenge service): Dịch vụ cấp phát và xác thực OTP gắn chặt mục đích (Purpose Binding: LOOKUP, RESCHEDULE, CANCEL); Mã OTP 6 chữ số CSPRNG; Database CHỈ LƯU OtpHash (HMAC-SHA256 kết hợp ChallengeId làm salt); TTL 5 phút, giới hạn 5 lần thử; Khóa vĩnh viễn khi vượt số lần thử sai; Resend cooldown 60 giây; Phản hồi generic an toàn chống tấn công dò tìm (Anti-enumeration); Adapter ISmsSender trừu tượng hóa SMS provider (TBD) bảo đảm No OTP in logs (chỉ log số điện thoại đã mask); Endpoints POST /api/v1/appointment-access/otp/request và POST /api/v1/appointment-access/otp/verify ([AllowAnonymous]); 199/199 unit tests PASS.
+- `FEAT-026` (OTP scoped access grant): Cơ chế cấp phát Scoped Access Grant tạm thời sau khi verify OTP thành công; Thực thể OtpVerificationGrant gắn chặt 1:1 với ChallengeId, AppointmentId và Purpose; Thời hạn ngắn TTL 15 phút; Cơ chế tiêu thụ một lần (One-time use qua ConsumedAt) cho các tác vụ thay đổi tài chính/lịch khám (RESCHEDULE/CANCEL); Hỗ trợ thu hồi (RevokeGrantAsync); Token an toàn mật mã CSPRNG 256-bit (prefix 'grnt_'), TUYỆT ĐỐI không phải là User JWT session; Database chỉ lưu binary hash SHA-256 (GrantTokenHash); Tích hợp tự động cấp grant vào POST /api/v1/appointment-access/otp/verify; 208/208 unit tests PASS.
 
 ## Next steps
-1. Triển khai FEAT-026 (OTP scoped access grant: Cấp phát token/grant tạm thời sau khi verify OTP thành công).
-2. Triển khai FEAT-027 (Guest appointment lookup API: Tra cứu lịch khám công khai bằng BookingCode + OTP grant).
+1. Triển khai FEAT-027 (Appointment lookup API: Tra cứu lịch khám công khai bằng BookingCode + OTP grant LOOKUP, summary tối thiểu, không lộ bệnh án/medical notes hay PII).
+2. Triển khai FEAT-028 (Lookup rate limiting: Bảo vệ chống quét thông tin ca khám).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

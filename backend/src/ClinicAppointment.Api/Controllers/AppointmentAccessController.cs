@@ -11,10 +11,14 @@ namespace ClinicAppointment.Api.Controllers;
 public class AppointmentAccessController : BaseApiController
 {
     private readonly IOtpChallengeService _otpService;
+    private readonly IOtpGrantService _grantService;
 
-    public AppointmentAccessController(IOtpChallengeService otpService)
+    public AppointmentAccessController(
+        IOtpChallengeService otpService,
+        IOtpGrantService grantService)
     {
         _otpService = otpService;
+        _grantService = grantService;
     }
 
     /// <summary>
@@ -54,7 +58,7 @@ public class AppointmentAccessController : BaseApiController
     }
 
     /// <summary>
-    /// Xác thực mã OTP gửi về điện thoại
+    /// Xác thực mã OTP và cấp phát Scoped Access Grant tạm thời (Not a User JWT)
     /// </summary>
     [HttpPost("otp/verify")]
     [AllowAnonymous]
@@ -64,25 +68,41 @@ public class AppointmentAccessController : BaseApiController
         [FromBody] VerifyOtpRequest request, 
         CancellationToken cancellationToken)
     {
-        var result = await _otpService.VerifyOtpAsync(
+        var verifyResult = await _otpService.VerifyOtpAsync(
             request.ChallengeId, 
             request.Otp, 
             request.Purpose, 
             cancellationToken);
 
-        if (!result.IsSuccess)
+        if (!verifyResult.IsSuccess)
         {
             return BadRequest(ApiResponse<object>.Fail(
-                result.ErrorMessage ?? "Mã OTP không hợp lệ.", 
+                verifyResult.ErrorMessage ?? "Mã OTP không hợp lệ.", 
+                StatusCodes.Status400BadRequest));
+        }
+
+        // Cấp phát Scoped Access Grant có thời hạn 15 phút gắn chặt cuộc hẹn và mục đích (FEAT-026)
+        var grantResult = await _grantService.IssueGrantAsync(
+            request.ChallengeId, 
+            TimeSpan.FromMinutes(15), 
+            cancellationToken);
+
+        if (!grantResult.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(
+                grantResult.ErrorMessage ?? "Không thể cấp quyền truy cập tạm thời.", 
                 StatusCodes.Status400BadRequest));
         }
 
         var response = new VerifyOtpResponse(
             true, 
-            "Xác thực mã OTP thành công.", 
-            result.ChallengeId, 
-            result.AppointmentId, 
-            result.Purpose);
+            "Xác thực mã OTP thành công. Quyền truy cập tạm thời đã được cấp phát.", 
+            verifyResult.ChallengeId, 
+            verifyResult.AppointmentId, 
+            verifyResult.Purpose,
+            grantResult.GrantToken,
+            grantResult.ExpiresAt,
+            "ScopedAppointmentGrant");
 
         return Ok(ApiResponse<VerifyOtpResponse>.Ok(response, "Xác thực mã OTP thành công."));
     }
