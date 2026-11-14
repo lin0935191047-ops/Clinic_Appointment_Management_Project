@@ -93,6 +93,13 @@ public class AppointmentsController : BaseApiController
             }
         }
 
+        if (string.IsNullOrWhiteSpace(grantToken))
+        {
+            return Unauthorized(ApiResponse<object>.Fail(
+                "Yêu cầu xác thực OTP để tra cứu thông tin ca khám. Vui lòng cung cấp mã quyền truy cập (Grant token).", 
+                StatusCodes.Status401Unauthorized));
+        }
+
         var query = new ClinicAppointment.Application.Features.Appointments.Queries.LookupAppointment.LookupAppointmentQuery(
             request.BookingCode, 
             grantToken);
@@ -133,6 +140,13 @@ public class AppointmentsController : BaseApiController
                     grantToken = authStr.Substring(6).Trim();
                 }
             }
+        }
+
+        if (string.IsNullOrWhiteSpace(grantToken))
+        {
+            return Unauthorized(ApiResponse<object>.Fail(
+                "Yêu cầu xác thực OTP để gửi yêu cầu đổi lịch. Vui lòng cung cấp mã quyền truy cập (Grant token).", 
+                StatusCodes.Status401Unauthorized));
         }
 
         var command = new ClinicAppointment.Application.Features.Appointments.Commands.SubmitRescheduleRequest.SubmitRescheduleRequestCommand(

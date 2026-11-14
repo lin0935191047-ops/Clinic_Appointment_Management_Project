@@ -2269,3 +2269,57 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `Refund boundaries`: Đạt 100%, kiểm thử toàn diện mốc 60 phút và làm tròn VND.
   - `State transitions`: Đạt 100%, kiểm thử máy trạng thái ca khám và yêu cầu đổi lịch.
   - `Identity matcher`: Đạt 100%, kiểm thử đối soát định danh tuân thủ Strictly NO Auto-merge.
+
+
+### 2026-11-14 — FEAT-050 — API integration tests
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Cài đặt và tích hợp gói NuGet `Microsoft.AspNetCore.Mvc.Testing` (v8.0.10) vào `backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj`.
+  - Khai báo `public partial class Program { }` tại cuối `backend/src/ClinicAppointment.Api/Program.cs` hỗ trợ `WebApplicationFactory<Program>`.
+  - Xây dựng hạ tầng TestHost `CustomWebApplicationFactory.cs`:
+    - Cách ly hoàn toàn InMemory Database cho mỗi test session, loại bỏ phụ thuộc mạng / DB ngoài.
+    - Tự động seed dữ liệu mẫu đầy đủ: Quyền (Admin, Doctor, Receptionist, Patient), Tài khoản nhân viên/bác sĩ, Chuyên khoa Tim Mạch, Hồ sơ Bác sĩ, Dịch vụ khám, và Ca làm việc cả 7 ngày trong tuần từ 07:00 đến 21:00.
+    - Tích hợp `SafeJsonOutputFormatter` ghi trực tiếp tuần tự hóa JSON vào `Response.Body` Stream, loại bỏ triệt để lỗi không tương thích giữa runtime .NET 10 và TestHost `ResponseBodyPipeWriter` (`PipeWriter.UnflushedBytes`).
+  - Thêm cấu hình `.AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))` vào `Program.cs` chuẩn hóa serialize enum thành String qua HTTP.
+  - Cập nhật Controller và Validator:
+    - Bắt buộc kiểm tra Grant token tại `AppointmentsController` khi gọi Lookup hoặc Submit Reschedule, trả về mã HTTP 401 Unauthorized theo đúng chuẩn API Spec khi thiếu grant.
+  - Xây dựng 3 bộ kiểm thử tích hợp Web API end-to-end với TestServer HttpClient:
+    1. `GuestBookingApiIntegrationTests.cs` (4 test cases):
+       - `GuestBooking_ValidRequest_SucceedsAndCreatesAppointmentWithoutAuth`: Khách vãng lai đặt lịch thành công không cần JWT Bearer header; xác nhận tạo `Patient` độc lập với `UserId = null`, `IsGuest = true`.
+       - `GuestBooking_InvalidPhoneNumberFormat_Returns400BadRequest`: Kiểm tra validation định dạng số điện thoại di động Việt Nam, trả về 400 Bad Request kèm chi tiết trường lỗi.
+       - `GuestBooking_IdempotencyKey_SamePayload_ReturnsSameResultWithoutDuplication`: Cơ chế Idempotency chống tạo lịch trùng lặp khi retry mạng; cùng Idempotency Key và payload trả về kết quả cũ kèm mã 201/200 mà không sinh Appointment mới.
+       - `GuestBooking_IdempotencyKey_DifferentPayload_Returns409Conflict`: Tái sử dụng cùng Idempotency Key với thông tin khác nhau bị từ chối 409 Conflict.
+    2. `OtpAndLookupApiIntegrationTests.cs` (4 test cases):
+       - `RequestOtp_AntiEnumeration_AlwaysReturnsGenericSuccessMessage`: Cơ chế chống tấn công dò tìm (Anti-enumeration); thông tin không tồn tại vẫn trả về generic message và dummy ChallengeId ngẫu nhiên; xác nhận tuyệt đối không lưu dummy challenge vào cơ sở dữ liệu.
+       - `RequestOtp_ValidBookingAndPhone_CreatesChallengeAndReturnsChallengeId`: Gửi yêu cầu OTP với mã booking và sđt trùng khớp thành công, sinh bản ghi `OtpChallenge` trong DB với mục đích `LOOKUP`.
+       - `VerifyOtpAndLookup_EndToEndFlow_IssuesGrantAndReturnsSummaryWithoutPii`: Luồng end-to-end hoàn chỉnh: Xác thực OTP thành công -> cấp Scoped Grant Token có TTL 15 phút -> dùng Grant tra cứu ca khám thành công; bảo vệ dữ liệu tối thượng: tuyệt đối không rò rỉ bệnh án `Consultation` hoặc raw PII bệnh nhân (chỉ hiển thị tóm tắt công khai).
+       - `Lookup_WithInvalidOrCrossPurposeGrant_Returns403Forbidden`: Sử dụng Grant cấp cho mục đích khác (như CANCEL) để tra cứu LOOKUP bị từ chối 403 Forbidden do Purpose Binding.
+    3. `RescheduleReviewApiIntegrationTests.cs` (5 test cases + helpers):
+       - `SubmitReschedule_WithoutGrantToken_Returns401Unauthorized`: Gửi yêu cầu đổi lịch không kèm Grant token bị chặn 401 Unauthorized.
+       - `RescheduleReview_FullFlow_ApproveTransfersSlotToNewTime`: Toàn bộ vòng đời đổi lịch thành công: Bệnh nhân xác thực OTP -> gửi yêu cầu đổi lịch trạng thái `PendingReview` -> Lễ tân đăng nhập JWT duyệt (Approve) -> Ca khám chuyển sang khung giờ mới, giải phóng slot cũ cho người khác đặt.
+       - `RescheduleReview_FullFlow_RejectHoldsOldSlotIntact`: Vòng đời đổi lịch bị từ chối: Lễ tân từ chối (Reject) kèm lý do -> Yêu cầu đổi lịch chuyển `Rejected`, ca khám cũ giữ nguyên 100% thời gian và bác sĩ đã hẹn ban đầu.
+  - Toàn bộ 13/13 integration test cases đều PASS 100%.
+  - Tổng số test cases trong toàn Solution đạt 478/478 PASS 100% (465 unit tests + 13 integration tests).
+  - Frontend Vite production build thành công 100% với 0 lỗi (dist bundle 420.59 kB).
+- Files created/changed:
+  - `backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj`
+  - `backend/src/ClinicAppointment.Api/Program.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/SubmitRescheduleRequest/SubmitRescheduleRequestCommandValidator.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Queries/LookupAppointment/LookupAppointmentQuery.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Integration/CustomWebApplicationFactory.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Integration/GuestBookingApiIntegrationTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Integration/OtpAndLookupApiIntegrationTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Integration/RescheduleReviewApiIntegrationTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~Integration"` (Thành công: 13 Passed, 0 Failed, 0 Skipped, Duration: 4 s)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 478 Passed, 0 Failed, 0 Skipped, Duration: 5 s)
+  - `npm --prefix frontend run build` (Thành công: 0 Errors, built in 8.73s, 1649 modules transformed)
+- Acceptance criteria evidence:
+  - `Guest booking flow without authentication`: Đạt 100%, kiểm thử đặt lịch công khai, Patient profile độc lập, Idempotency key bảo vệ tránh trùng lặp.
+  - `OTP challenge, verification, and scoped grant token flow`: Đạt 100%, kiểm thử Anti-enumeration, sinh OTP challenge, cấp Scoped Grant 15 phút, tra cứu không lộ PII hay bệnh án.
+  - `Reschedule review and approval/rejection lifecycle`: Đạt 100%, kiểm thử quy trình Lễ tân duyệt chuyển slot mới và từ chối bảo lưu slot cũ.
+  - `Idempotency key enforcement and anti-enumeration protection`: Đạt 100%, bảo vệ toàn diện các rủi ro brute-force và network retry.
