@@ -1445,3 +1445,63 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.32s)
 - Acceptance criteria evidence:
   - FEAT-034 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+
+## 2026-11-14: FEAT-035 - Reception patient management
+- Triển khai và hoàn thiện module Quản lý và tiếp nhận hồ sơ bệnh nhân tại quầy Lễ tân (Module Reception), tuân thủ triệt để các quy tắc bất biến trong AGENTS.md, docs/SPEC.md v1.2, docs/BUSINESS_RULES.md (BR-001, BR-002, BR-003, BR-004), docs/DATABASE_DESIGN.md (mục 4.2 & 6).
+- Phân quyền bảo vệ truy cập (Role guard):
+  - Áp dụng chính sách bảo vệ `StaffOnly` (chỉ cho phép người dùng có Role `RECEPTIONIST` hoặc `ADMIN`) cho toàn bộ các endpoint tại `ReceptionPatientsController` (`/api/v1/reception/patients`).
+  - Người dùng ẩn danh (Anonymous) hoặc Bệnh nhân (Role `PATIENT`) cố tình gọi API tiếp nhận tại quầy bị chặn ngay lập tức với mã lỗi HTTP 401 Unauthorized hoặc 403 Forbidden.
+- Tìm kiếm và lọc hồ sơ bệnh nhân tại quầy:
+  - Query `SearchReceptionPatientsQuery` hỗ trợ tìm kiếm linh hoạt theo từ khóa (Keyword: họ tên, số điện thoại), ngày sinh/năm sinh, trạng thái hoạt động (ACTIVE/MERGED), và lọc riêng các hồ sơ đang bị nghi trùng (`IsPossibleDuplicate = true`).
+  - Kết quả trả về kèm phân trang (`PaginatedList<ReceptionPatientDto>`), số điện thoại và định danh (CCCD, Hộ chiếu, BHYT) được che giấu mặt nạ an toàn (masked) trước khi hiển thị cho Lễ tân.
+- Tạo mới và cập nhật hồ sơ bệnh nhân tại quầy:
+  - Lễ tân có thể tiếp nhận và tạo hồ sơ mới (`POST /api/v1/reception/patients`) hoặc cập nhật thông tin cá nhân/định danh (`PUT /api/v1/reception/patients/{id}`).
+  - Toàn bộ thông tin định danh nhạy cảm (CCCD, Hộ chiếu, Thẻ BHYT) được mã hóa bằng AES-256-GCM và sinh Hash HMAC-SHA256 phục vụ tra cứu chính xác qua `IPatientSecurityService`.
+  - Ngăn chặn chỉnh sửa thông tin trên các hồ sơ đã gộp (`RecordStatus == "MERGED"`) với mã lỗi HTTP 400 Bad Request.
+  - Tự động ghi nhận `AuditLog` với `Action = "UPDATE_PATIENT"`.
+- Bất biến cốt lõi: Tuyệt đối không tự động gộp hồ sơ trùng Tên + Ngày sinh/Năm sinh (No auto-merge by name+DOB):
+  - Khi tạo mới hoặc cập nhật hồ sơ có Họ tên + Ngày sinh/Năm sinh trùng khớp với hồ sơ đã tồn tại:
+    - Hệ thống TUYỆT ĐỐI KHÔNG tự động gộp dữ liệu.
+    - Tạo hoặc giữ nguyên hồ sơ độc lập với mã định danh `PatientCode` riêng biệt.
+    - Tự động gắn cờ `IsPossibleDuplicate = true` trên hồ sơ.
+    - Tự động khởi tạo ca rà soát trùng lặp `PatientIdentityReviewCase` ở trạng thái `OPEN` với lý do `IdentityMatchReason.NAME_DOB` để Lễ tân đối chiếu CCCD trực tiếp tại quầy.
+- Quy trình đối soát và xử lý ca nghi trùng có kiểm toán (Merge case audited):
+  - Endpoint `POST /api/v1/reception/patients/review-cases/{id}/resolve` cho phép Lễ tân xử lý ca rà soát sau khi đối chiếu giấy tờ tùy thân của bệnh nhân tại quầy:
+    - Khi xác nhận cùng 1 người (`CONFIRMED_SAME_PERSON`):
+      - Chuyển toàn bộ lịch hẹn khám (`Appointments`) từ hồ sơ nguồn sang hồ sơ đích được chọn.
+      - Đổi trạng thái hồ sơ nguồn thành `MERGED` và ghi nhận `MergedIntoPatientId = targetPatientId`.
+      - Tạo bản ghi `PatientMergeEvent` lưu trữ snapshot dữ liệu trước khi gộp (`BeforeSnapshotJson`) và lý do gộp.
+      - Ghi nhận `AuditLog` bất biến với `Action = "MERGE_PATIENTS"`, `ActorType = "STAFF"`, và metadata chứa mã bệnh nhân nguồn/đích đã được bảo vệ.
+    - Khi xác nhận là 2 người khác nhau (`DIFFERENT_PERSON`):
+      - Cập nhật trạng thái ca rà soát sang `DIFFERENT_PERSON`.
+      - Tự động gỡ bỏ cờ nghi trùng `IsPossibleDuplicate = false` trên các hồ sơ liên quan.
+      - Ghi nhận `AuditLog` với `Action = "RESOLVE_PATIENT_DUPLICATE"`.
+- Bộ kiểm thử tự động xUnit (`ReceptionPatientManagementTests.cs`):
+  - 10 test cases bao phủ 100% các tiêu chí nghiệm thu:
+    1. `RoleGuard_StaffOnly_EnforcedForReceptionEndpoints`: Bệnh nhân bị từ chối với HTTP 403 khi gọi API tiếp nhận.
+    2. `RoleGuard_ReceptionistAndAdmin_AllowedAccess`: Lễ tân và Quản trị viên được phép truy cập và tìm kiếm hồ sơ.
+    3. `SearchPatients_ByKeyword_ReturnsMatchingPatients`: Tìm kiếm chính xác hồ sơ theo từ khóa họ tên.
+    4. `SearchPatients_FilterByDuplicateFlagAndStatus`: Lọc chính xác danh sách hồ sơ bị nghi trùng (`IsPossibleDuplicate = true`).
+    5. `UpdatePatient_ValidData_UpdatesInformationSuccessfully`: Cập nhật thông tin bệnh nhân, mã hóa CCCD và ghi AuditLog.
+    6. `NoAutoMerge_WhenDuplicateNameAndDOB_CreatesIndependentProfileAndFlagsReviewCase`: Tạo hồ sơ mới trùng tên + ngày sinh không bị auto-merge, tạo profile độc lập và mở ca rà soát OPEN.
+    7. `NoAutoMerge_WhenUpdatingToMatchingNameAndDOB_FlagsDuplicateAndOpensReviewCase`: Cập nhật hồ sơ trùng tên + ngày sinh kích hoạt cờ nghi trùng và mở ca rà soát OPEN.
+    8. `MergeCaseAudited_WhenConfirmedSamePerson_TransfersAppointmentsAndCreatesAuditLog`: Gộp hồ sơ chuyển lịch hẹn, lưu snapshot merge event và ghi AuditLog kiểm toán.
+    9. `MergeCaseAudited_WhenDifferentPerson_ClearsDuplicateFlagAndCreatesAuditLog`: Xác nhận khác người xóa cờ nghi trùng và ghi AuditLog.
+    10. `UpdatePatient_MergedPatient_CannotBeUpdated`: Từ chối cập nhật hồ sơ đã ở trạng thái MERGED với HTTP 400 Bad Request.
+  - Toàn bộ 294/294 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/Patient.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/ResolvePatientReviewCaseCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Commands/UpdatePatientCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Patients/Queries/SearchReceptionPatientsQuery.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/ReceptionPatientsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/ReceptionPatientManagementTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj` (Thành công: 294 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~ReceptionPatientManagementTests"` (Thành công: 10 Passed, 0 Failed, 0 Skipped)
+- Acceptance criteria evidence:
+  - FEAT-035 đạt toàn bộ tiêu chí nghiệm thu (Role guard, Merge case audited, No auto-merge by name+DOB) và có đầy đủ bằng chứng kiểm thử tự động thực tế.

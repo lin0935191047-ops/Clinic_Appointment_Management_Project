@@ -948,7 +948,7 @@
       "module": "Reception",
       "description": "Tìm/tạo/sửa hồ sơ và xử lý suspected duplicates.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-011",
         "FEAT-015"
@@ -958,8 +958,20 @@
         "Merge case audited",
         "No auto-merge by name+DOB"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Phân quyền bảo vệ StaffOnly: Toàn bộ API tiếp nhận hồ sơ bệnh nhân tại quầy (ReceptionPatientsController) bắt buộc người dùng đăng nhập có vai trò Staff (Receptionist hoặc Admin). Người dùng ẩn danh hoặc Patient bị chặn với HTTP 401 Unauthorized / 403 Forbidden (kiểm thử RoleGuard_StaffOnly_EnforcedForReceptionEndpoints và RoleGuard_ReceptionistAndAdmin_AllowedAccess).",
+        "Tìm kiếm và lọc hồ sơ bệnh nhân tại quầy: Hỗ trợ tìm kiếm theo từ khóa (họ tên, số điện thoại), ngày sinh/năm sinh, trạng thái (ACTIVE/MERGED) và cờ nghi trùng IsPossibleDuplicate (kiểm thử SearchPatients_ByKeyword_ReturnsMatchingPatients và SearchPatients_FilterByDuplicateFlagAndStatus).",
+        "Cập nhật hồ sơ bệnh nhân an toàn: Lễ tân cập nhật thông tin cá nhân và định danh (CCCD, Hộ chiếu, BHYT) được mã hóa AES-256-GCM + HMAC bí mật, đồng thời ghi nhận AuditLog hành động UPDATE_PATIENT (kiểm thử UpdatePatient_ValidData_UpdatesInformationSuccessfully).",
+        "Nguyên tắc bất biến No auto-merge by name+DOB (Bảo đảm an toàn danh tính): Khi tạo mới hoặc cập nhật hồ sơ bệnh nhân trùng Họ tên + Ngày sinh/Năm sinh với hồ sơ đã có trong hệ thống, hệ thống TUYỆT ĐỐI KHÔNG tự động gộp mà tạo/lưu hồ sơ độc lập với PatientCode riêng, tự động bật cờ IsPossibleDuplicate = true và tạo ca rà soát PatientIdentityReviewCase trạng thái OPEN (kiểm thử NoAutoMerge_WhenDuplicateNameAndDOB_CreatesIndependentProfileAndFlagsReviewCase và NoAutoMerge_WhenUpdatingToMatchingNameAndDOB_FlagsDuplicateAndOpensReviewCase).",
+        "Xử lý gộp hồ sơ có kiểm toán (Merge case audited): Khi Lễ tân đối chiếu CCCD và xác nhận cùng 1 người (CONFIRMED_SAME_PERSON), hệ thống chuyển toàn bộ lịch hẹn sang hồ sơ đích, hồ sơ nguồn chuyển sang trạng thái MERGED, tạo bản ghi PatientMergeEvent lưu snapshot trước gộp và ghi nhận AuditLog Action = MERGE_PATIENTS (kiểm thử MergeCaseAudited_WhenConfirmedSamePerson_TransfersAppointmentsAndCreatesAuditLog).",
+        "Xác nhận hai người khác nhau (Different person): Khi Lễ tân xác nhận là 2 người khác nhau (DIFFERENT_PERSON), cờ nghi trùng IsPossibleDuplicate trên cả 2 hồ sơ được xóa, trạng thái ca rà soát chuyển DIFFERENT_PERSON và ghi nhận AuditLog Action = RESOLVE_PATIENT_DUPLICATE (kiểm thử MergeCaseAudited_WhenDifferentPerson_ClearsDuplicateFlagAndCreatesAuditLog).",
+        "Bảo vệ hồ sơ đã gộp (Merged patient guard): Ngăn chặn chỉnh sửa thông tin trên hồ sơ đã ở trạng thái MERGED với thông báo lỗi HTTP 400 Bad Request (kiểm thử UpdatePatient_MergedPatient_CannotBeUpdated).",
+        "Bộ kiểm thử tự động tại ReceptionPatientManagementTests.cs: 10/10 test cases ĐẠT 100% (tổng 294/294 tests toàn solution PASS 100%)."
+      ],
+      "notes": [
+        "Hoàn thành trọn vẹn nghiệp vụ tiếp nhận và quản lý danh tính bệnh nhân tại quầy lễ tân.",
+        "Tuân thủ triệt để nguyên tắc cốt lõi: No auto-merge by name+DOB, bảo vệ mã hóa định danh và kiểm toán audit trail đầy đủ."
+      ]
     },
     {
       "id": "FEAT-036",

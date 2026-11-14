@@ -116,6 +116,28 @@ public class ResolvePatientReviewCaseCommandHandler : IRequestHandler<ResolvePat
 
             _context.PatientMergeEvents.Add(mergeEvent);
 
+            // Ghi nhận AuditLog cho sự kiện gộp hồ sơ
+            var mergeMetadata = new
+            {
+                SourcePatientId = sourcePatient.Id,
+                SourcePatientCode = sourcePatient.PatientCode,
+                TargetPatientId = targetPatient.Id,
+                TargetPatientCode = targetPatient.PatientCode,
+                Reason = request.MergeReason,
+                AppointmentsMigratedCount = appointmentsToMigrate.Count,
+                ReviewerNote = request.Note
+            };
+
+            var mergeAuditLog = AuditLog.Create(
+                actorType: "STAFF",
+                actorUserId: request.ReviewerUserId,
+                action: "MERGE_PATIENTS",
+                entityType: "Patient",
+                entityId: targetPatient.Id,
+                metadataRedacted: JsonSerializer.Serialize(mergeMetadata)
+            );
+            _context.AuditLogs.Add(mergeAuditLog);
+
             // Cập nhật trạng thái ca rà soát
             reviewCase.Resolve(IdentityReviewStatus.CONFIRMED_SAME_PERSON, request.ReviewerUserId, request.Note);
 
@@ -127,6 +149,26 @@ public class ResolvePatientReviewCaseCommandHandler : IRequestHandler<ResolvePat
         else if (request.Resolution == IdentityReviewStatus.DIFFERENT_PERSON)
         {
             reviewCase.Resolve(IdentityReviewStatus.DIFFERENT_PERSON, request.ReviewerUserId, request.Note);
+
+            // Ghi nhận AuditLog cho sự kiện xác nhận hai người khác nhau
+            var diffMetadata = new
+            {
+                CaseId = reviewCase.Id,
+                Resolution = "DIFFERENT_PERSON",
+                PatientCode = reviewCase.Patient.PatientCode,
+                CandidatePatientCode = reviewCase.CandidatePatient.PatientCode,
+                Note = request.Note
+            };
+
+            var diffAuditLog = AuditLog.Create(
+                actorType: "STAFF",
+                actorUserId: request.ReviewerUserId,
+                action: "RESOLVE_PATIENT_DUPLICATE",
+                entityType: "Patient",
+                entityId: reviewCase.PatientId,
+                metadataRedacted: JsonSerializer.Serialize(diffMetadata)
+            );
+            _context.AuditLogs.Add(diffAuditLog);
 
             // Xóa cờ nghi trùng nếu không còn ca rà soát nào khác đang OPEN
             var otherOpenCasesForPatient = await _context.PatientIdentityReviewCases

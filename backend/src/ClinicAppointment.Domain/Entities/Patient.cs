@@ -97,4 +97,37 @@ public class Patient : BaseEntity
         UserId = userId;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateDetails(
+        string fullName, 
+        string phoneNumber, 
+        DateOnly? dateOfBirth = null, 
+        short? birthYear = null, 
+        string? email = null,
+        string? gender = null,
+        string? address = null)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            throw new ArgumentException("Họ và tên bệnh nhân không được để trống.", nameof(fullName));
+
+        if (dateOfBirth is null && birthYear is null)
+            throw new ArgumentException("Hồ sơ bệnh nhân bắt buộc phải có Ngày sinh hoặc Năm sinh.", nameof(dateOfBirth));
+
+        if (dateOfBirth.HasValue && birthYear.HasValue && dateOfBirth.Value.Year != birthYear.Value)
+            throw new ArgumentException("Năm sinh và ngày sinh không khớp nhau.", nameof(birthYear));
+
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new ArgumentException("Số điện thoại liên hệ là bắt buộc.", nameof(phoneNumber));
+
+        var trimmedName = fullName.Trim();
+        FullName = trimmedName;
+        NormalizedFullName = NormalizeFullName(trimmedName);
+        DateOfBirth = dateOfBirth;
+        BirthYear = birthYear ?? (dateOfBirth.HasValue ? (short)dateOfBirth.Value.Year : null);
+        PhoneNumber = phoneNumber.Trim();
+        Email = email?.Trim();
+        Gender = gender?.Trim();
+        Address = address?.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
