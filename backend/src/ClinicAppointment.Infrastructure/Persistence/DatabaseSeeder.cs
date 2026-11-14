@@ -133,6 +133,64 @@ public class DatabaseSeeder
         }
         await _context.SaveChangesAsync(cancellationToken);
 
+        // 5. Seed Doctors & Schedules
+        var doctorRole = await _context.Roles.FirstAsync(r => r.Code == Role.DoctorCode, cancellationToken);
+        var doctorsData = new[]
+        {
+            (Email: "dr.an@clinic.vn", Code: "DOC-INT-01", Name: "BS. CKI Nguyễn Văn An", SpecId: internalMedSpec.Id, Title: "Bác sĩ Chuyên khoa I", Room: "P.101", Bio: "Hơn 15 năm kinh nghiệm điều trị bệnh lý nội tổng quát tại các bệnh viện tuyến đầu."),
+            (Email: "dr.mai@clinic.vn", Code: "DOC-PED-01", Name: "ThS. BS Trần Thị Mai", SpecId: pedSpec.Id, Title: "Thạc sĩ Bác sĩ", Room: "P.105", Bio: "Chuyên gia Nhi khoa giàu kinh nghiệm, tận tâm, thân thiện với các bé."),
+            (Email: "dr.nam@clinic.vn", Code: "DOC-CARD-01", Name: "TS. BS Lê Hoàng Nam", SpecId: cardSpec.Id, Title: "Tiến sĩ Bác sĩ", Room: "P.201", Bio: "Chuyên gia Tim mạch can thiệp, nguyên Phó khoa Tim mạch BV Đa khoa."),
+            (Email: "dr.trang@clinic.vn", Code: "DOC-ENT-01", Name: "BS. CKI Phạm Thu Trang", SpecId: entSpec.Id, Title: "Bác sĩ Chuyên khoa I", Room: "P.204", Bio: "Chuyên sâu nội soi Tai Mũi Họng và xử trí viêm xoang mạn tính."),
+            (Email: "dr.minh@clinic.vn", Code: "DOC-DENT-01", Name: "BS. Vũ Đức Minh", SpecId: dentSpec.Id, Title: "Bác sĩ Răng Hàm Mặt", Room: "P.301", Bio: "Bác sĩ nha khoa thẩm mỹ và điều trị bệnh lý răng miệng tổng quát.")
+        };
+
+        foreach (var d in doctorsData)
+        {
+            var doctorUser = await _context.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == d.Email.ToUpperInvariant(), cancellationToken);
+            if (doctorUser == null)
+            {
+                var docHash = _passwordHasher.HashPassword("Doctor@123");
+                doctorUser = User.Create(d.Email, docHash);
+                doctorUser.EmailVerifiedAt = DateTime.UtcNow;
+                _context.Users.Add(doctorUser);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _context.UserRoles.Add(new UserRoleAssignment
+                {
+                    UserId = doctorUser.Id,
+                    RoleId = doctorRole.Id,
+                    AssignedAt = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            var doctor = await _context.Doctors.FirstOrDefaultAsync(doc => doc.DoctorCode == d.Code, cancellationToken);
+            if (doctor == null)
+            {
+                doctor = Doctor.Create(doctorUser.Id, d.SpecId, d.Code, d.Name, d.Title, d.Bio, d.Room);
+                _context.Doctors.Add(doctor);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            // Seed Schedules từ Thứ 2 đến Thứ 7 (dayOfWeek 1..6)
+            for (short day = 1; day <= 6; day++)
+            {
+                if (!await _context.DoctorSchedules.AnyAsync(s => s.DoctorId == doctor.Id && s.DayOfWeek == day, cancellationToken))
+                {
+                    _context.DoctorSchedules.Add(DoctorSchedule.Create(
+                        doctorId: doctor.Id,
+                        dayOfWeek: day,
+                        startTime: new TimeOnly(8, 0),
+                        endTime: new TimeOnly(17, 0),
+                        effectiveFrom: new DateOnly(2026, 1, 1),
+                        effectiveTo: null,
+                        slotDurationMinutes: 30
+                    ));
+                }
+            }
+        }
+        await _context.SaveChangesAsync(cancellationToken);
+
         _logger.LogInformation("Seed dữ liệu nền tảng hoàn tất thành công.");
     }
 }

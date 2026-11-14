@@ -31,14 +31,14 @@ public class AuthCommandHandlers :
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtService;
     private readonly IPatientSecurityService _patientSecurityService;
-    private readonly PatientDuplicateDetectionService _duplicateDetector;
+    private readonly IPatientDuplicateDetectionService _duplicateDetector;
 
     public AuthCommandHandlers(
         IApplicationDbContext context,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtService,
         IPatientSecurityService patientSecurityService,
-        PatientDuplicateDetectionService duplicateDetector)
+        IPatientDuplicateDetectionService duplicateDetector)
     {
         _context = context;
         _passwordHasher = passwordHasher;
