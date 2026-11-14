@@ -67,6 +67,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // 4. Cấu hình HTTP request pipeline
+app.UseMiddleware<CorrelationAndLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())

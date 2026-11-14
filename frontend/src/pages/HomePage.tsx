@@ -54,7 +54,7 @@ export const HomePage: React.FC = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 rounded-full bg-blue-300"></div>
-                <span>Hoàn 100% nếu hủy $\ge$60p</span>
+                <span>Hoàn 100% nếu hủy 60 phút</span>
               </div>
             </div>
           </div>

@@ -2409,3 +2409,70 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `Reschedule approval`: Đạt 100%, kiểm thử dashboard Lễ tân, approve đổi slot, reject modal bắt buộc lý do giữ slot cũ, và confirm ca khám.
   - `Refund boundary display`: Đạt 100%, kiểm thử tra cứu OTP, hiển thị ranh giới >= 60 phút (hoàn 100%, phí 0%) và < 60 phút (hoàn 50%, phí 50%), bảo toàn tổng tiền.
 
+
+### 2026-11-14 — FEAT-053 — Logging, audit and health checks
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Xây dựng hệ thống Quan sát (Observability), Ghi log có cấu trúc (Structured Logging), Che giấu thông tin nhạy cảm (PII & Secret Redaction), Quản lý Correlation ID và Giám sát sức khỏe Cơ sở dữ liệu (Health Checks) theo chuẩn Production:
+    1. `ILogRedactor` & `LogRedactor` (`ClinicAppointment.Application.Common.Interfaces` & `ClinicAppointment.Infrastructure.Logging`):
+       - Bộ lọc regex tự động làm sạch và che giấu toàn diện các loại dữ liệu nhạy cảm:
+         - Số điện thoại di động Việt Nam (đầu 03, 05, 07, 08, 09, +84) dạng `0912345678` -> che giấu an toàn thành `091***678`.
+         - Số CCCD 12 chữ số (`\b\d{12}\b`) -> thay thế thành `[REDACTED_CCCD]`.
+         - Số CMND cũ 9 chữ số (`\b\d{9}\b`) -> thay thế thành `[REDACTED_ID]`.
+         - Mã thẻ BHYT 15 ký tự (`\b[A-Za-z]{2}\d{13}\b`) -> thay thế thành `[REDACTED_BHYT]`.
+         - Mã OTP 6 chữ số (`(?i)(otp|otpCode|code|mã xác thực)[\s:=]+\d{6}`) -> thay thế thành `[REDACTED_OTP]`.
+         - Mật khẩu và secrets trong JSON hoặc connection string -> thay thế thành `[REDACTED]`.
+         - Bearer JWT tokens -> `Bearer [REDACTED_TOKEN]`.
+         - Scoped grant tokens (`grnt_*`) -> `grnt_[REDACTED]`.
+         - Chuỗi kết nối Database `Password=[^;\s]+` -> `Password=[REDACTED]`.
+         - Phương thức `RedactDictionary(IDictionary)` tự động làm sạch các key nhạy cảm (Password, Secret, Otp, Token, Cccd, CitizenId, Insurance, Diagnosis, Symptoms, Clinical).
+    2. `CorrelationAndLoggingMiddleware` (`ClinicAppointment.Api.Middlewares`):
+       - Tự động trích xuất Correlation ID từ Request Header `X-Correlation-ID` (nếu có, tối đa 80 ký tự theo database schema constraint `varchar(80)`), hoặc sinh mới bằng `Guid.NewGuid().ToString("N")`.
+       - Gán Correlation ID vào `context.TraceIdentifier`, `context.Items["CorrelationId"]` và trả về client qua Response Header `X-Correlation-ID`.
+       - Mở structured logging scope `_logger.BeginScope` với `{ CorrelationId, TraceId, ClientIp }` cho toàn bộ request pipeline.
+       - Ghi log bắt đầu request (Method, Path, Redacted QueryString) và hoàn tất request (StatusCode, ElapsedMs) phục vụ profiling và truy vết lỗi.
+    3. `DatabaseHealthCheck` & `HealthController` (`ClinicAppointment.Infrastructure.Health` & `ClinicAppointment.Api.Controllers`):
+       - Kế thừa `IHealthCheck` của ASP.NET Core kiểm tra kết nối trực tiếp tới PostgreSQL thực tế với timeout 5 giây, đo lường độ trễ (latency ms), bắt ngoại lệ an toàn không lộ password chuỗi kết nối.
+       - Đăng ký Health Checks trong DI `AddHealthChecks().AddCheck<DatabaseHealthCheck>("database_health_check")`.
+       - Cung cấp 3 endpoints health check:
+         - `/health` và `/api/v1/health`: Kiểm tra toàn diện hệ thống và cơ sở dữ liệu, trả về HTTP 200 OK với `status: Healthy` khi DB online, và HTTP 503 Service Unavailable với `status: Unhealthy` khi DB mất kết nối.
+         - `/health/live` và `/api/v1/health/live`: Liveness probe xác nhận tiến trình web api đang chạy (HTTP 200 OK).
+         - `/health/ready` và `/api/v1/health/ready`: Readiness probe xác nhận DB sẵn sàng tiếp nhận request (HTTP 200 OK hoặc 503 Unhealthy).
+    4. Nâng cấp `ExceptionHandlingMiddleware`:
+       - Tích hợp `ILogRedactor` để làm sạch thông điệp ngoại lệ `ex.Message` trước khi ghi vào `_logger.LogError`, loại bỏ hoàn toàn nguy cơ rò rỉ secret hoặc raw PII trong log output.
+       - Tự động đính kèm `X-Correlation-ID` vào response header của mọi phản hồi lỗi.
+  - Xây dựng 16 test cases kiểm thử tự động xUnit (`LoggingAuditAndHealthChecksTests.cs`):
+    - 7 test cases kiểm thử PII & Secret Redaction (SĐT, CCCD, BHYT, OTP, Password, Tokens, Connection strings, Dictionary).
+    - 3 test cases kiểm thử Correlation ID (Preserve header, Generate new <= 80 chars, Truncate > 80 chars).
+    - 5 test cases kiểm thử Health Checks (Toàn diện /health 200 OK, Liveness /health/live 200 OK, Readiness /health/ready 200 OK, DatabaseHealthCheck direct evaluation, và DB failure trả về 503 Service Unavailable).
+    - 1 test case kiểm thử Exception Logging Redaction (Ngoại lệ chứa password/OTP/SĐT được redact an toàn trước khi log).
+  - Kết quả kiểm thử thực tế:
+    - 16/16 tests FEAT-053 PASS 100% trong 3s.
+    - 505/505 total solution backend tests PASS 100% trong 6s.
+    - 9/9 frontend tests PASS 100% trong 4.26s.
+    - Backend build 0 warning / 0 error. Frontend production build hoàn tất 100% trong 5.85s.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/ILogRedactor.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Logging/LogRedactor.cs`
+  - `backend/src/ClinicAppointment.Api/Middlewares/CorrelationAndLoggingMiddleware.cs`
+  - `backend/src/ClinicAppointment.Api/Middlewares/ExceptionHandlingMiddleware.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Health/DatabaseHealthCheck.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/HealthController.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Api/Program.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Operations/LoggingAuditAndHealthChecksTests.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/Integration/PostgresGistConcurrencyTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~LoggingAuditAndHealthChecks"` (Thành công: 16 Passed, 0 Failed, 0 Skipped, Duration: 3 s)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 505 Passed, 0 Failed, 0 Skipped, Duration: 6 s)
+  - `npm --prefix frontend test` (Thành công: 9 Passed, 0 Failed, 3 Test Files, Duration: 4.26s)
+  - `npm --prefix frontend run build` (Thành công: 0 Errors, built in 5.85s, 1649 modules transformed)
+- Acceptance criteria evidence:
+  - `PII redaction`: Đạt 100%, kiểm thử tự động làm sạch số điện thoại (091***678), CCCD ([REDACTED_CCCD]), BHYT ([REDACTED_BHYT]), OTP ([REDACTED_OTP]), và metadata dictionary.
+  - `DB health check`: Đạt 100%, kiểm thử kết nối PostgreSQL thực tế kèm đo latency ms, endpoints /health, /health/live, /health/ready, và trả về 503 khi DB down.
+  - `No secrets in logs`: Đạt 100%, kiểm thử lọc sạch password trong connection string, Bearer tokens, Grant tokens, và exception logging redaction.
+
+

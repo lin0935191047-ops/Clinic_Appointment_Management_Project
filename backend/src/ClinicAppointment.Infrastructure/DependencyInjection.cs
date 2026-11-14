@@ -71,6 +71,13 @@ public static class DependencyInjection
         services.AddScoped<IRoleAssignmentPolicy, RoleAssignmentPolicy>();
         services.AddScoped<DatabaseSeeder>();
 
+        // Logging & PII Redaction
+        services.AddSingleton<ILogRedactor, Logging.LogRedactor>();
+
+        // Health Checks
+        services.AddHealthChecks()
+            .AddCheck<Health.DatabaseHealthCheck>("database_health_check", tags: new[] { "ready", "db" });
+
         // Abuse Protection & Rate Limiting
         services.AddMemoryCache();
         services.AddSingleton<IAbuseProtectionService, AbuseProtectionService>();

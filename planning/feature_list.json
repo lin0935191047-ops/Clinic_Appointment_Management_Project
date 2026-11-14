@@ -1450,7 +1450,7 @@
       "module": "Operations",
       "description": "Structured logs, correlation, health.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-006",
         "FEAT-008"
@@ -1460,8 +1460,18 @@
         "DB health check",
         "No secrets in logs"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "16/16 Logging, Audit and Health Checks Tests PASS 100% (LoggingAuditAndHealthChecksTests.cs: 16 tests in 3s)",
+        "505/505 total solution backend tests PASS (dotnet test backend/ClinicAppointment.sln)",
+        "9/9 frontend tests PASS 100% (npm --prefix frontend test)",
+        "Frontend production build succeeded with 0 errors (tsc && vite build in 5.85s)"
+      ],
+      "notes": [
+        "Triển khai ILogRedactor và LogRedactor che giấu toàn diện dữ liệu nhạy cảm: số điện thoại di động Việt Nam (091***678), CCCD 12 số ([REDACTED_CCCD]), CMND 9 số ([REDACTED_ID]), BHYT 15 ký tự ([REDACTED_BHYT]), OTP 6 chữ số ([REDACTED_OTP]), mật khẩu/secrets ([REDACTED]), Bearer JWT và Grant tokens, chuỗi kết nối Password=[REDACTED].",
+        "Triển khai CorrelationAndLoggingMiddleware tự động trích xuất hoặc sinh mới Correlation ID (tối đa 80 ký tự theo database schema), gắn vào HttpContext, Response header 'X-Correlation-ID', mở structured log scope và log request/response thời gian thực hiện.",
+        "Nâng cấp ExceptionHandlingMiddleware làm sạch message ngoại lệ qua LogRedactor trước khi log, gắn Correlation ID vào response lỗi, loại bỏ hoàn toàn nguy cơ rò rỉ secret hoặc PII.",
+        "Triển khai DatabaseHealthCheck kế thừa IHealthCheck kiểm tra kết nối PostgreSQL thực tế kèm đo lường latency ms, nâng cấp HealthController với endpoints /health toàn diện, /health/live (liveness probe) và /health/ready (readiness probe), trả về HTTP 200 Healthy khi DB online và HTTP 503 Unhealthy khi DB mất kết nối."
+      ]
     },
     {
       "id": "FEAT-054",

@@ -99,8 +99,8 @@ public class PostgresGistConcurrencyTests
         // Arrange: Chuẩn bị 2 DbContext riêng biệt đại diện cho 2 client/connection đồng thời
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
-        // Khung giờ khám: Ngày ngẫu nhiên ở tương lai để tránh trùng dữ liệu cũ
-        var baseDate = DateTime.UtcNow.Date.AddDays(new Random().Next(30, 90));
+        // Khung giờ khám: Ngày ngẫu nhiên ở tương lai xa để tránh trùng dữ liệu cũ
+        var baseDate = DateTime.UtcNow.Date.AddDays(1000 + (int)(DateTime.UtcNow.Ticks % 5000));
         var startAtUtc = DateTime.SpecifyKind(baseDate.AddHours(9), DateTimeKind.Utc); // 09:00 UTC
         var endAtUtc = DateTime.SpecifyKind(baseDate.AddHours(9).AddMinutes(30), DateTimeKind.Utc); // 09:30 UTC
 
@@ -194,7 +194,7 @@ public class PostgresGistConcurrencyTests
         // Arrange
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
-        var baseDate = DateTime.UtcNow.Date.AddDays(new Random().Next(100, 150));
+        var baseDate = DateTime.UtcNow.Date.AddDays(6000 + (int)(DateTime.UtcNow.Ticks % 5000));
         // Ca 1: 14:00 - 14:30
         var start1 = DateTime.SpecifyKind(baseDate.AddHours(14), DateTimeKind.Utc);
         // Ca 2: 14:15 - 14:45 (Bị overlap 15 phút với ca 1)
@@ -246,7 +246,7 @@ public class PostgresGistConcurrencyTests
         // Arrange: Tạo cuộc hẹn và sau đó hủy (Status = Cancelled)
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
-        var baseDate = DateTime.UtcNow.Date.AddDays(new Random().Next(160, 200));
+        var baseDate = DateTime.UtcNow.Date.AddDays(12000 + (int)(DateTime.UtcNow.Ticks % 5000));
         var startUtc = DateTime.SpecifyKind(baseDate.AddHours(10), DateTimeKind.Utc); // 10:00
 
         using (var db1 = CreatePostgresDbContext())
@@ -296,7 +296,7 @@ public class PostgresGistConcurrencyTests
         // Arrange
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
-        var baseDate = DateTime.UtcNow.Date.AddDays(new Random().Next(210, 250));
+        var baseDate = DateTime.UtcNow.Date.AddDays(18000 + (int)(DateTime.UtcNow.Ticks % 5000));
         var startUtc = DateTime.SpecifyKind(baseDate.AddHours(15), DateTimeKind.Utc);
 
         using (var setupDb = CreatePostgresDbContext())

@@ -1,10 +1,10 @@
 using System.Net;
 using System.Text.Json;
 using ClinicAppointment.Application.Common.Exceptions;
+using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Models;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace ClinicAppointment.Api.Middlewares;
 
@@ -12,11 +12,16 @@ public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+    private readonly ILogRedactor _redactor;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+    public ExceptionHandlingMiddleware(
+        RequestDelegate next,
+        ILogger<ExceptionHandlingMiddleware> logger,
+        ILogRedactor redactor)
     {
         _next = next;
         _logger = logger;
+        _redactor = redactor;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -27,12 +32,16 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Đã xảy ra lỗi trong quá trình thực thi: {Message}", ex.Message);
-            await HandleExceptionAsync(context, ex);
+            var sanitizedMessage = _redactor.Redact(ex.Message);
+            _logger.LogError(ex, "Đã xảy ra ngoại lệ trong quá trình thực thi: {SanitizedMessage}", sanitizedMessage);
+            await HandleExceptionAsync(context, ex, _redactor);
         }
     }
 
-    public static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    public static async Task HandleExceptionAsync(
+        HttpContext context,
+        Exception exception,
+        ILogRedactor? redactor = null)
     {
         context.Response.ContentType = "application/json";
 
@@ -80,6 +89,14 @@ public class ExceptionHandlingMiddleware
                 (int)HttpStatusCode.InternalServerError)
         };
 
+        // Đảm bảo Correlation ID có trong response header
+        if (context.Items.TryGetValue(CorrelationAndLoggingMiddleware.CorrelationIdItemKey, out var corrId) &&
+            corrId is string correlationIdString &&
+            !context.Response.Headers.ContainsKey(CorrelationAndLoggingMiddleware.CorrelationIdHeader))
+        {
+            context.Response.Headers[CorrelationAndLoggingMiddleware.CorrelationIdHeader] = correlationIdString;
+        }
+
         context.Response.StatusCode = response.StatusCode;
         var jsonOptions = new JsonSerializerOptions 
         { 
@@ -100,17 +117,6 @@ public class ExceptionHandlingMiddleware
             return true;
         }
 
-        if (ex.InnerException is PostgresException pgEx)
-        {
-            if (pgEx.SqlState == "23P01" ||
-                pgEx.ConstraintName == "ex_appointments_doctor_no_overlap" ||
-                (pgEx.SqlState == "23505" && pgEx.ConstraintName?.Contains("appointments", StringComparison.OrdinalIgnoreCase) == true))
-            {
-                return true;
-            }
-        }
-
         return false;
     }
 }
-
