@@ -182,3 +182,104 @@ export interface CompleteConsultationPayload {
   conclusion?: string;
   followUpInstructions?: string;
 }
+
+// ==========================================
+// ADMIN DASHBOARD & CRUD TYPES
+// ==========================================
+
+export interface AppointmentStatusBreakdown {
+  total: number;
+  pendingConfirmation: number;
+  confirmed: number;
+  checkedIn: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
+  noShow: number;
+}
+
+export interface SpecialtyReportItem {
+  specialtyId: string;
+  specialtyName: string;
+  totalAppointments: number;
+  completedCount: number;
+  completionRate: number;
+  grossRevenue: number;
+}
+
+export interface DoctorReportItem {
+  doctorId: string;
+  doctorName: string;
+  specialtyName: string;
+  totalAppointments: number;
+  completedCount: number;
+  completionRate: number;
+  grossRevenue: number;
+}
+
+export interface AdminDashboardReport {
+  totalAppointments: number;
+  grossRevenue: number;
+  paidAmount: number;
+  cancellationFeeCollected: number;
+  netRevenue: number;
+  statusBreakdown: AppointmentStatusBreakdown;
+  specialtyReports: SpecialtyReportItem[];
+  doctorReports: DoctorReportItem[];
+  generatedAtUtc: string;
+}
+
+export interface AdminSpecialtyItem {
+  id: string;
+  code: string;
+  name: string;
+  slug: string;
+  description?: string;
+  iconUrl?: string;
+  isActive: boolean;
+  serviceCount: number;
+}
+
+export interface AdminDoctorItem {
+  id: string;
+  userId: string;
+  email: string;
+  specialtyId: string;
+  specialtyName: string;
+  specialtySlug: string;
+  doctorCode: string;
+  fullName: string;
+  title?: string;
+  bio?: string;
+  roomNumber?: string;
+  isActive: boolean;
+}
+
+export interface AdminServiceItem {
+  id: string;
+  specialtyId: string;
+  specialtyName: string;
+  specialtySlug?: string;
+  code: string;
+  name: string;
+  description?: string;
+  durationMinutes: number;
+  price: number;
+  currency: string;
+  isActive: boolean;
+}
+
+export interface AdminDoctorScheduleItem {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  doctorCode: string;
+  dayOfWeek: number;
+  dayOfWeekName: string;
+  startTime: string;
+  endTime: string;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  slotDurationMinutes: number;
+  isActive: boolean;
+}

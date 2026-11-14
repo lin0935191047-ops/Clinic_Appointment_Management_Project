@@ -1304,7 +1304,7 @@
       "module": "Frontend",
       "description": "UI admin.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-007",
         "FEAT-017",
@@ -1315,8 +1315,16 @@
         "CRUD catalog/schedule",
         "Dashboard and filters"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — CRUD catalog/schedule: Giao diện quản trị hệ thống (AdminDashboardPage.tsx) tích hợp toàn diện hệ thống tabs quản lý danh mục và lịch trình; Quản lý Chuyên khoa (Specialties CRUD): Xem danh sách, thêm chuyên khoa mới qua modal, bật/tắt kích hoạt trạng thái (Active/Inactive toggle); Quản lý Bác sĩ (Doctors CRUD): Xem danh sách bác sĩ, phân công chuyên khoa, phòng khám, tạo mới bác sĩ kèm tài khoản đăng nhập staff DOCTOR; Quản lý Dịch vụ khám (Services CRUD): Xem danh sách, thời lượng khám (phút), đơn giá niêm yết (VND), tạo dịch vụ mới, bật/tắt kích hoạt; Quản lý Lịch làm việc định kỳ (Doctor Schedules CRUD): Chọn bác sĩ, xem danh sách ca làm việc theo thứ trong tuần, thiết lập ca làm việc mới kèm ngày hiệu lực, bật/tắt kích hoạt, và xóa ca làm việc định kỳ.",
+        "Acceptance Criteria 2 — Dashboard and filters: Tích hợp bảng điều khiển số liệu thống kê và báo cáo tài chính quản trị kết nối GET /api/v1/admin/reports/dashboard; Bộ lọc đa chiều linh hoạt (Khoảng ngày từ ngày - đến ngày, lọc theo Bác sĩ, Chuyên khoa, và Trạng thái ca khám); 4 thẻ số liệu tài chính đối soát chính xác: Doanh thu gộp (GrossRevenue), Số tiền đã thanh toán (PaidAmount), Phí hủy đã thu (CancellationFeeCollected), và Doanh thu thực nhận (NetRevenue bảo toàn sau đối soát hủy lịch); Phân rã trạng thái ca khám (StatusBreakdown) hiển thị số lượng trực quan từng trạng thái; Bảng báo cáo hiệu suất theo Chuyên khoa (SpecialtyReports) và theo Bác sĩ (DoctorReports) hiển thị tổng ca hẹn, ca hoàn tất, tỷ lệ hoàn thành (CompletionRate %) và doanh thu gộp.",
+        "Kiểm soát phân quyền & Protected views: Bảo vệ nghiêm ngặt bằng vai trò ADMIN; Nếu chưa đăng nhập hoặc không đủ quyền, giao diện hiển thị màn hình Đăng nhập Quản Trị Viên chuyên biệt (kèm nút đăng nhập mẫu nhanh cho admin@clinic.vn / Admin@Clinic2026!); Tự động gắn Bearer Token qua apiClient interceptor; Điều hướng dễ dàng qua menu 'Quản Trị' trên Navbar và Route '/admin' trên App.tsx.",
+        "Bộ kiểm thử tự động Backend (65/65 tests liên quan tại AdminDashboardReportingTests, DoctorManagementTests, SpecialtyManagementTests, ServiceManagementTests, DoctorScheduleTests PASS 100%, tổng 419/419 tests toàn solution PASS 100%); Kiểm tra Frontend TypeScript & Vite build: 100% thành công (0 errors, 1649 modules transformed, built in 5.25s)."
+      ],
+      "notes": [
+        "Phân quyền Quản trị: Bảo vệ nghiêm ngặt bằng policy AdminOnly trên Backend và kiểm tra vai trò người dùng trên Frontend.",
+        "Đối soát tài chính: Bảo đảm nguyên tắc TotalNetRevenue = PaidAmount + CancellationFeeCollected."
+      ]
     },
     {
       "id": "FEAT-049",

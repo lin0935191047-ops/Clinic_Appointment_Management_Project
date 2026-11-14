@@ -13,6 +13,11 @@ import {
   ConsultationData,
   RecordConsultationPayload,
   CompleteConsultationPayload,
+  AdminDashboardReport,
+  AdminSpecialtyItem,
+  AdminDoctorItem,
+  AdminServiceItem,
+  AdminDoctorScheduleItem,
 } from '../types';
 
 export const apiClient = axios.create({
@@ -578,6 +583,187 @@ export const doctorApi = {
       payload || {}
     );
     return res.data;
+  },
+};
+
+export const adminApi = {
+  // 1. Dashboard & Reports
+  getDashboardReport: async (filters?: {
+    fromDate?: string;
+    toDate?: string;
+    doctorId?: string;
+    specialtyId?: string;
+    status?: string;
+  }): Promise<AdminDashboardReport> => {
+    const res = await apiClient.get<ApiResponse<AdminDashboardReport>>(
+      '/admin/reports/dashboard',
+      { params: filters }
+    );
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Không thể tải báo cáo quản trị.');
+    }
+    return res.data.data;
+  },
+
+  // 2. Specialties CRUD
+  getSpecialties: async (isActive?: boolean): Promise<AdminSpecialtyItem[]> => {
+    const res = await apiClient.get<ApiResponse<AdminSpecialtyItem[]>>(
+      '/admin/specialties',
+      { params: { isActive } }
+    );
+    return res.data.data || [];
+  },
+
+  createSpecialty: async (data: {
+    code: string;
+    name: string;
+    description?: string;
+  }): Promise<AdminSpecialtyItem> => {
+    const res = await apiClient.post<ApiResponse<AdminSpecialtyItem>>(
+      '/admin/specialties',
+      data
+    );
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Không thể tạo chuyên khoa.');
+    }
+    return res.data.data;
+  },
+
+  setSpecialtyStatus: async (id: string, isActive: boolean): Promise<boolean> => {
+    const res = await apiClient.patch<ApiResponse<boolean>>(
+      `/admin/specialties/${id}/status`,
+      { isActive }
+    );
+    return !!res.data.data;
+  },
+
+  // 3. Doctors CRUD
+  getDoctors: async (
+    specialtyId?: string,
+    isActive?: boolean
+  ): Promise<AdminDoctorItem[]> => {
+    const res = await apiClient.get<ApiResponse<AdminDoctorItem[]>>(
+      '/admin/doctors',
+      { params: { specialtyId, isActive } }
+    );
+    return res.data.data || [];
+  },
+
+  createDoctor: async (data: {
+    email: string;
+    password?: string;
+    specialtyId: string;
+    doctorCode: string;
+    fullName: string;
+    title?: string;
+    bio?: string;
+    roomNumber?: string;
+  }): Promise<AdminDoctorItem> => {
+    const res = await apiClient.post<ApiResponse<AdminDoctorItem>>(
+      '/admin/doctors',
+      data
+    );
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Không thể tạo hồ sơ bác sĩ.');
+    }
+    return res.data.data;
+  },
+
+  setDoctorStatus: async (id: string, isActive: boolean): Promise<boolean> => {
+    const res = await apiClient.patch<ApiResponse<boolean>>(
+      `/admin/doctors/${id}/status`,
+      { isActive }
+    );
+    return !!res.data.data;
+  },
+
+  // 4. Services CRUD
+  getServices: async (
+    specialtyId?: string,
+    isActive?: boolean
+  ): Promise<AdminServiceItem[]> => {
+    const res = await apiClient.get<ApiResponse<AdminServiceItem[]>>(
+      '/admin/services',
+      { params: { specialtyId, isActive } }
+    );
+    return res.data.data || [];
+  },
+
+  createService: async (data: {
+    specialtyId: string;
+    code: string;
+    name: string;
+    durationMinutes: number;
+    price: number;
+    currency?: string;
+    description?: string;
+  }): Promise<AdminServiceItem> => {
+    const res = await apiClient.post<ApiResponse<AdminServiceItem>>(
+      '/admin/services',
+      data
+    );
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Không thể tạo dịch vụ khám.');
+    }
+    return res.data.data;
+  },
+
+  setServiceStatus: async (id: string, isActive: boolean): Promise<boolean> => {
+    const res = await apiClient.patch<ApiResponse<boolean>>(
+      `/admin/services/${id}/status`,
+      { isActive }
+    );
+    return !!res.data.data;
+  },
+
+  // 5. Doctor Schedules CRUD
+  getDoctorSchedules: async (
+    doctorId: string,
+    effectiveDate?: string,
+    isActive?: boolean
+  ): Promise<AdminDoctorScheduleItem[]> => {
+    const res = await apiClient.get<ApiResponse<AdminDoctorScheduleItem[]>>(
+      '/admin/doctor-schedules',
+      { params: { doctorId, effectiveDate, isActive } }
+    );
+    return res.data.data || [];
+  },
+
+  createDoctorSchedule: async (data: {
+    doctorId: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    effectiveFrom: string;
+    effectiveTo?: string | null;
+    slotDurationMinutes?: number;
+  }): Promise<AdminDoctorScheduleItem> => {
+    const res = await apiClient.post<ApiResponse<AdminDoctorScheduleItem>>(
+      '/admin/doctor-schedules',
+      data
+    );
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Không thể thiết lập ca làm việc.');
+    }
+    return res.data.data;
+  },
+
+  setDoctorScheduleStatus: async (
+    id: string,
+    isActive: boolean
+  ): Promise<boolean> => {
+    const res = await apiClient.patch<ApiResponse<boolean>>(
+      `/admin/doctor-schedules/${id}/status`,
+      { isActive }
+    );
+    return !!res.data.data;
+  },
+
+  deleteDoctorSchedule: async (id: string): Promise<boolean> => {
+    const res = await apiClient.delete<ApiResponse<boolean>>(
+      `/admin/doctor-schedules/${id}`
+    );
+    return !!res.data.data;
   },
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, Search, Stethoscope, User, ShieldCheck } from 'lucide-react';
+import { Calendar, Search, Stethoscope, User, ShieldCheck, Settings } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -84,6 +84,18 @@ export const Navbar: React.FC = () => {
             >
               <Stethoscope className="w-4 h-4 mr-1 text-blue-600" />
               <span>Kênh Bác Sĩ</span>
+            </Link>
+
+            <Link
+              to="/admin"
+              className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                isActive('/admin')
+                  ? 'bg-purple-50 text-purple-700 font-semibold'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              <Settings className="w-4 h-4 mr-1 text-purple-600" />
+              <span>Quản Trị</span>
             </Link>
           </nav>
 

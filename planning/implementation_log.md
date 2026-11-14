@@ -2179,3 +2179,49 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `Assigned schedule`: Đạt 100%, thống kê chỉ số, hàng đợi chờ khám và lịch trình theo ngày.
   - `Consultation workflow`: Đạt 100%, luồng khám bệnh và khóa hồ sơ lâm sàng bất biến.
   - `Protected views`: Đạt 100%, phân quyền vai trò và bảo vệ chống IDOR.
+
+### 2026-11-14 — FEAT-048 — Admin frontend
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Thiết kế và xây dựng giao diện Trung Tâm Quản Trị Hệ Thống (`frontend/src/pages/AdminDashboardPage.tsx`):
+    - Đăng nhập phân quyền bảo vệ (Protected Views & Role checks):
+      - Chỉ cho phép vai trò `ADMIN` truy cập.
+      - Giao diện đăng nhập Quản Trị Viên chuyên biệt kèm nút Đăng nhập mẫu nhanh (`admin@clinic.vn` / `Admin@Clinic2026!`).
+      - Tự động trích xuất Bearer Token và User Profile qua interceptor.
+    - Báo cáo và Dashboard đối soát (Dashboard and filters):
+      - Bộ lọc linh hoạt: khoảng ngày (từ ngày - đến ngày), bác sĩ phụ trách, chuyên khoa, trạng thái ca khám.
+      - 4 Thẻ tài chính đối soát chính xác: Doanh thu gộp (`GrossRevenue`), Đã thanh toán (`PaidAmount`), Phí hủy đã thu (`CancellationFeeCollected`), Doanh thu thực nhận (`NetRevenue`).
+      - Thẻ phân rã trạng thái ca khám (`StatusBreakdown`): Thống kê số lượng từng trạng thái (Tổng ca, Hoàn tất, Đang khám, Chờ khám, Đã xác nhận, Chờ duyệt, Đã hủy).
+      - Bảng phân tích hiệu suất theo Chuyên khoa (`SpecialtyReports`): Tổng ca, Hoàn tất, Tỷ lệ hoàn thành %, Doanh thu gộp.
+      - Bảng phân tích hiệu suất theo Bác sĩ (`DoctorReports`): Bác sĩ, Chuyên khoa, Tổng ca, Hoàn tất, Tỷ lệ hoàn thành %, Doanh thu gộp.
+    - Quản lý danh mục và lịch trình công tác toàn diện (CRUD catalog/schedule):
+      - Quản lý Chuyên khoa (`Specialties CRUD`): Bảng danh sách chuyên khoa, mã code, slug, số dịch vụ, trạng thái; Modal thêm mới chuyên khoa; Nút toggle kích hoạt/vô hiệu hóa an toàn.
+      - Quản lý Bác sĩ (`Doctors CRUD`): Bảng danh sách bác sĩ, mã BS, chuyên khoa, phòng khám, email; Modal tạo hồ sơ bác sĩ kèm tài khoản đăng nhập staff DOCTOR; Nút toggle kích hoạt/vô hiệu hóa.
+      - Quản lý Dịch vụ khám (`Services CRUD`): Bảng danh sách dịch vụ, chuyên khoa, thời lượng (phút), đơn giá niêm yết (VND); Modal tạo dịch vụ mới; Nút toggle kích hoạt/vô hiệu hóa.
+      - Quản lý Lịch làm việc định kỳ (`Doctor Schedules CRUD`): Chọn bác sĩ; Bảng danh sách ca làm việc theo thứ trong tuần (T2 - CN), giờ bắt đầu/kết thúc, ngày hiệu lực; Modal thiết lập ca làm việc định kỳ; Nút toggle kích hoạt/vô hiệu hóa; Nút xóa ca làm việc.
+  - Cập nhật API Client (`frontend/src/api/client.ts`):
+    - Thêm `adminApi` đầy đủ các phương thức: `getDashboardReport`, `getSpecialties`, `createSpecialty`, `setSpecialtyStatus`, `getDoctors`, `createDoctor`, `setDoctorStatus`, `getServices`, `createService`, `setServiceStatus`, `getDoctorSchedules`, `createDoctorSchedule`, `setDoctorScheduleStatus`, `deleteDoctorSchedule`.
+  - Cập nhật Type Definitions (`frontend/src/types/index.ts`):
+    - Thêm `AdminDashboardReport`, `AppointmentStatusBreakdown`, `SpecialtyReportItem`, `DoctorReportItem`, `AdminSpecialtyItem`, `AdminDoctorItem`, `AdminServiceItem`, `AdminDoctorScheduleItem`.
+  - Cập nhật Routing & Navigation:
+    - `frontend/src/App.tsx`: Đăng ký Route `/admin` -> `<AdminDashboardPage />`.
+    - `frontend/src/components/layout/Navbar.tsx`: Bổ sung menu điều hướng "Quản Trị" (`/admin`).
+  - Đảm bảo trọn vẹn 2 tiêu chí nghiệm thu:
+    1. `CRUD catalog/schedule`: Đạt 100%, quản lý chuyên khoa, bác sĩ, dịch vụ và lịch định kỳ với modal và toggle trạng thái.
+    2. `Dashboard and filters`: Đạt 100%, bộ lọc đa chiều, 4 thẻ tài chính đối soát, phân rã trạng thái và bảng hiệu suất.
+- Files created/changed:
+  - `frontend/src/types/index.ts`
+  - `frontend/src/api/client.ts`
+  - `frontend/src/pages/AdminDashboardPage.tsx`
+  - `frontend/src/App.tsx`
+  - `frontend/src/components/layout/Navbar.tsx`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.25s, 1649 modules transformed)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~Admin|FullyQualifiedName~DoctorManagement|FullyQualifiedName~Specialty|FullyQualifiedName~ServiceManagement|FullyQualifiedName~DoctorSchedule"` (Thành công: 65 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 419 Passed, 0 Failed, 0 Skipped)
+- Acceptance criteria evidence:
+  - `CRUD catalog/schedule`: Đạt 100%, quản lý danh mục và lịch làm việc trực quan.
+  - `Dashboard and filters`: Đạt 100%, đối soát tài chính và bộ lọc đa chiều chính xác.
