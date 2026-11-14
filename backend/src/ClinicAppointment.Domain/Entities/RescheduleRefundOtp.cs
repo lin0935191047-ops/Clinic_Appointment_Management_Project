@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using ClinicAppointment.Domain.Common;
 using ClinicAppointment.Domain.Enums;
 
@@ -44,12 +46,97 @@ public class OtpChallenge : BaseEntity
     public DateTime ExpiresAt { get; set; }
     public bool IsUsed { get; set; } = false;
 
-    public bool IsValid(string inputOtpHash, DateTime currentUtc)
+    // Navigation properties
+    public virtual Appointment? Appointment { get; set; }
+    public virtual Patient? Patient { get; set; }
+
+    /// <summary>
+    /// Băm mã OTP bằng HMAC-SHA256 kết hợp ChallengeId làm Salt/Context duy nhất.
+    /// Tuyệt đối không bao giờ lưu trữ hoặc ghi log mã OTP thô (No raw OTP at rest or in logs).
+    /// </summary>
+    public static string ComputeOtpHash(string otp, Guid challengeId)
     {
-        if (IsUsed) return false;
-        if (currentUtc > ExpiresAt) return false;
-        if (AttemptsCount >= MaxAttempts) return false;
-        return OtpHash == inputOtpHash;
+        var key = Encoding.UTF8.GetBytes(challengeId.ToString("N"));
+        var data = Encoding.UTF8.GetBytes((otp ?? string.Empty).Trim());
+        using var hmac = new HMACSHA256(key);
+        return Convert.ToHexString(hmac.ComputeHash(data));
+    }
+
+    public static OtpChallenge Create(
+        Guid appointmentId,
+        Guid patientId,
+        string phoneNumber,
+        OtpPurpose purpose,
+        string rawOtp,
+        TimeSpan? ttl = null,
+        short maxAttempts = 5)
+    {
+        if (appointmentId == Guid.Empty)
+            throw new ArgumentException("Mã cuộc hẹn liên kết không hợp lệ.", nameof(appointmentId));
+
+        if (patientId == Guid.Empty)
+            throw new ArgumentException("Mã bệnh nhân liên kết không hợp lệ.", nameof(patientId));
+
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new ArgumentException("Số điện thoại nhận OTP không được để trống.", nameof(phoneNumber));
+
+        if (string.IsNullOrWhiteSpace(rawOtp))
+            throw new ArgumentException("Mã OTP không được để trống.", nameof(rawOtp));
+
+        var challengeId = Guid.NewGuid();
+
+        return new OtpChallenge
+        {
+            Id = challengeId,
+            AppointmentId = appointmentId,
+            PatientId = patientId,
+            PhoneNumber = phoneNumber.Trim(),
+            Purpose = purpose,
+            OtpHash = ComputeOtpHash(rawOtp, challengeId),
+            AttemptsCount = 0,
+            MaxAttempts = maxAttempts,
+            ExpiresAt = DateTime.UtcNow.Add(ttl ?? TimeSpan.FromMinutes(5)),
+            IsUsed = false,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public bool Verify(string inputOtp, DateTime currentUtc, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (IsUsed)
+        {
+            errorMessage = "Mã xác thực OTP này đã được sử dụng trước đó.";
+            return false;
+        }
+
+        if (currentUtc > ExpiresAt)
+        {
+            errorMessage = "Mã xác thực OTP đã hết hạn. Vui lòng yêu cầu mã mới.";
+            return false;
+        }
+
+        if (AttemptsCount >= MaxAttempts)
+        {
+            errorMessage = $"Mã OTP đã vượt quá giới hạn {MaxAttempts} lần thử và đã bị khóa. Vui lòng yêu cầu mã mới.";
+            return false;
+        }
+
+        AttemptsCount++;
+        UpdatedAt = currentUtc;
+
+        var computedHash = ComputeOtpHash(inputOtp, Id);
+        if (computedHash != OtpHash)
+        {
+            var remaining = MaxAttempts - AttemptsCount;
+            errorMessage = remaining > 0
+                ? $"Mã xác thực OTP không chính xác. Bạn còn {remaining} lần thử."
+                : $"Mã xác thực OTP không chính xác. Bạn đã hết lượt thử. Vui lòng yêu cầu mã mới.";
+            return false;
+        }
+
+        IsUsed = true;
+        return true;
     }
 }
-

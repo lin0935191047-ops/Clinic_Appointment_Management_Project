@@ -883,3 +883,69 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 4.87s)
 - Acceptance criteria evidence:
   - FEAT-024 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-025 — OTP Challenge Service (Mã Xác Thực Gắn Mục Đích Purpose-Bound, Băm HMAC-SHA256, Chống Enumeration & SMS Abstraction)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entity `OtpChallenge` (`ClinicAppointment.Domain.Entities.RescheduleRefundOtp.cs`):
+    - Cấu trúc: `AppointmentId`, `PatientId`, `PhoneNumber`, `Purpose` (`LOOKUP`, `RESCHEDULE`, `CANCEL`), `OtpHash`, `AttemptsCount`, `MaxAttempts = 5`, `ExpiresAt` (TTL 5 phút), `IsUsed`.
+    - Phương thức bảo mật:
+      - `ComputeOtpHash(string otp, Guid challengeId)`: Băm HMAC-SHA256 sử dụng ChallengeId làm salt động/context duy nhất. Database tuyệt đối KHÔNG lưu OTP dạng plain text.
+      - `Create(...)`: Sinh challengeId, thiết lập thời gian hết hạn và hash OTP.
+      - `Verify(...)`: Tự động kiểm tra `IsUsed`, `ExpiresAt`, tăng `AttemptsCount`, khóa challenge khi `AttemptsCount >= MaxAttempts`, và so khớp hash an toàn.
+  - SMS Abstraction (`ISmsSender` & `MockSmsSender`):
+    - Interface `ISmsSender`: Gửi OTP với tham số `phoneNumber`, `otp`, `purpose`.
+    - Adapter `MockSmsSender` trong `Infrastructure/Services`: Đánh dấu nhà cung cấp SMS là TBD theo quy định dự án (`AGENTS.md`).
+    - Bảo mật tuyệt đối No OTP in logs: Che một phần số điện thoại (`MaskPhone`) và ghi log mục đích; không in chuỗi raw OTP ra logger ở bất kỳ tầng nào.
+  - Ứng dụng & Dịch vụ (`IOtpChallengeService` & `OtpChallengeService`):
+    - `RequestOtpAsync`:
+      1. Kiểm tra giới hạn tần suất qua `IAbuseProtectionService`.
+      2. Tra cứu Appointment theo `BookingCode` và đối soát số điện thoại của `Patient`.
+      3. Chống tấn công dò tìm (Anti-enumeration): Khi thông tin không khớp, trả về cùng một thông điệp generic an toàn ("Nếu thông tin mã đặt lịch và số điện thoại trùng khớp với hồ sơ, mã xác thực OTP đã được gửi đến số điện thoại của bạn.") kèm dummy ChallengeId và không tạo bản ghi thật hay gửi SMS.
+      4. Kiểm tra Resend Cooldown (60 giây): Chặn người dùng yêu cầu gửi lại OTP quá nhanh.
+      5. Sinh OTP 6 chữ số CSPRNG (`RandomNumberGenerator.GetInt32(100000, 1000000)`), băm HMAC và lưu DB.
+      6. Gửi SMS thông báo và ghi nhận attempt.
+    - `VerifyOtpAsync`:
+      1. Tra cứu challenge theo `challengeId`.
+      2. Kiểm tra ràng buộc mục đích (Purpose Binding): Từ chối nếu mục đích challenge không khớp với `expectedPurpose`.
+      3. Thực thi `challenge.Verify(...)` và lưu cập nhật lượt thử / trạng thái `IsUsed`.
+  - API Controller & Validation (`AppointmentAccessController.cs`):
+    - `POST /api/v1/appointment-access/otp/request` (`[AllowAnonymous]`): Nhận `BookingCode`, `PhoneNumber`, `Purpose`, trả về thông điệp và ChallengeId.
+    - `POST /api/v1/appointment-access/otp/verify` (`[AllowAnonymous]`): Nhận `ChallengeId`, `Otp`, `Purpose`, trả về kết quả xác thực.
+    - FluentValidation: `RequestOtpRequestValidator` và `VerifyOtpRequestValidator` kiểm tra định dạng số điện thoại, độ dài OTP đúng 6 số ký tự số.
+  - Bộ kiểm thử tự động xUnit (`OtpChallengeTests.cs`):
+    - 10 test cases bao phủ toàn diện:
+      1. `RequestOtp_WhenBookingAndPhoneMatch_CreatesChallenge_StoresOnlyHash_AndSendsSms`: Tạo challenge, chỉ lưu hash 64 ký tự hex, gửi SMS tới số đã mask.
+      2. `RequestOtp_WhenBookingOrPhoneMismatch_ReturnsGenericAcknowledgment_WithoutCreatingChallenge_AntiEnumeration`: Sai booking/phone vẫn trả generic message thành công nhưng không tạo challenge trong DB và không gửi SMS.
+      3. `RequestOtp_WithinCooldownPeriod_ReturnsCooldownError`: Gửi lại dưới 60s trả về lỗi cooldown kèm số giây còn lại.
+      4. `VerifyOtp_WithCorrectOtpAndPurpose_SucceedsAndMarksUsed`: Nhập đúng OTP và purpose thành công, đánh dấu IsUsed = true.
+      5. `VerifyOtp_WithIncorrectOtp_DecrementsRemainingAttempts_Fails`: Nhập sai OTP giảm số lần thử còn lại và báo lỗi.
+      6. `VerifyOtp_WhenExceedingMaxAttempts_LocksChallenge_PermanentlyFails`: Nhập sai quá 3-5 lần thì challenge bị khóa vĩnh viễn (kể cả lần sau nhập đúng vẫn bị từ chối).
+      7. `VerifyOtp_WhenExpired_Fails`: Challenge hết hạn từ chối xác thực.
+      8. `VerifyOtp_WhenAlreadyUsed_Fails`: Challenge đã dùng trước đó từ chối xác thực lại.
+      9. `VerifyOtp_WhenPurposeMismatch_Fails_PurposeBinding`: Sai mục đích (cấp cho LOOKUP nhưng verify cho RESCHEDULE) bị từ chối ngay lập tức.
+      10. `OtpValidators_ValidateCorrectly`: Kiểm tra bắt lỗi validator cho request/verify DTOs.
+    - Toàn bộ 199/199 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.00s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/RescheduleRefundOtp.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/ISmsSender.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IOtpChallengeService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Otp/DTOs/OtpDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Otp/Services/OtpChallengeService.cs`
+  - `backend/src/ClinicAppointment.Application/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Services/MockSmsSender.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentAccessController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/OtpChallengeTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 199 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.00s)
+- Acceptance criteria evidence:
+  - FEAT-025 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

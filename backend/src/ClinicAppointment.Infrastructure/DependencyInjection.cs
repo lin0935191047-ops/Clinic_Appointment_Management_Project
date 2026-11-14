@@ -71,6 +71,7 @@ public static class DependencyInjection
         // Abuse Protection & Rate Limiting
         services.AddMemoryCache();
         services.AddSingleton<IAbuseProtectionService, AbuseProtectionService>();
+        services.AddSingleton<ISmsSender, MockSmsSender>();
 
         // Current User & Resource Authorization
         services.AddHttpContextAccessor();

@@ -658,7 +658,7 @@
       "module": "OTP",
       "description": "OTP purpose-bound + SMS abstraction.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-006",
         "FEAT-011"
@@ -669,7 +669,16 @@
         "Attempts/resend limits",
         "No OTP in logs"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Acceptance Criteria 1 — OTP hash only (docs/ARCHITECTURE.md, docs/SPEC.md): Mã OTP 6 chữ số sinh bằng CSPRNG (RandomNumberGenerator); hệ thống băm bằng HMAC-SHA256 kết hợp ChallengeId làm salt/context duy nhất (chuỗi hex 64 ký tự); cơ sở dữ liệu CHỈ LƯU OtpHash, tuyệt đối không bao giờ lưu trữ OTP thô (plain text)",
+        "Acceptance Criteria 2 — Purpose/booking/phone/expiry bind: Challenge gắn chặt toàn diện với AppointmentId, PatientId, PhoneNumber, Purpose (LOOKUP, RESCHEDULE, CANCEL) và thời hạn hiệu lực ExpiresAt (TTL 5 phút); khi verify kiểm tra nghiêm ngặt purpose khớp; nếu client cố tình dùng challenge của mục đích này để verify cho mục đích khác sẽ bị từ chối ngay lập tức",
+        "Acceptance Criteria 3 — Attempts/resend limits: Giới hạn số lần thử tối đa MaxAttempts = 5; mỗi lần verify sai giảm số lần còn lại; sau 5 lần thử sai thì challenge bị khóa vĩnh viễn (các lần nhập sau kể cả đúng OTP cũng bị từ chối); giới hạn thời gian gửi lại (Resend cooldown 60 giây giữa các lần yêu cầu cùng mục đích)",
+        "Bảo vệ chống tấn công dò tìm (Anti-enumeration): Endpoint yêu cầu OTP luôn trả về phản hồi generic đồng nhất ('Nếu thông tin mã đặt lịch và số điện thoại trùng khớp với hồ sơ, mã xác thực OTP đã được gửi đến số điện thoại của bạn.') kể cả khi mã đặt lịch hoặc số điện thoại không tồn tại; không tạo challenge thật và không gửi SMS khi thông tin không khớp",
+        "Acceptance Criteria 4 — No OTP in logs (AGENTS.md invariant): Toàn bộ các tầng Application, Service, Controller, Middleware và Adapter ISmsSender tuyệt đối không in mã OTP ra log; chỉ log ChallengeId, Purpose và số điện thoại đã che một phần (ví dụ 091***5678 qua IdentifierMaskingService)",
+        "Trừu tượng hóa SMS Sender: Xây dựng interface ISmsSender và adapter MockSmsSender đánh dấu provider là TBD theo quy định dự án",
+        "API Endpoints công khai: Cung cấp POST /api/v1/appointment-access/otp/request và POST /api/v1/appointment-access/otp/verify ([AllowAnonymous]) kèm validation chặt chẽ bằng FluentValidation",
+        "Bộ kiểm thử tự động tại OtpChallengeTests.cs: 10/10 test cases ĐẠT 100% (tổng 199/199 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {
