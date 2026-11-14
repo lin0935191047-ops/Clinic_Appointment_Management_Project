@@ -2,13 +2,13 @@
 
 - Baseline: 13/11/2026
 - Last updated: 14/11/2026
-- Overall status: In progress (FEAT-001 through FEAT-042 Completed)
-- Current phase: Admin dashboard/reporting (FEAT-043)
+- Overall status: In progress (FEAT-001 through FEAT-043 Completed)
+- Current phase: Doctor dashboard (FEAT-044)
 
 ## Summary
 Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
 
-## Features Completed (FEAT-001 -> FEAT-042)
+## Features Completed (FEAT-001 -> FEAT-043)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
 - `FEAT-002` (SRS & workflow baseline): docs/SPEC.md v1.2, docs/BUSINESS_RULES.md, use case / activity diagrams.
 - `FEAT-003` (Architecture & API design): docs/ARCHITECTURE.md, docs/API_SPECIFICATION.md, 3 ADRs.
@@ -51,10 +51,11 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 - `FEAT-040` (Consultation completion): Bác sĩ hoàn thành ca khám y khoa (Module Consultation); Chuyển trạng thái Appointment từ InProgress sang Completed, cập nhật UpdatedAt theo Server Timestamp UTC; Khóa hồ sơ bệnh án sau khi hoàn tất chống chỉnh sửa hoặc re-opening (RecordConsultationCommand và StartConsultationCommand bị chặn 400 khi đã Completed); Kiểm tra ca khám phải có bản ghi chẩn đoán/triệu chứng lâm sàng Consultation trước khi hoàn tất; Cập nhật bổ sung Conclusion và FollowUpInstructions; Phân quyền nghiêm ngặt theo bác sĩ được phân công (Assigned doctor only) hoặc Admin, từ chối bác sĩ khác với HTTP 403 Forbidden; Ghi nhận AuditLog bất biến với Action = COMPLETE_CONSULTATION bảo mật tuyệt đối không log nội dung y tế vào audit metadata; Endpoints POST /api/v1/doctor/appointments/{id}/complete và POST /api/v1/doctor/consultations/{appointmentId}/complete; 365/365 unit tests PASS (16/16 tests FEAT-040 PASS 100%).
 - `FEAT-041` (Notification abstraction): Trừu tượng hóa hệ thống thông báo đa kênh SMS, Email, InApp theo mẫu Outbox Pattern (Module Notification); Nhà cung cấp bên thứ ba là TBD theo AGENTS.md; Cung cấp Dev Stub Provider (DevStubSmsChannel, DevStubEmailChannel, DevStubInAppChannel) hoạt động trơn tru trong môi trường local/dev/test không cần SMS gateway hay SMTP thật; Thực thể và bảng lưu trữ notifications theo docs/DATABASE_DESIGN.md (Status: Pending, Sent, Failed, RetryCount, MaxRetries, FailureReason, SentAt, RecipientCiphertext, RecipientMasked, PayloadJson); Ghi nhận chi tiết thất bại khi gửi (Delivery failure recorded) và hỗ trợ cơ chế retry an toàn có giới hạn; Bộ kiểm soát an toàn NotificationSafetyGuard bảo đảm tiêu chí No diagnosis/identifier in message: TUYỆT ĐỐI chặn tin nhắn chứa chẩn đoán y tế, triệu chứng lâm sàng, số CCCD 12 số thô hoặc mật khẩu; Kênh gửi được decoupled hoàn toàn khỏi nghiệp vụ; 383/383 unit tests PASS (18/18 tests FEAT-041 PASS 100%).
 - `FEAT-042` (Appointment notifications): Tự động hóa gửi thông báo lịch hẹn qua Outbox theo sự kiện (Module Notification); Chống gửi trùng lặp tuyệt đối (No duplicate event notification) cho toàn bộ 5 sự kiện BOOKING_CREATED, APPOINTMENT_CONFIRMED, RESCHEDULE_APPROVED, APPOINTMENT_CANCELLED, APPOINTMENT_REMINDER; Truy vấn và quản lý chi tiết trạng thái gửi (Delivery status: Pending, Sent, Failed, ProviderMessageId, SentAt, FailureReason, RetryCount); Cung cấp Query GetAppointmentNotificationsQuery và endpoint GET /api/v1/appointments/{id}/notifications bảo vệ bởi policy StaffOrDoctor; Tuân thủ nguyên tắc nội dung tối thiểu an toàn (Minimal content): TUYỆT ĐỐI không chứa chẩn đoán hay triệu chứng bệnh án y tế; Tích hợp trigger gửi thông báo an toàn trong BookGuestAppointment, ConfirmAppointment, ApproveReschedule, CancelAppointment; 399/399 unit tests PASS (16/16 tests FEAT-042 PASS 100%).
+- `FEAT-043` (Admin dashboard/reporting): Báo cáo quản trị đa chiều và đối soát số liệu hệ thống (Module Reporting); Bộ lọc linh hoạt theo Ngày khám (FromDate, ToDate chuẩn hóa múi giờ Việt Nam UTC+7 sang UTC), Bác sĩ phụ trách (DoctorId), Chuyên khoa (SpecialtyId), và Trạng thái ca khám (Status); Bảo toàn số liệu và đối soát tài chính toàn diện (Numbers reconcile: TotalAppointments == tổng các trạng thái, TotalNetRevenue == GrossRevenue + CancellationFeeCollected); Phân rã báo cáo theo Chuyên khoa và Bác sĩ kèm tỷ lệ hoàn thành CompletionRate; Endpoints GET /api/v1/admin/reports/dashboard và GET /api/v1/admin/reports/appointments được bảo vệ nghiêm ngặt bằng policy 'AdminOnly' (chặn 403 Forbidden đối với Doctor, Receptionist, Patient); 409/409 unit tests PASS (10/10 tests FEAT-043 PASS 100%).
 
 ## Next steps
-1. Triển khai FEAT-043 (Admin dashboard/reporting: Báo cáo số liệu ca khám, doanh thu, tỷ lệ hủy/hoàn phí, hiệu suất bác sĩ, bộ lọc đa chiều).
-2. Triển khai FEAT-044 (Doctor dashboard: Dashboard thống kê ca khám của bác sĩ phụ trách).
+1. Triển khai FEAT-044 (Doctor dashboard: Dashboard thống kê ca khám của bác sĩ phụ trách).
+2. Triển khai FEAT-045 (Frontend public booking and lookup: Tích hợp hoàn thiện giao diện React công khai cho đặt lịch và tra cứu).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

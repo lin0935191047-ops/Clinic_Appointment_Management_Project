@@ -1948,3 +1948,55 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.75s)
 - Acceptance criteria evidence:
   - FEAT-042 đạt toàn bộ tiêu chí nghiệm thu (No duplicate event notification, Delivery status, Minimal content) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+
+### 2026-11-14 — FEAT-043 — Admin dashboard/reporting
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Thiết kế DTOs cho Báo cáo Quản trị hệ thống (`AdminDashboardDtos.cs`):
+    - `AppointmentStatusBreakdownDto`: Phân rã số lượng theo trạng thái ca khám (PendingConfirmation, Confirmed, CheckedIn, InProgress, Completed, Cancelled, NoShow), tính tỷ lệ hoàn thành CompletionRate (%) và tỷ lệ hủy ca CancellationRate (%).
+    - `FinancialSummaryDto`: Đối soát tài chính gồm tổng doanh thu gộp từ các ca khám đã hoàn thành `TotalGrossRevenue`, tổng tiền bệnh nhân đã thanh toán `TotalPaidAmount`, tổng tiền hoàn dự kiến `TotalExpectedRefundAmount`, tổng tiền đã hoàn thực tế `TotalActualRefundedAmount`, tổng phí hủy lịch phòng khám thu được `TotalCancellationFeeCollected`, và tổng doanh thu thuần `TotalNetRevenue = TotalGrossRevenue + TotalCancellationFeeCollected`.
+    - `SpecialtyReportDto`: Thống kê theo chuyên khoa (SpecialtyId, SpecialtyName, TotalAppointments, CompletedCount, CancelledCount, CompletionRate, GrossRevenue).
+    - `DoctorReportDto`: Thống kê theo bác sĩ phụ trách (DoctorId, DoctorName, SpecialtyName, TotalAppointments, CompletedCount, CancelledCount, CompletionRate, GrossRevenue).
+    - `AdminDashboardReportDto`: Tổng hợp báo cáo toàn diện theo bộ lọc thời gian và đối tượng.
+  - CQRS Query & QueryHandler (`GetAdminDashboardReportQuery.cs`):
+    - Bộ lọc đa chiều:
+      - `FromDate` và `ToDate` (DateOnly): Chuẩn hóa chính xác từ múi giờ Việt Nam (UTC+7) sang khoảng thời gian UTC tương ứng trên server (`AddHours(-7)`).
+      - `DoctorId`: Lọc theo bác sĩ phụ trách cụ thể.
+      - `SpecialtyId`: Lọc theo chuyên khoa cụ thể.
+      - `Status`: Lọc theo trạng thái ca khám (AppointmentStatus).
+    - Đối soát bảo toàn số lượng (Numbers reconcile): Đảm bảo bất biến `TotalAppointments == sum(status counts)`.
+    - Phân quyền: Kiểm tra người gọi API có vai trò Quản trị viên (`ADMIN`), từ chối mọi vai trò khác (Bác sĩ, Lễ tân, Bệnh nhân) với HTTP 403 Forbidden.
+  - Web API Controller (`AdminReportsController.cs`):
+    - Gắn `[Authorize(Policy = "AdminOnly")]` bảo vệ toàn bộ Controller.
+    - Endpoints:
+      - `GET /api/v1/admin/reports/dashboard`: Truy vấn báo cáo tổng quan đa chiều cho Dashboard Quản trị.
+      - `GET /api/v1/admin/reports/appointments`: Alias truy vấn báo cáo số liệu ca khám.
+  - Bộ kiểm thử tự động xUnit (`AdminDashboardReportingTests.cs`):
+    - 10 test cases bao phủ 100% các tiêu chí nghiệm thu:
+      1. `AdminDashboardReport_AllNumbersReconcile`: Kiểm tra toàn diện 8 ca khám thuộc các trạng thái khác nhau, đối soát bảo toàn số lượng (`TotalAppointments == sum(statuses)`) và đối soát tài chính (`GrossRevenue`, `PaidAmount`, `CancellationFee`, `NetRevenue`).
+      2. `AdminDashboardReport_FilterByDate_ReturnsOnlyAppointmentsWithinRange`: Kiểm tra lọc theo ngày chuẩn hóa múi giờ Việt Nam UTC+7.
+      3. `AdminDashboardReport_FilterByDoctor_ReturnsOnlyDoctorAppointments`: Kiểm tra lọc theo bác sĩ phụ trách.
+      4. `AdminDashboardReport_FilterBySpecialty_ReturnsOnlySpecialtyAppointments`: Kiểm tra lọc theo chuyên khoa.
+      5. `AdminDashboardReport_FilterByStatus_ReturnsOnlyStatusAppointments`: Kiểm tra lọc theo trạng thái ca khám.
+      6. `AdminDashboardReport_ByNonAdmin_ThrowsForbidden`: Chặn truy cập trái phép từ tài khoản không phải Admin (HTTP 403 Forbidden).
+      7. `AdminReportsController_ProtectedWithAdminOnlyPolicy`: Kiểm tra controller được bảo vệ bằng policy `AdminOnly`.
+      8. `AdminDashboardReport_EmptyData_HandlesZeroSafelyWithoutDivideByZero`: Kiểm tra xử lý an toàn khi hệ thống chưa có dữ liệu ca khám nào (tránh lỗi chia cho 0).
+      9. `AdminDashboardReport_DoctorAndSpecialtyMetrics_CalculatedAccurately`: Kiểm tra tính toán phân rã số liệu và tỷ lệ hoàn thành theo từng Bác sĩ và Chuyên khoa.
+      10. `AdminReportsController_Endpoints_InvokeMediatR_Successfully`: Kiểm tra endpoint thực thi qua MediatR trơn tru.
+    - Toàn bộ 409/409 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Reporting/DTOs/AdminDashboardDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Reporting/Queries/GetAdminDashboardReport/GetAdminDashboardReportQuery.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AdminReportsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/AdminDashboardReportingTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~AdminDashboardReportingTests"` (Thành công: 10 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 409 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.74s)
+- Acceptance criteria evidence:
+  - `Date/status/doctor/specialty filters`: Đạt 100%, hỗ trợ lọc đa chiều chính xác theo giờ Việt Nam UTC+7.
+  - `Numbers reconcile`: Đạt 100%, bảo toàn số lượng tổng các trạng thái và đối soát doanh thu tài chính chặt chẽ.

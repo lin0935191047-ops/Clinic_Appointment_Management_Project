@@ -1170,7 +1170,7 @@
       "module": "Reporting",
       "description": "Báo cáo quản trị.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-028",
         "FEAT-032",
@@ -1180,8 +1180,15 @@
         "Date/status/doctor/specialty filters",
         "Numbers reconcile"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — Date/status/doctor/specialty filters: Cho phép Quản trị viên (ADMIN) lọc linh hoạt đa chiều theo ngày (FromDate, ToDate quy đổi chuẩn xác múi giờ Việt Nam UTC+7 sang UTC), Bác sĩ phụ trách (DoctorId), Chuyên khoa (SpecialtyId), và Trạng thái ca khám (AppointmentStatus: PendingConfirmation, Confirmed, CheckedIn, InProgress, Completed, Cancelled, NoShow); Cung cấp các endpoints GET /api/v1/admin/reports/dashboard và GET /api/v1/admin/reports/appointments được bảo vệ nghiêm ngặt bằng policy 'AdminOnly'; Chặn mọi truy cập trái phép từ Bác sĩ, Lễ tân hoặc Bệnh nhân với HTTP 403 Forbidden.",
+        "Acceptance Criteria 2 — Numbers reconcile: Đảm bảo nguyên tắc bảo toàn số liệu và đối soát tài chính toàn diện; Tổng số lịch hẹn TotalAppointments luôn bằng tổng số các trạng thái phân rã (PendingConfirmationCount + ConfirmedCount + CheckedInCount + InProgressCount + CompletedCount + CancelledCount + NoShowCount); Tỷ lệ hoàn thành CompletionRate và tỷ lệ hủy CancellationRate được tính toán chuẩn xác; Đối soát tài chính hoàn chỉnh: Tổng doanh thu gộp TotalGrossRevenue (từ các ca Completed), tổng tiền bệnh nhân đã thanh toán TotalPaidAmount, tổng tiền hoàn hủy dự kiến/thực tế (ExpectedRefund/ActualRefunded), tổng phí hủy lịch thu được TotalCancellationFeeCollected, và doanh thu thuần TotalNetRevenue = TotalGrossRevenue + TotalCancellationFeeCollected; Thống kê phân rã theo Chuyên khoa (SpecialtyReports) và Bác sĩ (DoctorReports) bảo toàn số lượng và doanh thu.",
+        "Bộ kiểm thử tự động tại AdminDashboardReportingTests.cs: 10/10 test cases ĐẠT 100% (tổng 409/409 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
+      "notes": [
+        "Bảo vệ phân quyền: Chỉ Quản trị viên (ADMIN) mới có quyền truy cập dữ liệu báo cáo và thống kê toàn hệ thống.",
+        "Múi giờ báo cáo: Quy đổi chính xác theo ngày giờ Việt Nam (UTC+7) bảo đảm không bị lệch ca khám giữa các múi giờ."
+      ]
     },
     {
       "id": "FEAT-044",
