@@ -100,6 +100,51 @@ public class AppointmentsController : BaseApiController
     }
 
     /// <summary>
+    /// Gửi yêu cầu đổi lịch khám (Yêu cầu Grant token từ OTP với mục đích RESCHEDULE, lịch cũ giữ nguyên chờ duyệt)
+    /// </summary>
+    [HttpPost("{bookingCode}/reschedule-requests")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<ClinicAppointment.Application.Features.Appointments.Commands.SubmitRescheduleRequest.SubmitRescheduleRequestResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SubmitRescheduleRequest(
+        [FromRoute] string bookingCode,
+        [FromBody] ClinicAppointment.Application.Features.Appointments.Commands.SubmitRescheduleRequest.SubmitRescheduleRequestBody request,
+        CancellationToken cancellationToken)
+    {
+        // Hỗ trợ nhận Grant token từ header X-Appointment-Grant hoặc Authorization: Grant <token> nếu không truyền trong body
+        string? grantToken = request.GrantToken;
+        if (string.IsNullOrWhiteSpace(grantToken))
+        {
+            if (Request.Headers.TryGetValue("X-Appointment-Grant", out var headerGrant) && !string.IsNullOrWhiteSpace(headerGrant))
+            {
+                grantToken = headerGrant.ToString();
+            }
+            else if (Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                var authStr = authHeader.ToString();
+                if (authStr.StartsWith("Grant ", StringComparison.OrdinalIgnoreCase))
+                {
+                    grantToken = authStr.Substring(6).Trim();
+                }
+            }
+        }
+
+        var command = new ClinicAppointment.Application.Features.Appointments.Commands.SubmitRescheduleRequest.SubmitRescheduleRequestCommand(
+            bookingCode,
+            request.ProposedStartAtUtc,
+            grantToken,
+            request.RequestedDoctorId,
+            request.Reason);
+
+        var result = await Mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
     /// Xem chi tiết lịch khám theo Id (Kiểm tra quyền sở hữu ca khám, chống IDOR)
     /// </summary>
     [HttpGet("{id:guid}")]

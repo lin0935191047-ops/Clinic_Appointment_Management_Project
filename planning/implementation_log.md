@@ -1114,3 +1114,58 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.30s)
 - Acceptance criteria evidence:
   - FEAT-028 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+## 2026-11-14 — FEAT-029: Reschedule request submission
+- Summary:
+  - Triển khai chức năng gửi yêu cầu đổi lịch khám (Reschedule request submission) dành cho Bệnh nhân / Guest sau khi xác thực OTP thành công.
+  - Ràng buộc quyền truy cập bằng Scoped OTP Grant Token (Acceptance Criteria 1):
+    - Bắt buộc phải có Grant token từ xác thực OTP với mục đích `RESCHEDULE` (nhận qua body, header `X-Appointment-Grant` hoặc `Authorization: Grant <token>`).
+    - Thực thi cơ chế tiêu thụ một lần (One-time use): Ngay khi gửi yêu cầu đổi lịch thành công, token được đánh dấu `ConsumedAt = DateTime.UtcNow`. Nếu tái sử dụng token, hệ thống từ chối và trả về HTTP 403 Forbidden.
+  - Khởi tạo trạng thái chờ duyệt (Acceptance Criteria 2: PendingReview state):
+    - Tạo thực thể `RescheduleRequest` với trạng thái `RescheduleStatus.PendingReview`, liên kết với `AppointmentId`, `RequestedDoctorId`, `ProposedStartAtUtc`, `ProposedEndAtUtc`, `Reason`.
+  - Bảo toàn tuyệt đối lịch khám cũ (Acceptance Criteria 3: Old slot held):
+    - Ca khám hiện tại hoàn toàn giữ nguyên thông tin: `Appointment.StartAt`, `Appointment.EndAt`, `Appointment.DoctorId`, `Appointment.Status` (không thay đổi trước khi Lễ tân duyệt ở FEAT-030).
+  - Quy tắc một yêu cầu chờ duyệt duy nhất (Acceptance Criteria 4: One pending request):
+    - Kiểm tra và từ chối tạo thêm yêu cầu nếu cuộc hẹn đã có yêu cầu đổi lịch ở trạng thái `PendingReview` (trả về HTTP 409 Conflict).
+  - Kiểm tra sơ bộ tính khả dụng của slot đề xuất (FR-037):
+    - Bác sĩ có lịch nghỉ (`DoctorTimeOffs`) trong khung giờ đề xuất -> Trả về HTTP 409 Conflict.
+    - Khung giờ bị khóa hoặc bác sĩ có lịch bận (`DoctorScheduleBlocks`) -> Trả về HTTP 409 Conflict.
+    - Trùng ca khám đang hoạt động khác của bác sĩ -> Trả về HTTP 409 Conflict.
+    - Ca khám đã quá giờ bắt đầu hoặc đã ở trạng thái `Cancelled`/`Completed` -> Trả về HTTP 400 Bad Request.
+  - Lịch sử kiểm toán (Audit Trail Logging):
+    - Ghi nhận `AuditLog` với `Action = "SUBMIT_RESCHEDULE_REQUEST"`, `EntityType = "Appointment"`, `EntityId = appointment.Id`, `MetadataRedacted` an toàn không chứa PII.
+  - Endpoint API:
+    - `POST /api/v1/appointments/{bookingCode}/reschedule-requests` (`[AllowAnonymous]`).
+  - Bộ kiểm thử tự động xUnit (`RescheduleRequestSubmissionTests.cs`):
+    - 10 test cases bao phủ toàn diện:
+      1. `SubmitReschedule_WithValidGrant_ShouldCreatePendingReviewRequest_AndConsumeGrant`: Gửi yêu cầu thành công, tạo `RescheduleRequest` PendingReview, giữ nguyên ca khám cũ, grant token bị tiêu thụ (cố tình dùng lại bị 403).
+      2. `SubmitReschedule_WithoutGrantToken_ShouldFailWith401`: Thiếu grant token trả về 401 Unauthorized.
+      3. `SubmitReschedule_WithWrongPurposeGrant_ShouldFailWith403`: Grant token mục đích LOOKUP không thể đổi lịch, trả về 403 Forbidden.
+      4. `SubmitReschedule_WhenAlreadyHasPendingReviewRequest_ShouldFailWith409`: Giới hạn tối đa 1 yêu cầu PendingReview, vi phạm trả về 409 Conflict.
+      5. `SubmitReschedule_WhenAppointmentCancelled_ShouldFailWith400`: Ca khám đã hủy không thể đổi lịch, trả về 400 Bad Request.
+      6. `SubmitReschedule_WhenAppointmentInPast_ShouldFailWith400`: Ca khám đã quá giờ bắt đầu không thể đổi lịch, trả về 400 Bad Request.
+      7. `SubmitReschedule_WithNonExistentBookingCode_ShouldFailWith404`: Mã booking không tồn tại trả về 404 Not Found.
+      8. `SubmitReschedule_WhenSlotConflictsWithDoctorTimeOff_ShouldFailWith409`: Xung đột lịch nghỉ bác sĩ trả về 409 Conflict.
+      9. `SubmitReschedule_WhenSlotConflictsWithAnotherActiveAppointment_ShouldFailWith409`: Xung đột ca khám khác trả về 409 Conflict.
+      10. `SubmitReschedule_ShouldRecordAuditLog_WithNoPii`: Ghi nhận nhật ký kiểm toán không chứa PII nhạy cảm.
+    - Toàn bộ 236/236 unit tests trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 5.79s, 0 Error.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Domain/Entities/RescheduleRefundOtp.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/SubmitRescheduleRequest/SubmitRescheduleRequestCommand.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/SubmitRescheduleRequest/SubmitRescheduleRequestResponse.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/SubmitRescheduleRequest/SubmitRescheduleRequestCommandValidator.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/SubmitRescheduleRequest/SubmitRescheduleRequestCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/RescheduleRequestSubmissionTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 236 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 5.79s)
+- Acceptance criteria evidence:
+  - FEAT-029 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.

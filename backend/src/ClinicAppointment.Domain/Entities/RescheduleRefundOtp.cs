@@ -18,6 +18,60 @@ public class RescheduleRequest : BaseEntity
     public string? ReviewNotes { get; set; }
 
     public virtual Appointment? Appointment { get; set; }
+
+    public static RescheduleRequest Create(
+        Guid appointmentId,
+        Guid requestedDoctorId,
+        DateTime proposedStartAtUtc,
+        DateTime proposedEndAtUtc,
+        string? reason = null)
+    {
+        if (appointmentId == Guid.Empty)
+            throw new ArgumentException("Mã cuộc hẹn không hợp lệ.", nameof(appointmentId));
+        if (requestedDoctorId == Guid.Empty)
+            throw new ArgumentException("Mã bác sĩ yêu cầu không hợp lệ.", nameof(requestedDoctorId));
+        if (proposedStartAtUtc >= proposedEndAtUtc)
+            throw new ArgumentException("Thời gian bắt đầu đề xuất phải nhỏ hơn thời gian kết thúc đề xuất.", nameof(proposedStartAtUtc));
+
+        return new RescheduleRequest
+        {
+            Id = Guid.NewGuid(),
+            AppointmentId = appointmentId,
+            RequestedDoctorId = requestedDoctorId,
+            ProposedStartAt = proposedStartAtUtc,
+            ProposedEndAt = proposedEndAtUtc,
+            Reason = reason?.Trim(),
+            Status = RescheduleStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public void Approve(Guid receptionistUserId, string? reviewNotes = null)
+    {
+        if (Status != RescheduleStatus.PendingReview)
+            throw new InvalidOperationException($"Không thể duyệt yêu cầu đổi lịch ở trạng thái {Status}.");
+
+        Status = RescheduleStatus.Approved;
+        ReviewedByUserId = receptionistUserId;
+        ReviewedAt = DateTime.UtcNow;
+        ReviewNotes = reviewNotes?.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Reject(Guid receptionistUserId, string reviewNotes)
+    {
+        if (Status != RescheduleStatus.PendingReview)
+            throw new InvalidOperationException($"Không thể từ chối yêu cầu đổi lịch ở trạng thái {Status}.");
+
+        if (string.IsNullOrWhiteSpace(reviewNotes))
+            throw new ArgumentException("Lý do từ chối yêu cầu đổi lịch là bắt buộc.", nameof(reviewNotes));
+
+        Status = RescheduleStatus.Rejected;
+        ReviewedByUserId = receptionistUserId;
+        ReviewedAt = DateTime.UtcNow;
+        ReviewNotes = reviewNotes.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
 public class Refund : BaseEntity

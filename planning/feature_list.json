@@ -768,9 +768,9 @@
       "id": "FEAT-029",
       "name": "Reschedule request submission",
       "module": "Reschedule",
-      "description": "Tạo yêu cầu đổi lịch sau OTP.",
+      "description": "Bệnh nhân/Guest tạo yêu cầu đổi lịch sau khi xác thực OTP với Scoped Grant RESCHEDULE, lịch cũ giữ nguyên và chỉ cho phép 1 yêu cầu PendingReview.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-026",
         "FEAT-021",
@@ -782,8 +782,19 @@
         "Old slot held",
         "One pending request"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "backend/tests/ClinicAppointment.Domain.Tests/RescheduleRequestSubmissionTests.cs: 10 tests (SubmitReschedule_WithValidGrant_ShouldCreatePendingReviewRequest_AndConsumeGrant, SubmitReschedule_WithoutGrantToken_ShouldFailWith401, SubmitReschedule_WithWrongPurposeGrant_ShouldFailWith403, SubmitReschedule_WhenAlreadyHasPendingReviewRequest_ShouldFailWith409, SubmitReschedule_WhenAppointmentCancelled_ShouldFailWith400, SubmitReschedule_WhenAppointmentInPast_ShouldFailWith400, SubmitReschedule_WithNonExistentBookingCode_ShouldFailWith404, SubmitReschedule_WhenSlotConflictsWithDoctorTimeOff_ShouldFailWith409, SubmitReschedule_WhenSlotConflictsWithAnotherActiveAppointment_ShouldFailWith409, SubmitReschedule_ShouldRecordAuditLog_WithNoPii)",
+        "dotnet test ClinicAppointment.Domain.Tests: 236/236 passed",
+        "frontend: npm run build passed"
+      ],
+      "notes": [
+        "Endpoint POST /api/v1/appointments/{bookingCode}/reschedule-requests ([AllowAnonymous]) xác thực bằng Scoped Grant Token",
+        "Cơ chế One-time use: Grant token bị tiêu thụ (ConsumedAt = DateTime.UtcNow) ngay sau khi tạo yêu cầu đổi lịch thành công; không thể tái sử dụng token",
+        "Bảo vệ lịch cũ (Old slot held): Appointment.StartAt, EndAt, DoctorId, Status hoàn toàn không thay đổi trước khi Lễ tân duyệt",
+        "Quy tắc One pending request: Từ chối tạo yêu cầu mới (HTTP 409 Conflict) nếu đã có yêu cầu PendingReview cho ca khám",
+        "Kiểm tra sơ bộ xung đột (FR-037): Bác sĩ có lịch nghỉ hoặc ca khám khác trùng slot đề xuất sẽ bị từ chối 409 Conflict",
+        "Audit Log ghi nhận SUBMIT_RESCHEDULE_REQUEST an toàn không chứa PII"
+      ]
     },
     {
       "id": "FEAT-030",
