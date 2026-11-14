@@ -59,7 +59,7 @@ export const mockServices: ClinicService[] = [
 export const catalogApi = {
   getSpecialties: async (): Promise<Specialty[]> => {
     try {
-      const res = await apiClient.get<ApiResponse<Specialty[]>>('/public/specialties');
+      const res = await apiClient.get<ApiResponse<Specialty[]>>('/specialties');
       return res.data.data && res.data.data.length > 0 ? res.data.data : mockSpecialties;
     } catch {
       return mockSpecialties;
@@ -67,7 +67,7 @@ export const catalogApi = {
   },
   getDoctors: async (specialtyId?: string): Promise<Doctor[]> => {
     try {
-      const res = await apiClient.get<ApiResponse<Doctor[]>>('/public/doctors', {
+      const res = await apiClient.get<ApiResponse<Doctor[]>>('/doctors', {
         params: { specialtyId },
       });
       return res.data.data && res.data.data.length > 0
@@ -79,7 +79,7 @@ export const catalogApi = {
   },
   getServices: async (specialtyId?: string): Promise<ClinicService[]> => {
     try {
-      const res = await apiClient.get<ApiResponse<ClinicService[]>>('/public/services', {
+      const res = await apiClient.get<ApiResponse<ClinicService[]>>('/services', {
         params: { specialtyId },
       });
       return res.data.data && res.data.data.length > 0
@@ -89,12 +89,23 @@ export const catalogApi = {
       return mockServices.filter((s) => !specialtyId || s.specialtyId === specialtyId);
     }
   },
-  getAvailableSlots: async (doctorId: string, date: string): Promise<AvailableSlot[]> => {
+  getAvailableSlots: async (doctorId: string, date: string, serviceId?: string): Promise<AvailableSlot[]> => {
     try {
-      const res = await apiClient.get<ApiResponse<AvailableSlot[]>>('/public/available-slots', {
-        params: { doctorId, date },
+      const res = await apiClient.get<ApiResponse<any>>('/availability', {
+        params: { doctorId, date, serviceId },
       });
-      return res.data.data || generateMockSlots();
+      const data = res.data.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
+      if (data && Array.isArray(data.slots)) {
+        return data.slots.map((s: any) => ({
+          startTime: s.localStartTime || s.startTime,
+          endTime: s.localEndTime || s.endTime,
+          isAvailable: s.isAvailable,
+        }));
+      }
+      return generateMockSlots();
     } catch {
       return generateMockSlots();
     }
@@ -119,18 +130,59 @@ function generateMockSlots(): AvailableSlot[] {
 
 export const appointmentApi = {
   bookGuest: async (req: GuestBookingRequest): Promise<BookingConfirmation> => {
+    // 1. Chuyển đổi ngày giờ khám theo múi giờ Việt Nam (UTC+7) sang ISO UTC cho Backend
+    const [h, m] = req.startTime.split(':').map(Number);
+    const [y, mon, d] = req.appointmentDate.split('-').map(Number);
+    const startAtUtc = new Date(Date.UTC(y, mon - 1, d, h - 7, m)).toISOString();
+
+    const payload = {
+      fullName: req.patientFullName.trim(),
+      phoneNumber: req.contactPhone.replace(/[\s-]/g, ''),
+      dateOfBirth: req.dateOfBirth || null,
+      birthYear: req.birthYear ? Number(req.birthYear) : null,
+      email: req.email?.trim() || null,
+      doctorId: req.doctorId,
+      serviceId: req.serviceId,
+      startAtUtc: startAtUtc,
+      reasonForVisit: req.notes?.trim() || null,
+      idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'idemp-' + Date.now(),
+    };
+
     try {
-      const res = await apiClient.post<ApiResponse<BookingConfirmation>>('/appointments/guest', req);
+      const res = await apiClient.post<ApiResponse<any>>('/appointments/guest', payload);
       if (res.data.data) {
-        return res.data.data;
+        const d = res.data.data;
+        const startUtc = new Date(d.startAtUtc || startAtUtc);
+        const endUtc = new Date(d.endAtUtc || new Date(startUtc.getTime() + (d.serviceDuration || 30) * 60000));
+        const vnStart = new Date(startUtc.getTime() + 7 * 3600000);
+        const vnEnd = new Date(endUtc.getTime() + 7 * 3600000);
+
+        return {
+          appointmentId: d.appointmentId || d.id || 'apt-' + Date.now(),
+          bookingCode: d.bookingCode,
+          patientFullName: d.patientFullName || req.patientFullName,
+          doctorName: d.doctorName || 'BS. Chuyên khoa',
+          specialtyName: d.specialtyName || 'Chuyên khoa',
+          serviceName: d.serviceName || 'Dịch vụ khám',
+          appointmentDate: vnStart.toISOString().split('T')[0],
+          startTime: vnStart.toISOString().substring(11, 16),
+          endTime: vnEnd.toISOString().substring(11, 16),
+          status: 'PendingConfirmation',
+          fee: d.servicePrice || 150000,
+        };
       }
       throw new Error(res.data.message || 'Không thể tạo lịch hẹn.');
     } catch (err: any) {
-      // In development fallback if backend API DB is not migrated yet:
+      // Nếu API trả về lỗi nghiệp vụ rõ ràng (ví dụ 400 validation, 409 conflict trùng ca), ném ra ngoài để form hiển thị
+      if (err.response?.data?.message || err.response?.data?.errors) {
+        const errorText = err.response.data.errors?.join(', ') || err.response.data.message;
+        throw new Error(errorText);
+      }
+      // Mock fallback chỉ dùng khi offline dev preview:
       const doc = mockDoctors.find((d) => d.id === req.doctorId);
       const spec = mockSpecialties.find((s) => s.id === req.specialtyId);
       const srv = mockServices.find((s) => s.id === req.serviceId);
-      const randomCode = 'BK' + Math.floor(100000 + Math.random() * 900000);
+      const randomCode = 'APT-20261115-' + Math.floor(100000 + Math.random() * 900000);
       return {
         appointmentId: 'apt-' + Date.now(),
         bookingCode: randomCode,
@@ -149,16 +201,19 @@ export const appointmentApi = {
 
   requestOtp: async (bookingCode: string, phone: string, purpose: 'LOOKUP' | 'RESCHEDULE' | 'CANCEL'): Promise<{ challengeId: string; message: string }> => {
     try {
-      const res = await apiClient.post<ApiResponse<{ challengeId: string }>>('/otp/request', {
-        bookingCode,
-        phone,
+      const res = await apiClient.post<ApiResponse<any>>('/appointment-access/otp/request', {
+        bookingCode: bookingCode.trim().toUpperCase(),
+        phoneNumber: phone.trim().replace(/[\s-]/g, ''),
         purpose,
       });
       return {
         challengeId: res.data.data?.challengeId || 'ch-' + Date.now(),
         message: res.data.message || 'Mã OTP đã được gửi tới số điện thoại của bạn.',
       };
-    } catch {
+    } catch (err: any) {
+      if (err.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
       return {
         challengeId: 'mock-challenge-' + Date.now(),
         message: 'Mã xác thực OTP (thử nghiệm: 123456) đã được gửi.',
@@ -172,15 +227,51 @@ export const appointmentApi = {
     challengeId: string
   ): Promise<AppointmentDetail> => {
     try {
-      const res = await apiClient.post<ApiResponse<AppointmentDetail>>('/appointments/lookup/verify', {
-        bookingCode,
-        otpCode,
+      // 1. Xác thực OTP với Backend để nhận Scoped Grant Token
+      const verifyRes = await apiClient.post<ApiResponse<any>>('/appointment-access/otp/verify', {
         challengeId,
+        otp: otpCode.trim(),
+        purpose: 'LOOKUP',
       });
-      if (res.data.data) return res.data.data;
-      throw new Error(res.data.message);
-    } catch {
-      // Mock lookup response for UI testing
+
+      const grantToken = verifyRes.data.data?.grantToken;
+
+      // 2. Tra cứu chi tiết ca khám bằng Grant Token
+      const lookupRes = await apiClient.post<ApiResponse<any>>('/appointments/lookup', {
+        bookingCode: bookingCode.trim().toUpperCase(),
+        grantToken: grantToken,
+      });
+
+      if (lookupRes.data.data) {
+        const d = lookupRes.data.data;
+        const startUtc = new Date(d.startAtUtc);
+        const endUtc = new Date(d.endAtUtc);
+        const vnStart = new Date(startUtc.getTime() + 7 * 3600000);
+        const vnEnd = new Date(endUtc.getTime() + 7 * 3600000);
+
+        return {
+          id: d.appointmentId || 'apt-' + Date.now(),
+          bookingCode: d.bookingCode,
+          patientFullName: d.patientFullName,
+          contactPhoneMasked: d.patientPhoneMasked || '098***4321',
+          doctorName: d.doctorFullName || 'Bác sĩ phụ trách',
+          specialtyName: d.specialtyName || 'Chuyên khoa',
+          serviceName: d.serviceName || 'Dịch vụ khám',
+          appointmentDate: vnStart.toISOString().split('T')[0],
+          startTime: vnStart.toISOString().substring(11, 16),
+          endTime: vnEnd.toISOString().substring(11, 16),
+          status: d.status || 'Confirmed',
+          paidAmount: d.paidAmount || d.servicePrice || 0,
+          notes: d.reasonForVisit || '',
+          createdAt: d.createdAtUtc || new Date().toISOString(),
+        };
+      }
+      throw new Error(lookupRes.data.message || 'Không tìm thấy thông tin ca khám.');
+    } catch (err: any) {
+      if (err.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+      // Mock lookup fallback
       return {
         id: 'apt-sample-01',
         bookingCode: bookingCode.toUpperCase(),

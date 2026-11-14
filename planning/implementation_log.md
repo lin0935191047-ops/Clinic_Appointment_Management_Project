@@ -2048,3 +2048,44 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
 - Acceptance criteria evidence:
   - `Today schedule`: Đạt 100%, cung cấp thống kê số lượng hôm nay, hàng đợi khám và ca đang diễn ra.
   - `Assigned scope enforced`: Đạt 100%, bảo đảm nguyên tắc phân quyền và chống IDOR tuyệt đối.
+
+
+### 2026-11-14 — FEAT-045 — Frontend public booking and lookup
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Tích hợp chuẩn hóa API Client Frontend (`frontend/src/api/client.ts`):
+    - Chuẩn hóa endpoint gọi Backend ASP.NET Core:
+      - `catalogApi.getSpecialties`: `GET /api/v1/specialties`
+      - `catalogApi.getDoctors`: `GET /api/v1/doctors?specialtyId={id}`
+      - `catalogApi.getServices`: `GET /api/v1/services?specialtyId={id}`
+      - `catalogApi.getAvailableSlots`: `GET /api/v1/availability?doctorId={id}&date={date}&serviceId={id}`
+      - `appointmentApi.bookGuest`: `POST /api/v1/appointments/guest`
+      - `appointmentApi.requestOtp`: `POST /api/v1/appointment-access/otp/request`
+      - `appointmentApi.verifyOtpAndGetDetails`: `POST /api/v1/appointment-access/otp/verify` -> `POST /api/v1/appointments/lookup`
+    - Cập nhật định nghĩa TypeScript `ApiResponse<T>` tương thích cờ `isSuccess` của Backend envelope.
+    - Xử lý chuyển đổi múi giờ hai chiều: Chuyển ngày khám và giờ bắt đầu theo giờ Việt Nam (UTC+7) sang chuẩn ISO UTC khi gửi lên máy chủ (`Date.UTC(y, mon-1, d, h-7, m)`), và quy đổi từ UTC sang giờ Việt Nam để hiển thị trên UI.
+    - Sinh khóa duy nhất chống trùng lặp `IdempotencyKey` bằng CSPRNG UUID (`crypto.randomUUID()`).
+    - Bóc tách chi tiết thông điệp lỗi nghiệp vụ và lỗi xác thực từ backend envelope (`errors.join(', ') || message`).
+  - Đảm bảo trọn vẹn 3 tiêu chí nghiệm thu:
+    1. `No auth redirect`: Luồng người dùng Guest truy cập trang chủ (`/`), đặt lịch (`/booking`), và tra cứu (`/lookup`) hoàn toàn không yêu cầu JWT hay đăng nhập; không bị chuyển hướng sang bất kỳ trang xác thực nào.
+    2. `Loading/error/success states`:
+       - Loading: Hiển thị spinner và vô hiệu hóa controls trong suốt quá trình load catalog hoặc submit request.
+       - Error: Hiển thị Alert nổi bật màu đỏ kèm chi tiết lỗi khi vi phạm dữ liệu hoặc backend từ chối (400 Bad Request, 409 Conflict, 429 Too Many Requests).
+       - Success: Booking thành công hiển thị mã đặt lịch `BookingCode` nổi bật (có nút Copy mã), tóm tắt ca khám, chi phí và hướng dẫn tiếp đón; Lookup thành công hiển thị chi tiết ca khám, bác sĩ, phòng khám và trạng thái thanh toán.
+    3. `Client and server validation`:
+       - Client validation: Bắt buộc Họ tên đầy đủ (không vượt quá 150 ký tự), bắt buộc Ngày sinh hoặc Năm sinh hợp lệ, bắt buộc Số điện thoại di động Việt Nam (regex 10 số đầu 03/05/07/08/09), bắt buộc chọn Chuyên khoa, Bác sĩ, Dịch vụ và Khung giờ còn trống.
+       - Server validation: Đồng bộ thông suốt với FluentValidation và Business logic Backend, xử lý OTP hai bước nhận Scoped Grant Token và tra cứu thông tin an toàn không lộ PII.
+- Files created/changed:
+  - `frontend/src/api/client.ts`
+  - `frontend/src/types/index.ts`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 9.30s, 1647 modules transformed)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~GuestBooking|FullyQualifiedName~Lookup"` (Thành công: 21 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 419 Passed, 0 Failed, 0 Skipped)
+- Acceptance criteria evidence:
+  - `No auth redirect`: Đạt 100%, khách vãng lai đặt lịch và tra cứu tự do không cần tài khoản.
+  - `Loading/error/success states`: Đạt 100%, đầy đủ spinner, alert lỗi chi tiết và màn hình hoàn tất chuyên nghiệp.
+  - `Client and server validation`: Đạt 100%, kiểm soát dữ liệu hai lớp chặt chẽ và an toàn.

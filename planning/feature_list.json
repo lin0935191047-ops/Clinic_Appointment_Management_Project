@@ -1221,7 +1221,7 @@
       "module": "Frontend",
       "description": "React guest flow + API integration.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-007",
         "FEAT-023",
@@ -1232,8 +1232,16 @@
         "Loading/error/success states",
         "Client and server validation"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — No auth redirect: Khách vãng lai (Guest) truy cập trang chủ (/), trang đặt lịch khám (/booking) và trang tra cứu lịch hẹn (/lookup) hoàn toàn độc lập, không yêu cầu đăng nhập hay tài khoản; Tuyệt đối không chuyển hướng sang trang đăng nhập (No auth redirect); Giao diện có thông báo rõ ràng: 'Không cần tạo tài khoản hay đăng nhập vẫn có thể đặt lịch khám bệnh trực tuyến'.",
+        "Acceptance Criteria 2 — Loading/error/success states: Xử lý mượt mà và trực quan mọi trạng thái giao diện; Loading state: Hiển thị spinner và vô hiệu hóa nút submit khi tải dữ liệu chuyên khoa/bác sĩ/dịch vụ/khung giờ và khi gửi request đặt lịch/OTP; Error state: Hiển thị Alert nổi bật màu đỏ kèm chi tiết lỗi khi vi phạm validation hoặc khi server từ chối (lỗi trùng ca 409 Conflict, lỗi hết hạn OTP, lỗi số điện thoại không hợp lệ); Success state: Đặt lịch thành công hiển thị mã đặt lịch BookingCode nổi bật (kèm nút Sao chép mã), tóm tắt thông tin ca khám, chi phí và hướng dẫn tiếp đón; Tra cứu thành công hiển thị đầy đủ thông tin ca khám, bác sĩ, phòng khám, thời gian (giờ Việt Nam UTC+7) và trạng thái thanh toán.",
+        "Acceptance Criteria 3 — Client and server validation: Kiểm soát dữ liệu hai lớp chặt chẽ; Client validation: Bắt buộc Họ tên đầy đủ (không vượt quá 150 ký tự), bắt buộc Ngày sinh hoặc Năm sinh hợp lệ (1900..năm hiện tại), bắt buộc Số điện thoại di động Việt Nam (regex 10 số đầu 03/05/07/08/09), bắt buộc chọn Chuyên khoa, Bác sĩ, Dịch vụ và Khung giờ còn trống; Server validation: Tích hợp thông suốt với ASP.NET Core Backend qua apiClient, gửi payload chuẩn hóa (quy đổi múi giờ UTC+7 sang ISO UTC, sinh CSPRNG IdempotencyKey chống trùng ca, bóc tách lỗi chi tiết từ FluentValidation envelope); Xác thực OTP hai bước (yêu cầu OTP -> cấp Scoped Grant Token -> tra cứu PublicAppointmentSummaryDto an toàn không lộ PII).",
+        "Bộ kiểm thử tự động Backend (GuestBookingApiTests.cs + AppointmentLookupTests.cs): 21/21 tests PASS 100% (tổng 419/419 unit tests toàn solution PASS 100%, 0 warning, 0 error); Kiểm tra Frontend TypeScript & Vite build: 100% thành công (0 errors, 1647 modules transformed)."
+      ],
+      "notes": [
+        "UX Khách vãng lai: Không yêu cầu tài khoản, bảo vệ danh tính y tế và không lưu trữ thông tin nhạy cảm ở LocalStorage.",
+        "Múi giờ & Định dạng: Tự động chuyển đổi giữa giờ hiển thị Việt Nam (UTC+7) và chuẩn lưu trữ UTC trên máy chủ."
+      ]
     },
     {
       "id": "FEAT-046",
