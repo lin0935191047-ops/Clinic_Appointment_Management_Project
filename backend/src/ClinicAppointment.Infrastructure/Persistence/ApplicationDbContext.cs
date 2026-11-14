@@ -33,6 +33,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<OtpVerificationGrant> OtpVerificationGrants => Set<OtpVerificationGrant>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Consultation> Consultations => Set<Consultation>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

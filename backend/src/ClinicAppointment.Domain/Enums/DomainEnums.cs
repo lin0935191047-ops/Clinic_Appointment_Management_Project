@@ -76,3 +76,17 @@ public enum ScheduleBlockType
     Other
 }
 
+public enum NotificationChannel
+{
+    Sms,
+    Email,
+    InApp
+}
+
+public enum NotificationStatus
+{
+    Pending,
+    Sent,
+    Failed
+}
+

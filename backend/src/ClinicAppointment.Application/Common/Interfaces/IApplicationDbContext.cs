@@ -27,6 +27,7 @@ public interface IApplicationDbContext
     DbSet<OtpVerificationGrant> OtpVerificationGrants { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<Consultation> Consultations { get; }
+    DbSet<Notification> Notifications { get; }
 
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
 

@@ -1,10 +1,12 @@
 using System.Text;
 using ClinicAppointment.Application.Common.Interfaces;
+using ClinicAppointment.Application.Common.Notifications;
 using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Services;
 using ClinicAppointment.Infrastructure.Persistence;
 using ClinicAppointment.Infrastructure.Security;
 using ClinicAppointment.Infrastructure.Services;
+using ClinicAppointment.Infrastructure.Services.Notifications;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -72,6 +74,13 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddSingleton<IAbuseProtectionService, AbuseProtectionService>();
         services.AddSingleton<ISmsSender, MockSmsSender>();
+
+        // Notification Services & Outbox Abstractions (TBD Providers)
+        services.AddSingleton<INotificationSafetyGuard, NotificationSafetyGuard>();
+        services.AddScoped<INotificationChannel, DevStubSmsChannel>();
+        services.AddScoped<INotificationChannel, DevStubEmailChannel>();
+        services.AddScoped<INotificationChannel, DevStubInAppChannel>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         // Current User & Resource Authorization
         services.AddHttpContextAccessor();

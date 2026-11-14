@@ -1114,7 +1114,7 @@
       "module": "Notification",
       "description": "Adapter/outbox cho SMS/email/in-app.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-006"
       ],
@@ -1123,8 +1123,16 @@
         "Delivery failure recorded",
         "No diagnosis/identifier in message"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — Dev stub works without provider: Trừu tượng hóa INotificationChannel cho các kênh SMS, Email, InApp độc lập hoàn toàn với nhà cung cấp thứ ba (Provider TBD theo AGENTS.md); Cung cấp Dev Stub Provider (DevStubSmsChannel, DevStubEmailChannel, DevStubInAppChannel) hoạt động trơn tru trong môi trường local/dev/test mà không cần kết nối SMS Gateway thật hay SMTP; Lưu vết tin nhắn gửi an toàn trong bộ nhớ; Kênh gửi decoupled hoàn toàn khỏi nghiệp vụ phòng khám.",
+        "Acceptance Criteria 2 — Delivery failure recorded: Bảng lưu trữ Outbox notifications theo đúng docs/DATABASE_DESIGN.md (Status: Pending, Sent, Failed, RetryCount, MaxRetries, FailureReason, SentAt, RecipientCiphertext, RecipientMasked, PayloadJson); Khi gửi thất bại (simulate network/provider failure), NotificationService ghi nhận trạng thái Failed, lưu chi tiết FailureReason, tăng RetryCount; Cơ chế RetryNotificationAsync cho phép thử lại tin nhắn thất bại khi RetryCount < MaxRetries; Chặn thử lại khi vượt quá MaxRetries (HTTP 400).",
+        "Acceptance Criteria 3 — No diagnosis/identifier in message: Bộ kiểm soát NotificationSafetyGuard kiểm tra nghiêm ngặt trước khi xếp hàng thông báo: TUYỆT ĐỐI KHÔNG chứa chẩn đoán y tế (Diagnosis), triệu chứng lâm sàng (Symptoms), bệnh án, số định danh CCCD/CMND thô 12 số, hay mật khẩu trong nội dung tin nhắn hoặc Payload (ném NotificationSafetyViolationException và từ chối lưu vào DB); Cho phép tin nhắn lịch hẹn an toàn tối thiểu (mã đặt hẹn, thời gian, tên bác sĩ, phòng khám).",
+        "Bộ kiểm thử tự động tại NotificationAbstractionTests.cs: 18/18 test cases ĐẠT 100% (tổng 383/383 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
+      "notes": [
+        "Bảo mật y tế & thông tin nhạy cảm: Không gửi hoặc lưu chẩn đoán/triệu chứng bệnh án trong thông báo.",
+        "Mã hóa & Masking: RecipientMasked dạng 090***5678, RecipientCiphertext mã hóa AES-256-GCM."
+      ]
     },
     {
       "id": "FEAT-042",

@@ -1810,3 +1810,74 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 7.51s)
 - Acceptance criteria evidence:
   - FEAT-040 đạt toàn bộ tiêu chí nghiệm thu (InProgress to Completed, History recorded, Only assigned doctor/authorized role) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+## 2026-11-14 — FEAT-041: Notification abstraction
+- Feature: FEAT-041 (Notification abstraction)
+- Status: Completed
+- Context: Triển khai tầng trừu tượng hóa và kiến trúc Outbox Pattern cho phân hệ thông báo đa kênh (SMS, Email, InApp), tuân thủ quy định bất biến trong AGENTS.md (nhà cung cấp bên thứ ba là TBD, dev stub provider, không log hoặc gửi chẩn đoán y tế/định danh thô trong tin nhắn).
+- Actions taken:
+  - Domain Model & Entity Invariants (`Notification.cs` & `DomainEnums.cs`):
+    - Bổ sung enums trong `DomainEnums.cs`: `NotificationChannel` (Sms, Email, InApp), `NotificationStatus` (Pending, Sent, Failed).
+    - Tạo thực thể `Notification` kế thừa `BaseEntity` với các trường theo đúng `docs/DATABASE_DESIGN.md` và `docs/DATA_DICTIONARY.md`: `PatientId` (Guid?), `AppointmentId` (Guid?), `Channel` (NotificationChannel), `TemplateCode` (string, max 60), `RecipientCiphertext` (byte[]?), `RecipientMasked` (string?, max 100), `PayloadJson` (string?), `Status` (NotificationStatus), `ProviderMessageId` (string?, max 150), `SentAt` (DateTime? UTC), `FailureReason` (string?), `RetryCount` (int, default 0), `MaxRetries` (int, default 3).
+    - Các phương thức Domain: `Create(...)`, `MarkSent(...)`, `MarkFailed(...)`, `ResetForRetry(...)`, thuộc tính logic `CanRetry`.
+  - EF Core Configuration & Migration:
+    - Tạo `NotificationConfiguration.cs`: cấu hình mapping Fluent API cho PostgreSQL bảng `notifications`, khóa ngoại nullable tới `patients` và `appointments` (OnDelete: SetNull), composite index trên `(status, created_at)` (`ix_notifications_status_created_at`), index trên `appointment_id` và `patient_id`.
+    - Tạo migration EF Core `20261114101500_AddNotifications.cs` và cập nhật `IApplicationDbContext` & `ApplicationDbContext`.
+  - Application Abstractions & Security Guard (`ClinicAppointment.Application.Common.Notifications`):
+    - `INotificationChannel`: Trừu tượng hóa việc gửi tin nhắn qua kênh cụ thể (decoupled).
+    - `NotificationMessage` & `NotificationSendResult`: Cấu trúc tin nhắn và kết quả gửi tin chuẩn hóa.
+    - `INotificationSafetyGuard` & `NotificationSafetyGuard`: Bộ kiểm soát an toàn nội dung thông báo. Kiểm tra nghiêm ngặt và ném ngoại lệ `NotificationSafetyViolationException` nếu tin nhắn chứa chẩn đoán y khoa (`Diagnosis`), triệu chứng lâm sàng (`Symptoms`), từ khóa bệnh án nhạy cảm, số định danh cá nhân CCCD/CMND thô 12 số, hoặc mật khẩu dạng thô.
+    - `INotificationService` & `NotificationService`: Dịch vụ điều phối Outbox thông báo:
+      - `EnqueueNotificationAsync`: Kiểm tra an toàn bảo mật, che giấu mặt nạ người nhận (`RecipientMasked`), mã hóa bí mật người nhận (`RecipientCiphertext` qua `IPiiEncryptionService`), lưu vào CSDL với trạng thái `Pending`.
+      - `DispatchNotificationAsync`: Giải mã người nhận, điều phối gửi qua Channel adapter phù hợp, ghi nhận trạng thái `Sent` (kèm `ProviderMessageId`, `SentAt`) hoặc `Failed` (lưu chi tiết `FailureReason`, tăng `RetryCount`).
+      - `DispatchPendingNotificationsAsync`: Quét và gửi theo batch từ hàng đợi Outbox.
+      - `RetryNotificationAsync`: Thử lại các thông báo bị thất bại khi `RetryCount < MaxRetries`.
+  - Dev Stub Providers (`ClinicAppointment.Infrastructure.Services.Notifications`):
+    - `DevStubSmsChannel`: Giả lập gửi SMS qua bộ nhớ không cần kết nối SMS Gateway thật; che giấu số điện thoại trong log; hỗ trợ cờ `SimulateFailure` phục vụ kiểm thử.
+    - `DevStubEmailChannel`: Giả lập gửi Email không cần máy chủ SMTP thật; hỗ trợ cờ `SimulateFailure`.
+    - `DevStubInAppChannel`: Giả lập gửi thông báo In-App.
+  - Dependency Injection:
+    - Đăng ký DI trong `Infrastructure/DependencyInjection.cs`: `NotificationSafetyGuard`, `DevStubSmsChannel`, `DevStubEmailChannel`, `DevStubInAppChannel`, `NotificationService`.
+  - Bộ kiểm thử tự động xUnit (`NotificationAbstractionTests.cs`):
+    - 18 test cases bao phủ toàn diện 100% các tiêu chí nghiệm thu:
+      1. `DevStubSmsChannel_SendsSuccessfully_WithoutRealProvider`: Kênh SMS dev stub gửi thành công, sinh MsgId.
+      2. `DevStubEmailChannel_SendsSuccessfully_WithoutSmtp`: Kênh Email dev stub gửi thành công.
+      3. `DevStubInAppChannel_SendsSuccessfully`: Kênh InApp dev stub gửi thành công.
+      4. `NotificationService_EnqueueNotification_CreatesPendingRecordWithMaskedRecipient`: Xếp hàng outbox với người nhận được mask và mã hóa.
+      5. `DispatchNotification_WhenChannelSucceeds_UpdatesStatusToSent`: Cập nhật trạng thái `Sent`, `SentAt`, `ProviderMessageId`.
+      6. `DispatchNotification_WhenChannelFails_RecordsDeliveryFailure_AndIncrementsRetryCount`: Ghi nhận lỗi chi tiết `FailureReason`, tăng `RetryCount`.
+      7. `RetryNotification_WhenFailedAndWithinLimit_ResetsAndRetriesSuccessfully`: Thử lại thành công khi trong giới hạn retry.
+      8. `RetryNotification_WhenExceedsMaxRetries_IsBlocked`: Chặn thử lại khi vượt quá `MaxRetries` với lỗi 400.
+      9. `NotificationSafetyGuard_RejectsMessageWithMedicalDiagnosisOrSymptoms`: Chặn tin nhắn chứa chẩn đoán/triệu chứng lâm sàng y tế.
+      10. `NotificationSafetyGuard_RejectsMessageWithRawNationalId`: Chặn tin nhắn chứa số CCCD thô 12 số.
+      11. `NotificationSafetyGuard_RejectsMessageWithRawPassword`: Chặn tin nhắn chứa mật khẩu dạng thô.
+      12. `NotificationSafetyGuard_RejectsPayloadWithSensitiveMedicalFields`: Chặn payload chứa trường nhạy cảm `Diagnosis` hoặc `Symptoms`.
+      13. `NotificationSafetyGuard_AllowsSafeAppointmentMessage`: Chấp thuận tin nhắn lịch hẹn an toàn.
+      14. `DispatchPendingNotifications_ProcessesBatchSuccessfully`: Xử lý hàng đợi theo lô (batch) thành công.
+      15. `ChannelDecoupled_NotificationServiceDispatchesBasedOnChannel`: Kênh gửi decoupled hoàn toàn khỏi nghiệp vụ phòng khám.
+    - Toàn bộ 383/383 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Domain/Enums/DomainEnums.cs`
+  - `backend/src/ClinicAppointment.Domain/Entities/Notification.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Configurations/NotificationConfiguration.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Interfaces/IApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/ApplicationDbContext.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114101500_AddNotifications.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Persistence/Migrations/20261114101500_AddNotifications.Designer.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Notifications/NotificationModels.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Notifications/INotificationChannel.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Notifications/NotificationSafetyGuard.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Notifications/NotificationDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Common/Notifications/NotificationService.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/Services/Notifications/DevStubNotificationChannels.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/NotificationAbstractionTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~NotificationAbstractionTests"` (Thành công: 18 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 383 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.95s)
+- Acceptance criteria evidence:
+  - FEAT-041 đạt toàn bộ tiêu chí nghiệm thu (Dev stub works without provider, Delivery failure recorded, No diagnosis/identifier in message) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
