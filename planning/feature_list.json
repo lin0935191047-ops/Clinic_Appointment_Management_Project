@@ -402,7 +402,7 @@
       "module": "Catalog",
       "description": "Admin CRUD specialty.",
       "priority": "high",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-010"
       ],
@@ -411,7 +411,15 @@
         "Slug unique",
         "Public chỉ hiện active"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Xây dựng SlugHelper tự động chuyển đổi chuỗi tiếng Việt có dấu sang định dạng URL-friendly kebab-case chuẩn (ví dụ: 'Khoa Tai Mũi Họng' -> 'khoa-tai-mui-hong', 'Cơ - Xương - Khớp' -> 'co-xuong-khop')",
+        "Ràng buộc Slug và Code duy nhất trong cơ sở dữ liệu: SpecialtyConfiguration cấu hình HasIndex(s => s.Code).IsUnique() và HasIndex(s => s.Slug).IsUnique(); kiểm tra xung đột trùng lặp trước khi lưu",
+        "Public Catalog (FR-002 Invariant): GetActiveSpecialtiesQuery và GetSpecialtyBySlugOrIdQuery chỉ hiển thị các chuyên khoa có IsActive == true; các chuyên khoa Inactive bị ẩn hoàn toàn khỏi danh mục công khai",
+        "Admin CRUD & Active status: AdminSpecialtiesController hỗ trợ đầy đủ các thao tác GetAll, CreateSpecialty, UpdateSpecialty, SetSpecialtyStatus và DeleteSpecialty; phân quyền nghiêm ngặt AdminOnly cho mutation và StaffOnly cho query",
+        "Cơ chế Soft-delete / Deactivation an toàn: Khi yêu cầu xóa chuyên khoa đang có Bác sĩ hoặc Dịch vụ hoạt động, hệ thống tự động chuyển sang trạng thái Inactive để bảo vệ tính toàn vẹn dữ liệu quan hệ",
+        "Xây dựng FluentValidators: CreateSpecialtyRequestValidator và UpdateSpecialtyRequestValidator kiểm soát chặt chẽ định dạng Code, Name và Slug",
+        "Bộ kiểm thử tự động tại SpecialtyManagementTests.cs: 14/14 test cases ĐẠT 100% kiểm tra SlugHelper, Create, Update, Unique Slug/Code, Public Active Filter, Status Toggle và Soft Delete (tổng 105/105 unit tests toàn solution PASS 100%)"
+      ],
       "notes": []
     },
     {

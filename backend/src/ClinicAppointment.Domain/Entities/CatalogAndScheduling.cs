@@ -12,6 +12,54 @@ public class Specialty : BaseEntity
     public bool IsActive { get; set; } = true;
 
     public virtual ICollection<Service> Services { get; set; } = new List<Service>();
+
+    public static Specialty Create(string code, string name, string slug, string? description = null, string? iconUrl = null, bool isActive = true)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ArgumentException("Mã chuyên khoa không được để trống.", nameof(code));
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Tên chuyên khoa không được để trống.", nameof(name));
+
+        if (string.IsNullOrWhiteSpace(slug))
+            throw new ArgumentException("Slug chuyên khoa không được để trống.", nameof(slug));
+
+        return new Specialty
+        {
+            Code = code.Trim().ToUpperInvariant(),
+            Name = name.Trim(),
+            Slug = slug.Trim().ToLowerInvariant(),
+            Description = description?.Trim(),
+            IconUrl = iconUrl?.Trim(),
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public void Update(string name, string slug, string? description = null, string? iconUrl = null, bool? isActive = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Tên chuyên khoa không được để trống.", nameof(name));
+
+        if (string.IsNullOrWhiteSpace(slug))
+            throw new ArgumentException("Slug chuyên khoa không được để trống.", nameof(slug));
+
+        Name = name.Trim();
+        Slug = slug.Trim().ToLowerInvariant();
+        Description = description?.Trim();
+        IconUrl = iconUrl?.Trim();
+        if (isActive.HasValue)
+        {
+            IsActive = isActive.Value;
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetStatus(bool isActive)
+    {
+        IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
 public class Service : BaseEntity

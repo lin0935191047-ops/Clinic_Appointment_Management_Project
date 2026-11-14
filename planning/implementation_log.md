@@ -384,3 +384,48 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-015 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-016 — Specialty Management (Admin CRUD, Unique Slug, Vietnamese SlugHelper & Public Active Filter)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Domain Entity `Specialty`:
+    - Bổ sung factory method `Specialty.Create(...)` có kiểm tra validation mã và tên chuyên khoa.
+    - Bổ sung phương thức `Update(...)` và `SetStatus(bool isActive)`.
+  - Tiện ích `SlugHelper`:
+    - Chuẩn hóa chuỗi tiếng Việt có dấu sang không dấu (bỏ dấu Unicode, thay thế ký tự đ/Đ).
+    - Tạo chuỗi định danh đường dẫn URL-friendly kebab-case hợp lệ.
+  - Ràng buộc Cơ sở dữ liệu:
+    - Bảng `specialties`: `Code` unique, `Slug` unique, `Name` required.
+    - Kiểm tra xung đột trước khi lưu: trùng Code hoặc trùng Slug trả về ngoại lệ nghiệp vụ rõ ràng.
+  - CQRS Commands & Queries:
+    - Commands: `CreateSpecialtyCommand`, `UpdateSpecialtyCommand`, `SetSpecialtyStatusCommand`, `DeleteSpecialtyCommand`.
+    - Queries: `GetActiveSpecialtiesQuery` (Public catalog FR-002, chỉ lấy `IsActive == true`), `GetSpecialtyBySlugOrIdQuery`, `GetAllSpecialtiesQuery`.
+    - Cơ chế Soft-delete / Deactivation: Khi chuyên khoa đang có Bác sĩ hoặc Dịch vụ hoạt động, hệ thống tự động chuyển sang `IsActive = false` thay vì xóa vật lý gây đứt gãy khóa ngoại.
+  - API Controllers:
+    - `SpecialtiesController` (`/api/v1/specialties`): `[AllowAnonymous]` phục vụ công khai người dùng và khách vãng lai.
+    - `AdminSpecialtiesController` (`/api/v1/admin/specialties`): Phân quyền nghiêm ngặt `[Authorize(Policy = "StaffOnly")]` cho truy vấn và `[Authorize(Policy = "AdminOnly")]` cho các thao tác tạo mới, sửa đổi, đổi trạng thái và xóa.
+  - FluentValidation:
+    - `CreateSpecialtyRequestValidator` và `UpdateSpecialtyRequestValidator`.
+  - Bộ kiểm thử tự động xUnit:
+    - Xây dựng 14 test cases mới trong `SpecialtyManagementTests.cs` kiểm tra SlugHelper với nhiều cụm từ tiếng Việt phức tạp, kiểm tra Create/Update, kiểm tra bắt lỗi trùng Code/Slug, kiểm tra Public Active Filter (FR-002 Invariant), Status Toggle, và Soft-delete deactivation.
+    - Toàn bộ 105/105 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch Frontend: `npm run build` chạy thành công 100% trong 4.99s.
+- Files changed:
+  - `backend/src/ClinicAppointment.Application/Common/Helpers/SlugHelper.cs`
+  - `backend/src/ClinicAppointment.Domain/Entities/CatalogAndScheduling.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Specialties/DTOs/SpecialtyDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Specialties/Validators/SpecialtyValidators.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Specialties/Commands/SpecialtyCommands.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Specialties/Queries/SpecialtyQueries.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/SpecialtiesController.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AdminSpecialtiesController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/SpecialtyManagementTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" build "backend/ClinicAppointment.sln"` (Thành công: 0 Warnings, 0 Errors)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test "backend/ClinicAppointment.sln"` (Thành công: 105 Passed, 0 Failed)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-016 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
