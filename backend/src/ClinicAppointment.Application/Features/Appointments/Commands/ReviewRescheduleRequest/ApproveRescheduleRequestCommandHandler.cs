@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Models;
+using ClinicAppointment.Application.Features.Notifications.Services;
 using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Enums;
 using MediatR;
@@ -14,13 +15,16 @@ public class ApproveRescheduleRequestCommandHandler : IRequestHandler<ApproveRes
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IAppointmentNotificationService? _appointmentNotificationService;
 
     public ApproveRescheduleRequestCommandHandler(
         IApplicationDbContext context,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IAppointmentNotificationService? appointmentNotificationService = null)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _appointmentNotificationService = appointmentNotificationService;
     }
 
     public async Task<Result<ReviewRescheduleResponse>> Handle(
@@ -180,6 +184,22 @@ public class ApproveRescheduleRequestCommandHandler : IRequestHandler<ApproveRes
             if (transaction != null)
             {
                 await transaction.CommitAsync(cancellationToken);
+            }
+
+            // 9. Kích hoạt thông báo duyệt đổi lịch khám tới bệnh nhân (Outbox pattern)
+            if (_appointmentNotificationService != null)
+            {
+                try
+                {
+                    await _appointmentNotificationService.NotifyRescheduleApprovedAsync(
+                        appointment.Id, 
+                        dispatchImmediately: true, 
+                        cancellationToken: cancellationToken);
+                }
+                catch
+                {
+                    // Resilient outbox
+                }
             }
 
             var response = new ReviewRescheduleResponse(

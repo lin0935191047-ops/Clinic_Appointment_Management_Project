@@ -1140,7 +1140,7 @@
       "module": "Notification",
       "description": "Thông báo booking/confirm/reschedule/cancel.",
       "priority": "medium",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-023",
         "FEAT-028",
@@ -1153,8 +1153,16 @@
         "Delivery status",
         "Minimal content"
       ],
-      "test_evidence": [],
-      "notes": []
+      "test_evidence": [
+        "Acceptance Criteria 1 — No duplicate event notification: Dịch vụ AppointmentNotificationService kiểm soát chặt chẽ tính idempotent cho toàn bộ các sự kiện vòng đời lịch khám (BOOKING_CREATED, APPOINTMENT_CONFIRMED, RESCHEDULE_APPROVED, APPOINTMENT_CANCELLED, APPOINTMENT_REMINDER); kiểm tra sự tồn tại của thông báo cùng TemplateCode, AppointmentId, Channel (Sms/Email/InApp) ở trạng thái Pending hoặc Sent; từ chối tạo thông báo trùng lặp (trả về null), đảm bảo duy nhất 1 thông báo cho mỗi sự kiện.",
+        "Acceptance Criteria 2 — Delivery status: Cho phép tra cứu chi tiết lịch sử và trạng thái gửi thông báo của ca khám (Pending, Sent, Failed, ProviderMessageId, SentAt, FailureReason, RetryCount); Cung cấp Query GetAppointmentNotificationsQuery và endpoint GET /api/v1/appointments/{id}/notifications bảo vệ bằng policy StaffOrDoctor; Chặn truy cập trái phép đối với bác sĩ không phụ trách (HTTP 403 Forbidden) hoặc khách ẩn danh (HTTP 401 Unauthorized).",
+        "Acceptance Criteria 3 — Minimal content: Toàn bộ 5 mẫu thông báo lịch hẹn tuân thủ nghiêm ngặt nguyên tắc thông tin tối thiểu an toàn; kiểm duyệt qua NotificationSafetyGuard: TUYỆT ĐỐI KHÔNG chứa chẩn đoán y tế (Diagnosis), triệu chứng lâm sàng (Symptoms), bệnh án, số định danh CCCD thô, hay mật khẩu; chỉ truyền tải thông tin cần thiết: mã đặt lịch BookingCode, ngày giờ khám (chuẩn hóa giờ Việt Nam UTC+7), tên bác sĩ, phòng khám, và số tiền hoàn dự kiến (nếu có hủy lịch).",
+        "Bộ kiểm thử tự động tại AppointmentNotificationsTests.cs: 16/16 test cases ĐẠT 100% (tổng 399/399 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
+      "notes": [
+        "Tự động kích hoạt: Tích hợp trigger gửi thông báo an toàn trong BookGuestAppointment, ConfirmAppointment, ApproveReschedule, CancelAppointment.",
+        "Outbox Resiliency: Lỗi phát sinh trong quá trình dispatch thông báo không làm gián đoạn transaction chính của nghiệp vụ ca khám."
+      ]
     },
     {
       "id": "FEAT-043",

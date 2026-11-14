@@ -1,8 +1,10 @@
 using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Models;
+using ClinicAppointment.Application.Common.Notifications;
 using ClinicAppointment.Application.Features.Appointments.Commands.BookGuestAppointment;
 using ClinicAppointment.Application.Features.Appointments.DTOs;
 using ClinicAppointment.Application.Features.Appointments.Queries;
+using ClinicAppointment.Application.Features.Notifications.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -331,6 +333,24 @@ public class AppointmentsController : BaseApiController
     {
         var command = new ClinicAppointment.Application.Features.Appointments.Commands.CheckInAppointment.CheckInAppointmentCommand(id, request?.Note);
         var result = await Mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Tra cứu lịch sử và trạng thái gửi thông báo của ca khám (Delivery status)
+    /// </summary>
+    [HttpGet("{id:guid}/notifications")]
+    [Authorize(Policy = "StaffOrDoctor")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<NotificationDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAppointmentNotifications(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetAppointmentNotificationsQuery(id);
+        var result = await Mediator.Send(query, cancellationToken);
         return HandleResult(result);
     }
 }

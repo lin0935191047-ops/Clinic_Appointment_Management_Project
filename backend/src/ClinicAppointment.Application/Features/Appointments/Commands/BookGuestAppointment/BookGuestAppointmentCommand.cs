@@ -3,6 +3,7 @@ using ClinicAppointment.Application.Common.Exceptions;
 using ClinicAppointment.Application.Common.Helpers;
 using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Models;
+using ClinicAppointment.Application.Features.Notifications.Services;
 using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Enums;
 using ClinicAppointment.Domain.Services;
@@ -69,15 +70,18 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
     private readonly IApplicationDbContext _context;
     private readonly IPatientDuplicateDetectionService _duplicateDetectionService;
     private readonly IAbuseProtectionService _abuseProtectionService;
+    private readonly IAppointmentNotificationService? _appointmentNotificationService;
 
     public BookGuestAppointmentCommandHandler(
         IApplicationDbContext context,
         IPatientDuplicateDetectionService duplicateDetectionService,
-        IAbuseProtectionService abuseProtectionService)
+        IAbuseProtectionService abuseProtectionService,
+        IAppointmentNotificationService? appointmentNotificationService = null)
     {
         _context = context;
         _duplicateDetectionService = duplicateDetectionService;
         _abuseProtectionService = abuseProtectionService;
+        _appointmentNotificationService = appointmentNotificationService;
     }
 
     public async Task<Result<BookGuestAppointmentResponse>> Handle(
@@ -296,6 +300,22 @@ public class BookGuestAppointmentCommandHandler : IRequestHandler<BookGuestAppoi
             if (transaction != null)
             {
                 await transaction.CommitAsync(cancellationToken);
+            }
+
+            // Kích hoạt thông báo tiếp nhận lịch hẹn mới (Outbox pattern)
+            if (_appointmentNotificationService != null)
+            {
+                try
+                {
+                    await _appointmentNotificationService.NotifyBookingCreatedAsync(
+                        appointment.Id, 
+                        dispatchImmediately: true, 
+                        cancellationToken: cancellationToken);
+                }
+                catch
+                {
+                    // Resilient outbox
+                }
             }
 
             // Ghi nhận lượt đặt lịch để kiểm soát rate limit

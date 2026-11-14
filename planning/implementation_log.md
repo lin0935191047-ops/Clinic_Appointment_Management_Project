@@ -1881,3 +1881,70 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.95s)
 - Acceptance criteria evidence:
   - FEAT-041 đạt toàn bộ tiêu chí nghiệm thu (Dev stub works without provider, Delivery failure recorded, No diagnosis/identifier in message) và có đầy đủ bằng chứng kiểm thử tự động thực tế.
+
+## 2026-11-14 — FEAT-042: Appointment notifications
+- Feature: FEAT-042 (Appointment notifications)
+- Status: Completed
+- Context: Triển khai luồng tự động hóa thông báo sự kiện vòng đời lịch hẹn qua Outbox, kiểm soát chống gửi trùng lặp (No duplicate event notification), theo dõi trạng thái giao nhận (Delivery status), bảo đảm nội dung tối thiểu an toàn không chứa dữ liệu y tế nhạy cảm (Minimal content).
+- Actions taken:
+  - Appointment Notification Service (`ClinicAppointment.Application.Features.Notifications.Services`):
+    - Xây dựng interface `IAppointmentNotificationService` và lớp cài đặt `AppointmentNotificationService`.
+    - Hỗ trợ toàn bộ 5 sự kiện vòng đời lịch hẹn:
+      1. `NotifyBookingCreatedAsync`: Thông báo tiếp nhận đặt lịch mới (`BOOKING_CREATED`).
+      2. `NotifyAppointmentConfirmedAsync`: Thông báo xác nhận lịch hẹn thành công (`APPOINTMENT_CONFIRMED`).
+      3. `NotifyRescheduleApprovedAsync`: Thông báo duyệt đổi lịch hẹn (`RESCHEDULE_APPROVED`).
+      4. `NotifyAppointmentCancelledAsync`: Thông báo hủy lịch kèm số tiền hoàn dự kiến (`APPOINTMENT_CANCELLED`).
+      5. `NotifyAppointmentReminderAsync`: Nhắc lịch khám trước giờ hẹn (`APPOINTMENT_REMINDER`).
+    - Chống gửi trùng lặp sự kiện (`No duplicate event notification`): Kiểm tra sự tồn tại của bản ghi notification cùng `AppointmentId`, `TemplateCode`, `Channel` (Sms/Email/InApp) ở trạng thái `Pending` hoặc `Sent`; từ chối tạo bản ghi trùng lặp và trả về null nếu đã tồn tại.
+    - Nội dung tối thiểu an toàn (`Minimal content`): Định dạng giờ khám theo giờ Việt Nam (UTC+7, format `dd/MM/yyyy HH:mm`), tên bệnh nhân, tên bác sĩ, mã đặt lịch `BookingCode`, phòng khám, và số tiền hoàn phí nếu có; kiểm duyệt qua `NotificationSafetyGuard` trước khi lưu vào CSDL.
+  - Tích hợp Trigger tự động trong các CQRS Handlers:
+    - `ConfirmAppointmentCommandHandler`: Tự động gọi `NotifyAppointmentConfirmedAsync` sau khi xác nhận lịch hẹn.
+    - `CancelAppointmentCommandHandler`: Tự động gọi `NotifyAppointmentCancelledAsync` sau khi hủy lịch thành công.
+    - `ApproveRescheduleRequestCommandHandler`: Tự động gọi `NotifyRescheduleApprovedAsync` sau khi duyệt đổi lịch.
+    - `BookGuestAppointmentCommandHandler`: Tự động gọi `NotifyBookingCreatedAsync` sau khi tạo lịch hẹn mới.
+    - Thiết kế kiến trúc Outbox Resiliency: Sử dụng constructor nạp chồng hỗ trợ `IAppointmentNotificationService? = null` để giữ 100% tính tương thích ngược với 383 unit tests trước đó; bọc trigger trong try-catch để sự cố dispatch thông báo không làm gián đoạn transaction chính.
+  - CQRS Query & Web API Endpoint:
+    - Tạo `GetAppointmentNotificationsQuery` và `GetAppointmentNotificationsQueryHandler` tra cứu danh sách và trạng thái phát (Delivery status) của các thông báo thuộc ca khám.
+    - Phân quyền: Nhân viên Lễ tân (`RECEPTIONIST`), Quản trị viên (`ADMIN`), hoặc Bác sĩ được phân công (`DOCTOR` phụ trách) có quyền tra cứu; từ chối bác sĩ không phụ trách với HTTP 403 Forbidden và từ chối khách ẩn danh với HTTP 401 Unauthorized.
+    - Thêm endpoint `GET /api/v1/appointments/{id}/notifications` trong `AppointmentsController` bảo vệ bằng policy `StaffOrDoctor`.
+  - Dependency Injection:
+    - Đăng ký `services.AddScoped<IAppointmentNotificationService, AppointmentNotificationService>();` trong `Infrastructure/DependencyInjection.cs`.
+  - Bộ kiểm thử tự động xUnit (`AppointmentNotificationsTests.cs`):
+    - 16 test cases bao phủ toàn diện 100% các tiêu chí nghiệm thu:
+      1. `NotifyBookingCreated_EnqueuesAndDispatchesSmsNotification`: Kích hoạt và gửi thông báo tiếp nhận lịch hẹn qua SMS thành công.
+      2. `NotifyBookingCreated_NoDuplicateEventNotification`: Chống gửi trùng lặp sự kiện booking.
+      3. `NotifyAppointmentConfirmed_EnqueuesAndDispatchesNotification`: Kích hoạt và gửi thông báo xác nhận lịch hẹn thành công.
+      4. `NotifyAppointmentConfirmed_NoDuplicateEventNotification`: Chống gửi trùng lặp sự kiện confirm.
+      5. `NotifyRescheduleApproved_EnqueuesAndDispatchesNotification`: Kích hoạt và gửi thông báo duyệt đổi lịch thành công.
+      6. `NotifyRescheduleApproved_NoDuplicateEventNotification`: Chống gửi trùng lặp sự kiện reschedule approve.
+      7. `NotifyAppointmentCancelled_EnqueuesAndDispatchesNotification_WithRefundInfo`: Kích hoạt và gửi thông báo hủy lịch kèm thông tin hoàn tiền.
+      8. `NotifyAppointmentCancelled_NoDuplicateEventNotification`: Chống gửi trùng lặp sự kiện cancel.
+      9. `NotifyAppointmentReminder_EnqueuesAndDispatchesNotification`: Kích hoạt và gửi thông báo nhắc lịch khám thành công.
+      10. `NotifyAppointmentReminder_NoDuplicateEventNotification`: Chống gửi trùng lặp sự kiện reminder.
+      11. `MinimalContent_AllTemplates_DoNotContainDiagnosisOrSensitivePii`: Đảm bảo toàn bộ 5 mẫu thông báo không chứa chẩn đoán hay triệu chứng bệnh án y tế.
+      12. `DeliveryStatus_GetNotificationsByAppointmentId_ReturnsAllEventStatuses`: Truy vấn danh sách trạng thái phát gồm cả tin thành công và tin thất bại.
+      13. `GetAppointmentNotificationsQuery_ByStaff_ReturnsDeliveryStatusList`: Nhân viên truy vấn delivery status thành công.
+      14. `GetAppointmentNotificationsQuery_ByUnassignedDoctor_ThrowsForbidden`: Bác sĩ không phụ trách bị từ chối với 403 Forbidden.
+      15. `GetAppointmentNotificationsQuery_ByAnonymous_ThrowsUnauthorized`: Khách ẩn danh bị từ chối với 401 Unauthorized.
+      16. `ConfirmAppointmentCommandHandler_AutomaticallyTriggersNotification`: Tự động kích hoạt thông báo khi lễ tân xác nhận ca khám.
+    - Toàn bộ 399/399 unit tests trong Solution đều PASS 100%.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Application/Features/Notifications/Services/IAppointmentNotificationService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Notifications/Services/AppointmentNotificationService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Notifications/Queries/GetAppointmentNotificationsQuery.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ConfirmAppointment/ConfirmAppointmentCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/CancelAppointment/CancelAppointmentCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/ReviewRescheduleRequest/ApproveRescheduleRequestCommandHandler.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Appointments/Commands/BookGuestAppointment/BookGuestAppointmentCommand.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AppointmentsController.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/AppointmentNotificationsTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/tests/ClinicAppointment.Domain.Tests/ClinicAppointment.Domain.Tests.csproj --filter "FullyQualifiedName~AppointmentNotificationsTests"` (Thành công: 16 Passed, 0 Failed, 0 Skipped)
+  - `& "C:\Program Files\dotnet\dotnet.exe" test backend/ClinicAppointment.sln` (Thành công: 399 Passed, 0 Failed, 0 Skipped)
+  - `npm run build --prefix frontend` (Thành công: 0 Errors, built in 6.75s)
+- Acceptance criteria evidence:
+  - FEAT-042 đạt toàn bộ tiêu chí nghiệm thu (No duplicate event notification, Delivery status, Minimal content) và có đầy đủ bằng chứng kiểm thử tự động thực tế.

@@ -3,6 +3,7 @@ using System.Text.Json;
 using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Models;
 using ClinicAppointment.Application.Features.Appointments.Services;
+using ClinicAppointment.Application.Features.Notifications.Services;
 using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Enums;
 using MediatR;
@@ -16,15 +17,18 @@ public class CancelAppointmentCommandHandler : IRequestHandler<CancelAppointment
     private readonly IApplicationDbContext _context;
     private readonly IOtpGrantService _grantService;
     private readonly ICancellationPolicyService _policyService;
+    private readonly IAppointmentNotificationService? _appointmentNotificationService;
 
     public CancelAppointmentCommandHandler(
         IApplicationDbContext context,
         IOtpGrantService grantService,
-        ICancellationPolicyService policyService)
+        ICancellationPolicyService policyService,
+        IAppointmentNotificationService? appointmentNotificationService = null)
     {
         _context = context;
         _grantService = grantService;
         _policyService = policyService;
+        _appointmentNotificationService = appointmentNotificationService;
     }
 
     public async Task<Result<CancelAppointmentResponse>> Handle(
@@ -197,6 +201,23 @@ public class CancelAppointmentCommandHandler : IRequestHandler<CancelAppointment
             if (transaction != null)
             {
                 await transaction.CommitAsync(cancellationToken);
+            }
+
+            // 6.5 Kích hoạt thông báo hủy lịch hẹn tới bệnh nhân (Outbox pattern)
+            if (_appointmentNotificationService != null)
+            {
+                try
+                {
+                    await _appointmentNotificationService.NotifyAppointmentCancelledAsync(
+                        appointment.Id, 
+                        evaluation.ExpectedRefundAmount, 
+                        dispatchImmediately: true, 
+                        cancellationToken: cancellationToken);
+                }
+                catch
+                {
+                    // Resilient outbox
+                }
             }
 
             // 7. Tạo thông điệp phản hồi rõ ràng, phân biệt giữa số tiền dự kiến hoàn và trạng thái xử lý hoàn tiền

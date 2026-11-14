@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Models;
+using ClinicAppointment.Application.Features.Notifications.Services;
 using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Enums;
 using MediatR;
@@ -13,13 +14,16 @@ public class ConfirmAppointmentCommandHandler : IRequestHandler<ConfirmAppointme
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IAppointmentNotificationService? _appointmentNotificationService;
 
     public ConfirmAppointmentCommandHandler(
         IApplicationDbContext context,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IAppointmentNotificationService? appointmentNotificationService = null)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _appointmentNotificationService = appointmentNotificationService;
     }
 
     public async Task<Result<ConfirmAppointmentResponse>> Handle(
@@ -89,6 +93,22 @@ public class ConfirmAppointmentCommandHandler : IRequestHandler<ConfirmAppointme
 
         // 6. Lưu thay đổi vào CSDL
         await _context.SaveChangesAsync(cancellationToken);
+
+        // 7. Kích hoạt thông báo xác nhận lịch hẹn (Outbox pattern)
+        if (_appointmentNotificationService != null)
+        {
+            try
+            {
+                await _appointmentNotificationService.NotifyAppointmentConfirmedAsync(
+                    appointment.Id, 
+                    dispatchImmediately: true, 
+                    cancellationToken: cancellationToken);
+            }
+            catch
+            {
+                // Resilient outbox: không làm gián đoạn response nếu việc dispatch gặp sự cố
+            }
+        }
 
         var response = new ConfirmAppointmentResponse(
             AppointmentId: appointment.Id,

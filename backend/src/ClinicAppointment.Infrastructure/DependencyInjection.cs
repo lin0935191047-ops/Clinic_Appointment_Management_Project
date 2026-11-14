@@ -1,6 +1,7 @@
 using System.Text;
 using ClinicAppointment.Application.Common.Interfaces;
 using ClinicAppointment.Application.Common.Notifications;
+using ClinicAppointment.Application.Features.Notifications.Services;
 using ClinicAppointment.Domain.Entities;
 using ClinicAppointment.Domain.Services;
 using ClinicAppointment.Infrastructure.Persistence;
@@ -81,6 +82,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationChannel, DevStubEmailChannel>();
         services.AddScoped<INotificationChannel, DevStubInAppChannel>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IAppointmentNotificationService, AppointmentNotificationService>();
 
         // Current User & Resource Authorization
         services.AddHttpContextAccessor();
