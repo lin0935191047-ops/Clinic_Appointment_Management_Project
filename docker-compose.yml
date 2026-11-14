@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinic_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ClinicAppointmentDb}
+    ports:
+      # Ánh xạ cổng 5432 của máy host vào container.
+      # Lưu ý: Nếu máy tính đã có PostgreSQL local đang chạy trên 5432, 
+      # bạn có thể đổi thành "5433:5432" để tránh xung đột cổng.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ClinicAppointmentDb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Dịch vụ Mailpit giả lập gửi/nhận email trong môi trường Development
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: clinic_mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP server
+      - "8025:8025" # Web UI xem email
+    environment:
+      MP_MAX_MESSAGES: 500
+
+volumes:
+  postgres_data:
+    driver: local
+
