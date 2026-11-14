@@ -1,5 +1,6 @@
 using System.Reflection;
 using ClinicAppointment.Application.Common.Behaviors;
+using ClinicAppointment.Application.Features.Scheduling.Services;
 using ClinicAppointment.Application.Features.TimeOffs.Services;
 using FluentValidation;
 using MediatR;
@@ -22,6 +23,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IDoctorTimeOffService, DoctorTimeOffService>();
+        services.AddScoped<IAvailabilityService, AvailabilityService>();
 
         return services;
     }

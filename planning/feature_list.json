@@ -542,7 +542,7 @@
       "module": "Scheduling",
       "description": "Tính khung giờ khả dụng.",
       "priority": "critical",
-      "status": "not_started",
+      "status": "completed",
       "dependencies": [
         "FEAT-018",
         "FEAT-019",
@@ -553,7 +553,17 @@
         "Loại trừ break/time off/active appointments",
         "Không lộ patient info"
       ],
-      "test_evidence": [],
+      "test_evidence": [
+        "Thuật toán chia slot (Time Slot Generator): Chia slot chính xác theo thời lượng dịch vụ DurationMinutes (hoặc mặc định 30 phút); không sinh slot vượt quá giờ kết thúc ca làm việc; hỗ trợ nhiều ca sáng/chiều trong cùng một ngày",
+        "Acceptance Criteria 1 — Không hiển thị ngoài lịch (FR-052): Chỉ sinh các slot nằm trọn vẹn trong các ca làm việc của DoctorSchedule có hiệu lực tại ngày khám (khớp DayOfWeek ISO 8601, EffectiveFrom <= date <= EffectiveTo); trả về danh sách rỗng khi bác sĩ không có lịch làm việc trong ngày",
+        "Acceptance Criteria 2 — Loại trừ break / time off / active appointments (FR-035, BR-006): Tự động phát hiện và đánh dấu IsAvailable = false (hoặc loại trừ khi onlyAvailable = true) đối với mọi slot bị giao nhau với DoctorTimeOff (trạng thái Active), DoctorScheduleBlock (Break/Meeting), và Appointments đang hoạt động (PendingConfirmation, Confirmed, CheckedIn, InProgress)",
+        "Giải phóng slot khi lịch hẹn đã hủy: Các cuộc hẹn đã bị hủy (Status = Cancelled) không chiếm slot, slot tương ứng được hiển thị khả dụng bình thường",
+        "Loại trừ slot quá khứ: Nếu ngày tra cứu là hôm nay, các slot có StartAtUtc <= nowUtc được đánh dấu không khả dụng",
+        "Acceptance Criteria 3 — Tuyệt đối không lộ patient info (FR-030): DTO công khai TimeSlotDto và DoctorAvailabilityDto chỉ chứa thông tin khung giờ (StartTime, EndTime, StartAtUtc, EndAtUtc, DurationMinutes, IsAvailable, ReasonUnavailable); hoàn toàn không chứa bất kỳ trường nào về thông tin cá nhân của bệnh nhân (không PatientId, không FullName, không BookingCode)",
+        "Xử lý múi giờ đồng nhất: TimeZoneHelper chuyển đổi chính xác giữa giờ địa phương phòng khám Asia/Ho_Chi_Minh (UTC+7) và UTC lưu trữ trong cơ sở dữ liệu",
+        "RESTful API Controller: AvailabilityController (/api/v1/availability) công khai [AllowAnonymous] phục vụ Khách vãng lai và Bệnh nhân tra cứu khung giờ khám khả dụng",
+        "Bộ kiểm thử tự động tại AvailabilityCalculationTests.cs: 10/10 test cases ĐẠT 100% (tổng 158/158 unit tests toàn solution PASS 100%, 0 warning, 0 error)"
+      ],
       "notes": []
     },
     {

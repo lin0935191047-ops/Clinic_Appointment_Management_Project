@@ -661,3 +661,56 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `npm run build` trong `frontend/` (Thành công: 0 Errors)
 - Acceptance criteria evidence:
   - FEAT-020 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
+
+### 2026-11-14 — FEAT-021 — Availability Calculation (Tính Khung giờ khả dụng, Chia Slot, Loại trừ Time Off/Busy & Bảo mật Bệnh nhân)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Helper & Timezone Conversion:
+    - [TimeZoneHelper.cs](file:///d:/Clinic_Appointment_Management_Project/backend/src/ClinicAppointment.Application/Common/Helpers/TimeZoneHelper.cs): Chuyển đổi chính xác ngày giờ giữa giờ địa phương phòng khám `Asia/Ho_Chi_Minh` (UTC+7) và UTC lưu trữ; tính toán `GetIsoDayOfWeek` (1..7) và khoảng `GetDayUtcRange`.
+  - Application Service & Engine:
+    - [IAvailabilityService.cs](file:///d:/Clinic_Appointment_Management_Project/backend/src/ClinicAppointment.Application/Features/Scheduling/Services/IAvailabilityService.cs) & [AvailabilityService.cs](file:///d:/Clinic_Appointment_Management_Project/backend/src/ClinicAppointment.Application/Features/Scheduling/Services/AvailabilityService.cs):
+      - Thuật toán sinh Slot (Time Slot Slicing): Chia slot tự động theo thời lượng dịch vụ `DurationMinutes` (hoặc mặc định 30 phút); không sinh slot vượt quá giờ kết thúc ca làm việc.
+      - Hỗ trợ nhiều ca làm việc sáng/chiều trong cùng một ngày.
+      - **Acceptance Criteria 1 — Không hiển thị ngoài lịch (FR-052)**: Chỉ sinh slot trong các ca làm việc `DoctorSchedule` có hiệu lực tại ngày khám; trả về danh sách rỗng khi bác sĩ không có lịch làm việc.
+      - **Acceptance Criteria 2 — Loại trừ Break / Time Off / Active Appointments (FR-035, BR-006)**: Tự động phát hiện và đánh dấu `IsAvailable = false` (hoặc lọc bỏ khi `onlyAvailable = true`) với mọi slot giao nhau với `DoctorTimeOff` (Active), `DoctorScheduleBlock` (Meeting/Break), và `Appointments` đang hoạt động (`PendingConfirmation`, `Confirmed`, `CheckedIn`, `InProgress`).
+      - Giải phóng slot khi lịch hẹn đã hủy: Các cuộc hẹn có trạng thái `Cancelled` không chiếm slot, slot tương ứng hiển thị khả dụng bình thường.
+      - Loại trừ slot quá khứ: Nếu ngày khám là hôm nay, các slot có `StartAtUtc <= nowUtc` được đánh dấu không khả dụng.
+      - **Acceptance Criteria 3 — Tuyệt đối không lộ patient info (FR-030)**: DTO công khai `TimeSlotDto` và `DoctorAvailabilityDto` chỉ trả về thông tin khung giờ; hoàn toàn không có trường nào liên quan đến thông tin cá nhân của bệnh nhân khác.
+  - CQRS Queries & Handlers:
+    - [GetDoctorAvailabilityQuery.cs](file:///d:/Clinic_Appointment_Management_Project/backend/src/ClinicAppointment.Application/Features/Scheduling/Queries/GetDoctorAvailabilityQuery.cs): Nhận tham số `DoctorId`, `Date`, `ServiceId`, `OnlyAvailable`.
+  - Web API Controller:
+    - [AvailabilityController.cs](file:///d:/Clinic_Appointment_Management_Project/backend/src/ClinicAppointment.Api/Controllers/AvailabilityController.cs): Endpoint công khai `GET /api/v1/availability` (`[AllowAnonymous]`) phục vụ Khách vãng lai và Bệnh nhân tra cứu lịch khám khả dụng.
+  - Bộ kiểm thử tự động xUnit (`AvailabilityCalculationTests.cs`):
+    - 10 test cases kiểm tra:
+      1. Bác sĩ không có lịch làm việc trong ngày trả về danh sách slots rỗng.
+      2. Mặc định 30 phút chia đúng 4 slots cho ca 2 tiếng (08:00 - 10:00).
+      3. Dịch vụ 45 phút chia đúng 2 slots (08:00-08:45 và 08:45-09:30), không sinh slot dư khi không đủ thời gian.
+      4. Slot rơi vào ngày nghỉ của bác sĩ (`DoctorTimeOff`) bị đánh dấu không khả dụng.
+      5. Slot rơi vào khung giờ bận (`DoctorScheduleBlock`) bị đánh dấu không khả dụng.
+      6. Slot đã có cuộc hẹn đang hoạt động (`Appointment` active) bị đánh dấu không khả dụng.
+      7. Cuộc hẹn đã bị hủy (`Status = Cancelled`) giải phóng slot, slot tương ứng khả dụng bình thường.
+      8. Tham số `onlyAvailable = true` lọc bỏ toàn bộ các slot bận hoặc đã qua.
+      9. Phân ca sáng/chiều trong cùng một ngày sinh đầy đủ slots cho cả 2 ca.
+      10. Xác minh quyền riêng tư: DTO không để lộ bất kỳ thông tin nào của bệnh nhân khác.
+    - Toàn bộ 158/158 unit test cases trong Solution đều PASS 100%.
+  - Biên dịch toàn diện:
+    - Backend: `dotnet build` hoàn tất 0 Warning, 0 Error.
+    - Frontend: `npm run build` hoàn tất trong 4.67s, 0 Error.
+- Files changed:
+  - `backend/src/ClinicAppointment.Application/Common/Helpers/TimeZoneHelper.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Scheduling/DTOs/AvailabilityDtos.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Scheduling/Services/IAvailabilityService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Scheduling/Services/AvailabilityService.cs`
+  - `backend/src/ClinicAppointment.Application/Features/Scheduling/Queries/GetDoctorAvailabilityQuery.cs`
+  - `backend/src/ClinicAppointment.Application/DependencyInjection.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/AvailabilityController.cs`
+  - `backend/tests/ClinicAppointment.Domain.Tests/AvailabilityCalculationTests.cs`
+  - `planning/feature_list.json`
+  - `planning/progress.md`
+  - `planning/implementation_log.md`
+- Commands executed:
+  - `dotnet test "backend/ClinicAppointment.sln"` (Thành công: 158 Passed, 0 Failed, 0 Skipped)
+  - `dotnet build "backend/ClinicAppointment.sln" --no-incremental` (Thành công: 0 Warnings, 0 Errors)
+  - `npm run build` trong `frontend/` (Thành công: 0 Errors)
+- Acceptance criteria evidence:
+  - FEAT-021 đạt toàn bộ tiêu chí nghiệm thu và có đầy đủ bằng chứng kiểm thử thực tế.
