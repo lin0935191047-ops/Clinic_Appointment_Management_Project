@@ -28,7 +28,6 @@ services:
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
-    plan: free
     routes:
       - type: rewrite
         source: /*
@@ -38,7 +37,7 @@ services:
         fromService:
           type: web
           name: clinic-backend-api
-          envVarKey: RENDER_EXTERNAL_URL
+          property: host
 
 databases:
   # 3. PostgreSQL Database

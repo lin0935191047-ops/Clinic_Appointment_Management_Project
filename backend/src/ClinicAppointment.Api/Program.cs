@@ -53,6 +53,11 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // 3. Cấu hình CORS (Hỗ trợ Local Dev, Vercel, Render và Cloudflare Tunnels cho Demo Online)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://+:{port}");
+}
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCorsPolicy", policy =>
@@ -124,6 +129,11 @@ if (autoMigrate)
         logger.LogWarning(ex, "Chưa thể kết nối tới cơ sở dữ liệu PostgreSQL để chạy migrate/seed tự động. Vui lòng kiểm tra mật khẩu kết nối.");
     }
 }
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
 
 app.UseHttpsRedirection();
 app.UseCors("DefaultCorsPolicy");
