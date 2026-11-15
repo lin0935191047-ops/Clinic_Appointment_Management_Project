@@ -52,15 +52,33 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// 3. Cấu hình CORS
+// 3. Cấu hình CORS (Hỗ trợ Local Dev, Vercel, Render và Cloudflare Tunnels cho Demo Online)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCorsPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? Array.Empty<string>();
+
+        var defaultOrigins = new[] { "http://localhost:3000", "http://localhost:5173" };
+        var allowedOrigins = defaultOrigins.Concat(configuredOrigins).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        policy.SetIsOriginAllowed(origin =>
+        {
+            if (string.IsNullOrWhiteSpace(origin)) return false;
+            if (allowedOrigins.Contains(origin)) return true;
+            if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+            {
+                return uri.Host.EndsWith("vercel.app", StringComparison.OrdinalIgnoreCase) ||
+                       uri.Host.EndsWith("onrender.com", StringComparison.OrdinalIgnoreCase) ||
+                       uri.Host.EndsWith("trycloudflare.com", StringComparison.OrdinalIgnoreCase) ||
+                       uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
     });
 });
 
@@ -70,7 +88,10 @@ var app = builder.Build();
 app.UseMiddleware<CorrelationAndLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Environment.IsDevelopment() || 
+                    builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", true);
+
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -78,7 +99,13 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Clinic Appointment API v1.2");
         c.RoutePrefix = "swagger";
     });
+}
 
+var autoMigrate = app.Environment.IsDevelopment() || 
+                  builder.Configuration.GetValue<bool>("AUTO_MIGRATE", true);
+
+if (autoMigrate)
+{
     // Tự động migrate và seed nếu PostgreSQL kết nối thành công
     using var scope = app.Services.CreateScope();
     var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
