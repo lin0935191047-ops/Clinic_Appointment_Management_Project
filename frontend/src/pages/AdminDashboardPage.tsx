@@ -46,9 +46,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // ==========================================
   // TAB 1: REPORTS & DASHBOARD STATE
-  // ==========================================
   const todayStr = new Date().toISOString().split('T')[0];
   const thirtyDaysAgoStr = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     .toISOString()
@@ -61,9 +59,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [reportStatus, setReportStatus] = useState<string>('');
   const [dashboardReport, setDashboardReport] = useState<AdminDashboardReport | null>(null);
 
-  // ==========================================
   // TAB 2: SPECIALTIES STATE
-  // ==========================================
   const [specialtiesList, setSpecialtiesList] = useState<AdminSpecialtyItem[]>([]);
   const [showSpecialtyModal, setShowSpecialtyModal] = useState(false);
   const [newSpecialty, setNewSpecialty] = useState({
@@ -72,9 +68,7 @@ export const AdminDashboardPage: React.FC = () => {
     description: '',
   });
 
-  // ==========================================
   // TAB 3: DOCTORS STATE
-  // ==========================================
   const [doctorsList, setDoctorsList] = useState<AdminDoctorItem[]>([]);
   const [showDoctorModal, setShowDoctorModal] = useState(false);
   const [newDoctor, setNewDoctor] = useState({
@@ -88,9 +82,7 @@ export const AdminDashboardPage: React.FC = () => {
     bio: '',
   });
 
-  // ==========================================
   // TAB 4: SERVICES STATE
-  // ==========================================
   const [servicesList, setServicesList] = useState<AdminServiceItem[]>([]);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [newService, setNewService] = useState({
@@ -102,9 +94,7 @@ export const AdminDashboardPage: React.FC = () => {
     description: '',
   });
 
-  // ==========================================
   // TAB 5: DOCTOR SCHEDULES STATE
-  // ==========================================
   const [selectedDoctorIdForSchedule, setSelectedDoctorIdForSchedule] = useState<string>('');
   const [schedulesList, setSchedulesList] = useState<AdminDoctorScheduleItem[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -122,9 +112,7 @@ export const AdminDashboardPage: React.FC = () => {
     currentUser &&
     currentUser.roles?.includes('ADMIN');
 
-  // ==========================================
   // DATA FETCHING FUNCTIONS
-  // ==========================================
   const fetchReports = useCallback(async () => {
     if (!token || !isAuthorizedAdmin) return;
     setLoading(true);
@@ -651,11 +639,10 @@ export const AdminDashboardPage: React.FC = () => {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition ${
-                isActive
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition ${isActive
                   ? 'bg-purple-600 text-white shadow-md shadow-purple-100'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              }`}
+                }`}
             >
               <Icon className="w-4 h-4" />
               <span>{t.label}</span>
@@ -1013,11 +1000,10 @@ export const AdminDashboardPage: React.FC = () => {
                     <td className="px-4 py-3 text-center font-bold text-gray-700">{s.serviceCount}</td>
                     <td className="px-4 py-3 text-center">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          s.isActive
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.isActive
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-gray-100 text-gray-600'
-                        }`}
+                          }`}
                       >
                         {s.isActive ? 'Đang hoạt động' : 'Tạm tắt'}
                       </span>
@@ -1025,11 +1011,10 @@ export const AdminDashboardPage: React.FC = () => {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleToggleSpecialtyStatus(s.id, s.isActive)}
-                        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                          s.isActive
+                        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition ${s.isActive
                             ? 'text-red-700 bg-red-50 hover:bg-red-100'
                             : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                        }`}
+                          }`}
                       >
                         {s.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
                       </button>
@@ -1107,11 +1092,10 @@ export const AdminDashboardPage: React.FC = () => {
                     <td className="px-4 py-3 text-xs text-gray-500 font-mono">{d.email}</td>
                     <td className="px-4 py-3 text-center">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          d.isActive
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${d.isActive
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-gray-100 text-gray-600'
-                        }`}
+                          }`}
                       >
                         {d.isActive ? 'Đang hoạt động' : 'Tạm tắt'}
                       </span>
@@ -1119,11 +1103,10 @@ export const AdminDashboardPage: React.FC = () => {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleToggleDoctorStatus(d.id, d.isActive)}
-                        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                          d.isActive
+                        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition ${d.isActive
                             ? 'text-red-700 bg-red-50 hover:bg-red-100'
                             : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                        }`}
+                          }`}
                       >
                         {d.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
                       </button>
@@ -1183,11 +1166,10 @@ export const AdminDashboardPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          srv.isActive
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${srv.isActive
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-gray-100 text-gray-600'
-                        }`}
+                          }`}
                       >
                         {srv.isActive ? 'Đang hoạt động' : 'Tạm tắt'}
                       </span>
@@ -1195,11 +1177,10 @@ export const AdminDashboardPage: React.FC = () => {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleToggleServiceStatus(srv.id, srv.isActive)}
-                        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                          srv.isActive
+                        className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition ${srv.isActive
                             ? 'text-red-700 bg-red-50 hover:bg-red-100'
                             : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                        }`}
+                          }`}
                       >
                         {srv.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
                       </button>
@@ -1275,11 +1256,10 @@ export const AdminDashboardPage: React.FC = () => {
                       <td className="px-4 py-3 text-xs text-gray-400">{sc.effectiveTo || 'Vô thời hạn'}</td>
                       <td className="px-4 py-3 text-center">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            sc.isActive
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${sc.isActive
                               ? 'bg-emerald-100 text-emerald-800'
                               : 'bg-gray-100 text-gray-600'
-                          }`}
+                            }`}
                         >
                           {sc.isActive ? 'Đang hoạt động' : 'Tạm tắt'}
                         </span>

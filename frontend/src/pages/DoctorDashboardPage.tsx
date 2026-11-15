@@ -344,9 +344,7 @@ export const DoctorDashboardPage: React.FC = () => {
     return a.status === statusFilter;
   }) || [];
 
-  // ==========================================
   // VIEW 1: LOGIN FORM (If not authenticated)
-  // ==========================================
   if (!token || !isAuthorizedDoctorOrAdmin) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -469,9 +467,7 @@ export const DoctorDashboardPage: React.FC = () => {
     );
   }
 
-  // ==========================================
   // VIEW 2: DOCTOR DASHBOARD & CLINICAL WORKFLOW
-  // ==========================================
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Header Bar */}
@@ -929,11 +925,10 @@ export const DoctorDashboardPage: React.FC = () => {
               <button
                 key={f.id}
                 onClick={() => setStatusFilter(f.id)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                  statusFilter === f.id
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${statusFilter === f.id
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 {f.label}
               </button>

@@ -1,7 +1,5 @@
 services:
-  # ==============================================================================
-  # 1. DATABASE: PostgreSQL 16 (Không expose port ra ngoài, chỉ nội bộ container)
-  # ==============================================================================
+    # 1. DATABASE: PostgreSQL 16 (Không expose port ra ngoài, chỉ nội bộ container)
   postgres:
     image: postgres:16-alpine
     container_name: clinic_prod_postgres
@@ -21,9 +19,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ==============================================================================
-  # 2. BACKEND: ASP.NET Core 8 Web API
-  # ==============================================================================
+   # 2. BACKEND: ASP.NET Core 8 Web API
   backend:
     build:
       context: .
@@ -53,9 +49,7 @@ services:
       retries: 3
       start_period: 20s
 
-  # ==============================================================================
   # 3. FRONTEND: React SPA (Nginx Serving Assets)
-  # ==============================================================================
   frontend:
     build:
       context: .
@@ -70,9 +64,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # ==============================================================================
-  # 4. REVERSE PROXY & SSL GATEWAY: Nginx (Cổng vào duy nhất của hệ thống)
-  # ==============================================================================
+   # 4. REVERSE PROXY & SSL GATEWAY: Nginx (Cổng vào duy nhất của hệ thống)
   nginx:
     image: nginx:1.27-alpine
     container_name: clinic_prod_nginx

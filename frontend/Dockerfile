@@ -1,6 +1,4 @@
-# ==============================================================================
 # STAGE 1: Build React Production Bundle
-# ==============================================================================
 FROM node:20-alpine AS build
 WORKDIR /app
 
@@ -15,9 +13,7 @@ COPY frontend/ ./
 ENV VITE_API_BASE_URL=/api/v1
 RUN npm run build
 
-# ==============================================================================
 # STAGE 2: Nginx Alpine Serving Static Assets
-# ==============================================================================
 FROM nginx:1.27-alpine AS final
 
 # Xóa trang mặc định của Nginx

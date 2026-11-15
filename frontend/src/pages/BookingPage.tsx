@@ -245,9 +245,8 @@ export const BookingPage: React.FC = () => {
           {[1, 2, 3, 4].map((step) => (
             <div
               key={step}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                currentStep >= step ? 'bg-teal-600' : 'bg-gray-200'
-              }`}
+              className={`h-2 rounded-full transition-all duration-300 ${currentStep >= step ? 'bg-teal-600' : 'bg-gray-200'
+                }`}
             />
           ))}
         </div>
@@ -261,9 +260,7 @@ export const BookingPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* STEP 1: CHUYÊN KHOA & DỊCH VỤ                                             */}
-      {/* ========================================================================= */}
+      {/* STEP 1: CHUYÊN KHOA & DỊCH VỤ */}
       {currentStep === 1 && (
         <div className="space-y-8 bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-sm">
           <div>
@@ -282,11 +279,10 @@ export const BookingPage: React.FC = () => {
                     setSelectedServiceId('');
                     setSelectedDoctorId('');
                   }}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition text-left ${
-                    selectedSpecialtyId === spec.id
-                      ? 'border-teal-600 bg-teal-50/50 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition text-left ${selectedSpecialtyId === spec.id
+                    ? 'border-teal-600 bg-teal-50/50 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
                 >
                   <p className="font-bold text-gray-900 text-sm">{spec.name}</p>
                   <p className="text-xs text-gray-500 mt-1 line-clamp-2">{spec.description}</p>
@@ -310,11 +306,10 @@ export const BookingPage: React.FC = () => {
                   <div
                     key={srv.id}
                     onClick={() => setSelectedServiceId(srv.id)}
-                    className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${
-                      selectedServiceId === srv.id
-                        ? 'border-teal-600 bg-teal-50/50 shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-center justify-between ${selectedServiceId === srv.id
+                      ? 'border-teal-600 bg-teal-50/50 shadow-sm'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
                   >
                     <div>
                       <p className="font-bold text-gray-900 text-sm">{srv.name}</p>
@@ -347,9 +342,7 @@ export const BookingPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* STEP 2: BÁC SĨ & KHUNG GIỜ KHÁM                                           */}
-      {/* ========================================================================= */}
+      {/* STEP 2: BÁC SĨ & KHUNG GIỜ KHÁM */}
       {currentStep === 2 && (
         <div className="space-y-8 bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-sm">
           <div>
@@ -364,11 +357,10 @@ export const BookingPage: React.FC = () => {
                 <div
                   key={doc.id}
                   onClick={() => setSelectedDoctorId(doc.id)}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-start space-x-3 ${
-                    selectedDoctorId === doc.id
-                      ? 'border-teal-600 bg-teal-50/50 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-start space-x-3 ${selectedDoctorId === doc.id
+                    ? 'border-teal-600 bg-teal-50/50 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
                 >
                   <div className="w-12 h-12 rounded-xl overflow-hidden bg-teal-50 border border-teal-200 flex items-center justify-center flex-shrink-0 shadow-sm">
                     <img
@@ -428,13 +420,12 @@ export const BookingPage: React.FC = () => {
                       type="button"
                       disabled={!slot.isAvailable}
                       onClick={() => setSelectedSlot(slot.startTime)}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition border ${
-                        !slot.isAvailable
-                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through'
-                          : selectedSlot === slot.startTime
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition border ${!slot.isAvailable
+                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through'
+                        : selectedSlot === slot.startTime
                           ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
                           : 'bg-white text-gray-800 border-gray-300 hover:border-teal-500'
-                      }`}
+                        }`}
                     >
                       {slot.startTime} - {slot.endTime}
                     </button>
@@ -461,9 +452,7 @@ export const BookingPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* STEP 3: THÔNG TIN BỆNH NHÂN (FULLNAME + DOB/BIRTHYEAR + PHONE)             */}
-      {/* ========================================================================= */}
+      {/* STEP 3: THÔNG TIN BỆNH NHÂN (FULLNAME + DOB/BIRTHYEAR + PHONE) */}
       {currentStep === 3 && (
         <form onSubmit={handleBookingSubmit} className="space-y-8 bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-sm">
           <div>
@@ -504,18 +493,16 @@ export const BookingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setDobMode('full')}
-                    className={`px-3 py-1 rounded-lg font-semibold transition ${
-                      dobMode === 'full' ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
+                    className={`px-3 py-1 rounded-lg font-semibold transition ${dobMode === 'full' ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-700'
+                      }`}
                   >
                     Đầy đủ ngày tháng năm sinh
                   </button>
                   <button
                     type="button"
                     onClick={() => setDobMode('year')}
-                    className={`px-3 py-1 rounded-lg font-semibold transition ${
-                      dobMode === 'year' ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
+                    className={`px-3 py-1 rounded-lg font-semibold transition ${dobMode === 'year' ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-700'
+                      }`}
                   >
                     Chỉ nhớ năm sinh
                   </button>
@@ -676,9 +663,7 @@ export const BookingPage: React.FC = () => {
         </form>
       )}
 
-      {/* ========================================================================= */}
-      {/* STEP 4: HOÀN TẤT ĐẶT LỊCH (BOOKING CODE & HƯỚNG DẪN)                      */}
-      {/* ========================================================================= */}
+      {/* STEP 4: HOÀN TẤT ĐẶT LỊCH (BOOKING CODE & HƯỚNG DẪN) */}
       {currentStep === 4 && confirmation && (
         <div className="bg-white p-6 sm:p-10 rounded-3xl border border-teal-200 shadow-xl space-y-8 text-center">
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">

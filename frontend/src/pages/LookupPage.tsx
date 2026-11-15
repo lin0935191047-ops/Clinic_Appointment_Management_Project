@@ -183,9 +183,7 @@ export const LookupPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* AUTH STEP 1: INPUT BOOKING CODE & PHONE                                   */}
-      {/* ========================================================================= */}
+      {/* AUTH STEP 1: INPUT BOOKING CODE & PHONE */}
       {authStep === 'input' && (
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-sm max-w-lg mx-auto space-y-6">
           <div className="flex items-center space-x-3 text-teal-700">
@@ -239,9 +237,7 @@ export const LookupPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* AUTH STEP 2: ENTER OTP CHALLENGE                                          */}
-      {/* ========================================================================= */}
+      {/* AUTH STEP 2: ENTER OTP CHALLENGE */}
       {authStep === 'otp_sent' && (
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-sm max-w-lg mx-auto space-y-6">
           <div className="flex items-center space-x-3 text-teal-700">
@@ -300,9 +296,7 @@ export const LookupPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* STEP 3: VERIFIED APPOINTMENT DETAILS                                      */}
-      {/* ========================================================================= */}
+      {/* STEP 3: VERIFIED APPOINTMENT DETAILS */}
       {authStep === 'verified' && appointment && (
         <div className="space-y-6">
           {cancelledSuccess && (
@@ -327,13 +321,12 @@ export const LookupPage: React.FC = () => {
 
               <div>
                 <span
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold inline-block ${
-                    appointment.status === 'Confirmed'
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold inline-block ${appointment.status === 'Confirmed'
                       ? 'bg-emerald-500 text-white'
                       : appointment.status === 'Cancelled'
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-amber-400 text-amber-950'
-                  }`}
+                        ? 'bg-rose-500 text-white'
+                        : 'bg-amber-400 text-amber-950'
+                    }`}
                 >
                   {appointment.status === 'Confirmed' && 'Đã Xác Nhận (Confirmed)'}
                   {appointment.status === 'PendingConfirmation' && 'Chờ Xác Nhận (PendingConfirmation)'}
@@ -418,9 +411,7 @@ export const LookupPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: RESCHEDULE REQUEST                                                 */}
-      {/* ========================================================================= */}
+      {/* MODAL: RESCHEDULE REQUEST */}
       {showRescheduleModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl">
@@ -454,13 +445,12 @@ export const LookupPage: React.FC = () => {
                       type="button"
                       disabled={!slot.isAvailable}
                       onClick={() => setSelectedNewSlot(slot.startTime)}
-                      className={`py-2 px-2 rounded-xl text-xs font-semibold border ${
-                        !slot.isAvailable
+                      className={`py-2 px-2 rounded-xl text-xs font-semibold border ${!slot.isAvailable
                           ? 'bg-gray-100 text-gray-400 line-through'
                           : selectedNewSlot === slot.startTime
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-300'
-                      }`}
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-700 border-gray-300'
+                        }`}
                     >
                       {slot.startTime}
                     </button>
@@ -499,9 +489,7 @@ export const LookupPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: CANCELLATION & 60-MINUTE REFUND PREVIEW                             */}
-      {/* ========================================================================= */}
+      {/* MODAL: CANCELLATION & 60-MINUTE REFUND PREVIEW */}
       {showCancelModal && refundPreview && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl">
