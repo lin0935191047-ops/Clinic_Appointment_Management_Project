@@ -14,37 +14,37 @@ export const DOCTOR_AVATARS: DoctorAvatarInfo[] = [
   {
     code: 'DOC-INT-01',
     nameKey: 'nguyễn văn an',
-    primaryUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80',
+    primaryUrl: '/images/doctors/dr-an.jpg',
     localSvg: '/images/doctors/dr-an.svg',
   },
   {
     code: 'DOC-PED-01',
     nameKey: 'trần thị mai',
-    primaryUrl: 'https://images.unsplash.com/photo-1594824813627-2c98d6c708c9?auto=format&fit=crop&w=600&q=80',
+    primaryUrl: '/images/doctors/dr-mai.jpg',
     localSvg: '/images/doctors/dr-mai.svg',
   },
   {
     code: 'DOC-CARD-01',
     nameKey: 'lê hoàng nam',
-    primaryUrl: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=80',
+    primaryUrl: '/images/doctors/dr-nam.jpg',
     localSvg: '/images/doctors/dr-nam.svg',
   },
   {
     code: 'DOC-ENT-01',
     nameKey: 'phạm thu trang',
-    primaryUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
+    primaryUrl: '/images/doctors/dr-trang.jpg',
     localSvg: '/images/doctors/dr-trang.svg',
   },
   {
     code: 'DOC-DENT-01',
     nameKey: 'vũ đức minh',
-    primaryUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80',
+    primaryUrl: '/images/doctors/dr-minh.jpg',
     localSvg: '/images/doctors/dr-minh.svg',
   },
   {
     code: 'DOC-GIST-01',
     nameKey: 'đặng minh tuấn',
-    primaryUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=600&q=80',
+    primaryUrl: '/images/doctors/dr-tuan.jpg',
     localSvg: '/images/doctors/dr-tuan.svg',
   },
 ];
@@ -62,8 +62,8 @@ export function getDoctorAvatar(doctor?: {
 } | null): string {
   if (!doctor) return DEFAULT_DOCTOR_AVATAR;
 
-  // 1. Ưu tiên avatarUrl được gán trực tiếp nếu có
-  if (doctor.avatarUrl && doctor.avatarUrl.trim() !== '') {
+  // 1. Ưu tiên avatarUrl được gán trực tiếp nếu có (loại trừ URL lỗi cũ)
+  if (doctor.avatarUrl && doctor.avatarUrl.trim() !== '' && !doctor.avatarUrl.includes('photo-1594824813627-2c98d6c708c9')) {
     return doctor.avatarUrl;
   }
 

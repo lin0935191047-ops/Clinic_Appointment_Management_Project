@@ -70,7 +70,7 @@ export const mockDoctors: Doctor[] = [
     specialtyName: 'Nội Tổng Quát',
     consultationFee: 150000,
     roomNumber: 'P.101',
-    avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80',
+    avatarUrl: '/images/doctors/dr-an.jpg',
     bio: 'Hơn 15 năm kinh nghiệm điều trị bệnh lý nội tổng quát tại các bệnh viện tuyến đầu.'
   },
   {
@@ -82,7 +82,7 @@ export const mockDoctors: Doctor[] = [
     specialtyName: 'Nhi Khoa',
     consultationFee: 200000,
     roomNumber: 'P.105',
-    avatarUrl: 'https://images.unsplash.com/photo-1594824813627-2c98d6c708c9?auto=format&fit=crop&w=600&q=80',
+    avatarUrl: '/images/doctors/dr-mai.jpg',
     bio: 'Chuyên gia Nhi khoa giàu kinh nghiệm, tận tâm, thân thiện với các bé.'
   },
   {
@@ -94,7 +94,7 @@ export const mockDoctors: Doctor[] = [
     specialtyName: 'Tim Mạch',
     consultationFee: 250000,
     roomNumber: 'P.201',
-    avatarUrl: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=80',
+    avatarUrl: '/images/doctors/dr-nam.jpg',
     bio: 'Chuyên gia Tim mạch can thiệp, nguyên Phó khoa Tim mạch BV Đa khoa.'
   },
   {
@@ -106,7 +106,7 @@ export const mockDoctors: Doctor[] = [
     specialtyName: 'Tai Mũi Họng',
     consultationFee: 180000,
     roomNumber: 'P.204',
-    avatarUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
+    avatarUrl: '/images/doctors/dr-trang.jpg',
     bio: 'Chuyên sâu nội soi Tai Mũi Họng và xử trí viêm xoang mạn tính.'
   },
   {
@@ -118,7 +118,7 @@ export const mockDoctors: Doctor[] = [
     specialtyName: 'Răng Hàm Mặt',
     consultationFee: 150000,
     roomNumber: 'P.301',
-    avatarUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80',
+    avatarUrl: '/images/doctors/dr-minh.jpg',
     bio: 'Bác sĩ nha khoa thẩm mỹ và điều trị bệnh lý răng miệng tổng quát.'
   },
   {
@@ -130,7 +130,7 @@ export const mockDoctors: Doctor[] = [
     specialtyName: 'Khoa Nội Thần kinh - Cơ xương khớp - Huyết học lâm sàng',
     consultationFee: 200000,
     roomNumber: 'P.205',
-    avatarUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=600&q=80',
+    avatarUrl: '/images/doctors/dr-tuan.jpg',
     bio: 'Hơn 18 năm kinh nghiệm chuyên sâu trong điều trị Nội thần kinh, Cơ xương khớp và Huyết học lâm sàng tại các bệnh viện tuyến đầu.'
   },
 ];
