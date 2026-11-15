@@ -1,6 +1,4 @@
-# ==============================================================================
 # STAGE 1: Build & Publish .NET Backend
-# ==============================================================================
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
@@ -23,9 +21,7 @@ RUN dotnet build "ClinicAppointment.Api.csproj" -c Release -o /app/build
 FROM build AS publish
 RUN dotnet publish "ClinicAppointment.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# ==============================================================================
 # STAGE 2: Runtime ASP.NET Core Image (Non-root user for security)
-# ==============================================================================
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
