@@ -20,7 +20,7 @@ export const DOCTOR_AVATARS: DoctorAvatarInfo[] = [
   {
     code: 'DOC-PED-01',
     nameKey: 'trần thị mai',
-    primaryUrl: '/images/doctors/dr-mai.jpg',
+    primaryUrl: '/images/doctors/dr-mai.jpg?v=2',
     localSvg: '/images/doctors/dr-mai.svg',
   },
   {
