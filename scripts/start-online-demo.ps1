@@ -1,4 +1,4 @@
-﻿# Script khởi chạy Demo Online qua Cloudflare Tunnel
+# Script khởi chạy Demo Online qua Cloudflare Tunnel
 param (
     [int]$Port = 5173
 )
