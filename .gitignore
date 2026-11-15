@@ -31,3 +31,4 @@ private-data/
 *.backup
 *.sql.gz
 cloudflared.exe
+tunnel.log
