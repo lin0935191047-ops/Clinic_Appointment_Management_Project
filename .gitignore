@@ -30,3 +30,4 @@ private-data/
 *.dump
 *.backup
 *.sql.gz
+cloudflared.exe
