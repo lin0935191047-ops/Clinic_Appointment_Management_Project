@@ -18,6 +18,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { adminApi, authApi } from '../api/client';
+import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
 import {
   AdminDashboardReport,
   AdminSpecialtyItem,
@@ -1079,8 +1080,27 @@ export const AdminDashboardPage: React.FC = () => {
                   <tr key={d.id} className="hover:bg-gray-50/80 transition">
                     <td className="px-4 py-3 font-mono text-xs font-bold text-purple-700">{d.doctorCode}</td>
                     <td className="px-4 py-3">
-                      <div className="font-bold text-gray-900">{d.fullName}</div>
-                      <div className="text-xs text-gray-400">{d.title || 'Bác Sĩ'}</div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-purple-50 border border-purple-200 flex-shrink-0 shadow-sm">
+                          <img
+                            src={d.avatarUrl || getDoctorAvatar(d)}
+                            alt={d.fullName}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              const fallback = getDoctorLocalFallback(d);
+                              if (!target.src.endsWith(fallback)) {
+                                target.src = fallback;
+                              }
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900">{d.fullName}</div>
+                          <div className="text-xs text-gray-400">{d.title || 'Bác Sĩ'}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-semibold text-gray-700">{d.specialtyName}</td>
                     <td className="px-4 py-3 text-xs font-mono text-gray-600">{d.roomNumber || '-'}</td>

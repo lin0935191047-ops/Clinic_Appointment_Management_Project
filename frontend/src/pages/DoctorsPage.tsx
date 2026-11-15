@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { catalogApi, mockSpecialties, mockDoctors } from '../api/client';
 import { Doctor, Specialty } from '../types';
-import { User, Calendar, Award, MapPin, DollarSign, Search } from 'lucide-react';
+import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
+import { Calendar, Award, MapPin, DollarSign, Search } from 'lucide-react';
 
 export const DoctorsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -106,8 +107,20 @@ export const DoctorsPage: React.FC = () => {
             >
               <div className="p-6 space-y-4">
                 <div className="flex items-start space-x-4">
-                  <div className="w-16 h-16 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-2xl flex-shrink-0">
-                    <User className="w-8 h-8" />
+                  <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-teal-50 border-2 border-teal-100 flex-shrink-0 shadow-sm">
+                    <img
+                      src={doc.avatarUrl || getDoctorAvatar(doc)}
+                      alt={doc.fullName}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        const fallback = getDoctorLocalFallback(doc);
+                        if (!target.src.endsWith(fallback)) {
+                          target.src = fallback;
+                        }
+                      }}
+                    />
                   </div>
                   <div className="space-y-1">
                     <span className="inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">

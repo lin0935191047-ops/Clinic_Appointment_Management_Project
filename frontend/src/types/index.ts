@@ -39,6 +39,8 @@ export interface Doctor {
   bio?: string;
   consultationFee: number;
   roomNumber?: string;
+  avatarUrl?: string;
+  doctorCode?: string;
 }
 
 export interface ClinicService {
@@ -253,6 +255,7 @@ export interface AdminDoctorItem {
   bio?: string;
   roomNumber?: string;
   isActive: boolean;
+  avatarUrl?: string;
 }
 
 export interface AdminServiceItem {

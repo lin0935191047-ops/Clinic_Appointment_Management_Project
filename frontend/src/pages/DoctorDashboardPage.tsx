@@ -18,6 +18,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { doctorApi, authApi } from '../api/client';
+import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
 import {
   DoctorDashboardData,
   DoctorDashboardAppointmentItem,
@@ -476,8 +477,20 @@ export const DoctorDashboardPage: React.FC = () => {
       {/* Top Header Bar */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center space-x-4">
-          <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md">
-            <Stethoscope className="w-8 h-8" />
+          <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-blue-50 border-2 border-blue-200 flex items-center justify-center shadow-md flex-shrink-0">
+            <img
+              src={getDoctorAvatar({ fullName: dashboardData?.doctorName || currentUser?.fullName })}
+              alt="Bác sĩ"
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                const fallback = getDoctorLocalFallback({ fullName: dashboardData?.doctorName || currentUser?.fullName });
+                if (!target.src.endsWith(fallback)) {
+                  target.src = fallback;
+                }
+              }}
+            />
           </div>
           <div>
             <div className="flex items-center space-x-2">

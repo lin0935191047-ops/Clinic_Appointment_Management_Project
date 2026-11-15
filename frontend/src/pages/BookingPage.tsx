@@ -15,10 +15,10 @@ import {
   GuestBookingRequest,
   BookingConfirmation,
 } from '../types';
+import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
 import {
   CheckCircle,
   AlertCircle,
-  User,
   ArrowRight,
   ArrowLeft,
   Info,
@@ -370,8 +370,20 @@ export const BookingPage: React.FC = () => {
                       : 'border-gray-200 hover:border-gray-300 bg-white'
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold flex-shrink-0">
-                    <User className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-teal-50 border border-teal-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <img
+                      src={doc.avatarUrl || getDoctorAvatar(doc)}
+                      alt={doc.fullName}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        const fallback = getDoctorLocalFallback(doc);
+                        if (!target.src.endsWith(fallback)) {
+                          target.src = fallback;
+                        }
+                      }}
+                    />
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 text-sm">{doc.fullName}</p>

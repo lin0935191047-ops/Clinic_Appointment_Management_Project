@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg-minh" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+    <linearGradient id="skin-minh" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbd38d" />
+      <stop offset="100%" stop-color="#f6ad55" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="100" fill="url(#bg-minh)" />
+  <!-- Shoulders & Dentist Scrub/Coat -->
+  <path d="M40 200 C40 150 70 140 100 140 C130 140 160 150 160 200 Z" fill="#ffffff" />
+  <!-- Inner shirt (Dental Teal/Mint) -->
+  <path d="M88 140 L100 168 L112 140 Z" fill="#10b981" />
+  <!-- Neck -->
+  <rect x="88" y="115" width="24" height="28" rx="4" fill="url(#skin-minh)" />
+  <!-- Dentist badge / tooth pin -->
+  <circle cx="75" cy="165" r="7" fill="#ecfdf5" stroke="#059669" stroke-width="1.5" />
+  <path d="M72 163 C72 161 74 160 75 160 C76 160 78 161 78 163 C78 166 76 169 75 169 C74 169 72 166 72 163 Z" fill="#059669" />
+  <!-- Head & Ears -->
+  <circle cx="68" cy="85" r="9" fill="url(#skin-minh)" />
+  <circle cx="132" cy="85" r="9" fill="url(#skin-minh)" />
+  <ellipse cx="100" cy="85" rx="32" ry="38" fill="url(#skin-minh)" />
+  <!-- Modern Spiky/Textured Hair -->
+  <path d="M68 74 C66 42 78 36 94 36 C102 34 112 36 122 40 C132 46 134 60 132 74 C126 56 116 50 100 50 C84 50 74 56 68 74 Z" fill="#292524" />
+  <path d="M90 36 L94 44 L100 35 L106 43 L114 38" fill="none" stroke="#292524" stroke-width="3" stroke-linecap="round" />
+  <!-- Eyes & Eyebrows -->
+  <path d="M80 72 Q88 69 93 72" fill="none" stroke="#1c1917" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M107 72 Q112 69 120 72" fill="none" stroke="#1c1917" stroke-width="2.5" stroke-linecap="round" />
+  <circle cx="86" cy="81" r="3.5" fill="#1c1917" />
+  <circle cx="114" cy="81" r="3.5" fill="#1c1917" />
+  <!-- Nose -->
+  <path d="M100 79 L98 93 L104 93" fill="none" stroke="#dd6b20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Big Bright Dental Smile -->
+  <path d="M88 103 Q100 120 112 103 Z" fill="#ffffff" stroke="#c05621" stroke-width="2" />
+  <path d="M92 105 Q100 110 108 105" fill="none" stroke="#cbd5e1" stroke-width="1.5" />
+  <!-- Coat Collar -->
+  <path d="M68 140 L88 168 L100 140 L112 168 L132 140" fill="none" stroke="#e2e8f0" stroke-width="2" />
+</svg>

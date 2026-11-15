@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Search, ShieldCheck, Clock, Award, Users, ArrowRight, HeartPulse } from 'lucide-react';
-import { mockSpecialties } from '../api/client';
+import { mockSpecialties, mockDoctors } from '../api/client';
+import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
 
 export const HomePage: React.FC = () => {
   return (
@@ -184,6 +185,71 @@ export const HomePage: React.FC = () => {
                   className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center"
                 >
                   Đặt chuyên khoa này <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Featured Doctors Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Bác Sĩ Tiêu Biểu</h2>
+            <p className="text-gray-500 text-sm mt-1">Đội ngũ chuyên gia y khoa đầu ngành, tận tâm và giàu kinh nghiệm</p>
+          </div>
+          <Link to="/doctors" className="text-teal-600 hover:text-teal-700 text-sm font-semibold flex items-center">
+            Xem tất cả bác sĩ <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {mockDoctors.slice(0, 3).map((doc) => (
+            <div
+              key={doc.id}
+              className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-teal-200 transition flex flex-col justify-between"
+            >
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-teal-50 border-2 border-teal-100 flex-shrink-0 shadow-sm">
+                    <img
+                      src={doc.avatarUrl || getDoctorAvatar(doc)}
+                      alt={doc.fullName}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        const fallback = getDoctorLocalFallback(doc);
+                        if (!target.src.endsWith(fallback)) {
+                          target.src = fallback;
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <span className="inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200 mb-1">
+                      {doc.specialtyName}
+                    </span>
+                    <h3 className="font-bold text-gray-900 text-base">{doc.fullName}</h3>
+                    <p className="text-xs text-gray-500 flex items-center mt-0.5">
+                      <Award className="w-3.5 h-3.5 mr-1 text-teal-600" />
+                      {doc.title}
+                    </p>
+                  </div>
+                </div>
+                {doc.bio && <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{doc.bio}</p>}
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500">
+                  Phòng: <strong className="text-gray-800">{doc.roomNumber || 'P.101'}</strong>
+                </span>
+                <Link
+                  to={`/booking?doctorId=${doc.id}&specialtyId=${doc.specialtyId}`}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition shadow-sm"
+                >
+                  Đặt Khám
                 </Link>
               </div>
             </div>

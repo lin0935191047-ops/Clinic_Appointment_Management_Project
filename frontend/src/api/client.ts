@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getDoctorAvatar } from '../utils/doctorAvatars';
 import {
   ApiResponse,
   Specialty,
@@ -59,11 +60,66 @@ export const mockSpecialties: Specialty[] = [
 ];
 
 export const mockDoctors: Doctor[] = [
-  { id: 'doc-1', fullName: 'BS. CKI Nguyễn Văn An', title: 'Bác sĩ Chuyên khoa I', specialtyId: 'spec-1', specialtyName: 'Nội Tổng Quát', consultationFee: 150000, roomNumber: 'P.101', bio: 'Hơn 15 năm kinh nghiệm điều trị bệnh lý nội tổng quát tại các bệnh viện tuyến đầu.' },
-  { id: 'doc-2', fullName: 'ThS. BS Trần Thị Mai', title: 'Thạc sĩ Bác sĩ', specialtyId: 'spec-2', specialtyName: 'Nhi Khoa', consultationFee: 200000, roomNumber: 'P.105', bio: 'Chuyên gia Nhi khoa giàu kinh nghiệm, tận tâm, thân thiện với các bé.' },
-  { id: 'doc-3', fullName: 'TS. BS Lê Hoàng Nam', title: 'Tiến sĩ Bác sĩ', specialtyId: 'spec-3', specialtyName: 'Tim Mạch', consultationFee: 250000, roomNumber: 'P.201', bio: 'Chuyên gia Tim mạch can thiệp, nguyên Phó khoa Tim mạch BV Đa khoa.' },
-  { id: 'doc-4', fullName: 'BS. CKI Phạm Thu Trang', title: 'Bác sĩ Chuyên khoa I', specialtyId: 'spec-4', specialtyName: 'Tai Mũi Họng', consultationFee: 180000, roomNumber: 'P.204', bio: 'Chuyên sâu nội soi Tai Mũi Họng và xử trí viêm xoang mạn tính.' },
-  { id: 'doc-5', fullName: 'BS. Vũ Đức Minh', title: 'Bác sĩ Răng Hàm Mặt', specialtyId: 'spec-5', specialtyName: 'Răng Hàm Mặt', consultationFee: 150000, roomNumber: 'P.301', bio: 'Bác sĩ nha khoa thẩm mỹ và điều trị bệnh lý răng miệng tổng quát.' },
+  {
+    id: 'doc-1',
+    doctorCode: 'DOC-INT-01',
+    fullName: 'BS. CKI Nguyễn Văn An',
+    title: 'Bác sĩ Chuyên khoa I',
+    specialtyId: 'spec-1',
+    specialtyName: 'Nội Tổng Quát',
+    consultationFee: 150000,
+    roomNumber: 'P.101',
+    avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80',
+    bio: 'Hơn 15 năm kinh nghiệm điều trị bệnh lý nội tổng quát tại các bệnh viện tuyến đầu.'
+  },
+  {
+    id: 'doc-2',
+    doctorCode: 'DOC-PED-01',
+    fullName: 'ThS. BS Trần Thị Mai',
+    title: 'Thạc sĩ Bác sĩ',
+    specialtyId: 'spec-2',
+    specialtyName: 'Nhi Khoa',
+    consultationFee: 200000,
+    roomNumber: 'P.105',
+    avatarUrl: 'https://images.unsplash.com/photo-1594824813627-2c98d6c708c9?auto=format&fit=crop&w=600&q=80',
+    bio: 'Chuyên gia Nhi khoa giàu kinh nghiệm, tận tâm, thân thiện với các bé.'
+  },
+  {
+    id: 'doc-3',
+    doctorCode: 'DOC-CARD-01',
+    fullName: 'TS. BS Lê Hoàng Nam',
+    title: 'Tiến sĩ Bác sĩ',
+    specialtyId: 'spec-3',
+    specialtyName: 'Tim Mạch',
+    consultationFee: 250000,
+    roomNumber: 'P.201',
+    avatarUrl: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=80',
+    bio: 'Chuyên gia Tim mạch can thiệp, nguyên Phó khoa Tim mạch BV Đa khoa.'
+  },
+  {
+    id: 'doc-4',
+    doctorCode: 'DOC-ENT-01',
+    fullName: 'BS. CKI Phạm Thu Trang',
+    title: 'Bác sĩ Chuyên khoa I',
+    specialtyId: 'spec-4',
+    specialtyName: 'Tai Mũi Họng',
+    consultationFee: 180000,
+    roomNumber: 'P.204',
+    avatarUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
+    bio: 'Chuyên sâu nội soi Tai Mũi Họng và xử trí viêm xoang mạn tính.'
+  },
+  {
+    id: 'doc-5',
+    doctorCode: 'DOC-DENT-01',
+    fullName: 'BS. Vũ Đức Minh',
+    title: 'Bác sĩ Răng Hàm Mặt',
+    specialtyId: 'spec-5',
+    specialtyName: 'Răng Hàm Mặt',
+    consultationFee: 150000,
+    roomNumber: 'P.301',
+    avatarUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80',
+    bio: 'Bác sĩ nha khoa thẩm mỹ và điều trị bệnh lý răng miệng tổng quát.'
+  },
 ];
 
 export const mockServices: ClinicService[] = [
@@ -88,11 +144,21 @@ export const catalogApi = {
       const res = await apiClient.get<ApiResponse<Doctor[]>>('/doctors', {
         params: { specialtyId },
       });
-      return res.data.data && res.data.data.length > 0
+      const docs = res.data.data && res.data.data.length > 0
         ? res.data.data
         : mockDoctors.filter((d) => !specialtyId || d.specialtyId === specialtyId);
+
+      return docs.map((doc: any) => ({
+        ...doc,
+        avatarUrl: doc.avatarUrl || getDoctorAvatar(doc),
+      }));
     } catch {
-      return mockDoctors.filter((d) => !specialtyId || d.specialtyId === specialtyId);
+      return mockDoctors
+        .filter((d) => !specialtyId || d.specialtyId === specialtyId)
+        .map((doc) => ({
+          ...doc,
+          avatarUrl: doc.avatarUrl || getDoctorAvatar(doc),
+        }));
     }
   },
   getServices: async (specialtyId?: string): Promise<ClinicService[]> => {
@@ -646,7 +712,11 @@ export const adminApi = {
       '/admin/doctors',
       { params: { specialtyId, isActive } }
     );
-    return res.data.data || [];
+    const list = res.data.data || [];
+    return list.map((doc) => ({
+      ...doc,
+      avatarUrl: doc.avatarUrl || getDoctorAvatar(doc),
+    }));
   },
 
   createDoctor: async (data: {

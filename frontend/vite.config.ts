@@ -1,18 +1,30 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    preserveSymlinks: true,
+  },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
+    setupFiles: [path.resolve(__dirname, 'src/test/setup.ts')],
     css: false,
+    server: {
+      deps: {
+        inline: true,
+      },
+    },
   },
   server: {
     port: 5173,
+    fs: {
+      strict: false,
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
