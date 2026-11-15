@@ -1,0 +1,49 @@
+services:
+  # 1. Backend Web API (.NET 8 Docker)
+  - type: web
+    name: clinic-backend-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: AUTO_MIGRATE
+        value: "true"
+      - key: ENABLE_SWAGGER
+        value: "true"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: clinic-postgres
+          property: connectionString
+
+  # 2. Frontend React SPA (Static Site)
+  - type: web
+    name: clinic-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    plan: free
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: clinic-backend-api
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  # 3. PostgreSQL Database
+  - name: clinic-postgres
+    databaseName: clinicappointmentdb
+    user: postgres
+    plan: free
+    region: singapore
