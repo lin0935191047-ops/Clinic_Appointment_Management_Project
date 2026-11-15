@@ -57,6 +57,7 @@ export const mockSpecialties: Specialty[] = [
   { id: 'spec-3', name: 'Tim Mạch', code: 'CARD', description: 'Chẩn đoán và theo dõi huyết áp, tim mạch, mạch máu' },
   { id: 'spec-4', name: 'Tai Mũi Họng', code: 'ENT', description: 'Khám nội soi và điều trị các bệnh tai mũi họng' },
   { id: 'spec-5', name: 'Răng Hàm Mặt', code: 'DENT', description: 'Khám nha khoa, nhổ răng, lấy cao răng, phục hình' },
+  { id: 'spec-6', name: 'Khoa Nội Thần kinh - Cơ xương khớp - Huyết học lâm sàng', code: 'NEURO_RHEUM', description: 'Chẩn đoán và điều trị chuyên sâu bệnh lý Nội thần kinh, Cơ xương khớp và Huyết học lâm sàng' },
 ];
 
 export const mockDoctors: Doctor[] = [
@@ -120,6 +121,18 @@ export const mockDoctors: Doctor[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80',
     bio: 'Bác sĩ nha khoa thẩm mỹ và điều trị bệnh lý răng miệng tổng quát.'
   },
+  {
+    id: 'doc-6',
+    doctorCode: 'DOC-GIST-01',
+    fullName: 'BS. CKII Đặng Minh Tuấn',
+    title: 'Bác sĩ Chuyên khoa II',
+    specialtyId: 'spec-6',
+    specialtyName: 'Khoa Nội Thần kinh - Cơ xương khớp - Huyết học lâm sàng',
+    consultationFee: 200000,
+    roomNumber: 'P.205',
+    avatarUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=600&q=80',
+    bio: 'Hơn 18 năm kinh nghiệm chuyên sâu trong điều trị Nội thần kinh, Cơ xương khớp và Huyết học lâm sàng tại các bệnh viện tuyến đầu.'
+  },
 ];
 
 export const mockServices: ClinicService[] = [
@@ -128,6 +141,7 @@ export const mockServices: ClinicService[] = [
   { id: 'srv-3', name: 'Khám & Tư Vấn Tim Mạch', description: 'Đo điện tim, tư vấn bệnh lý tăng huyết áp và xơ vữa', durationMinutes: 30, specialtyId: 'spec-3', basePrice: 250000 },
   { id: 'srv-4', name: 'Nội Soi Tai Mũi Họng', description: 'Nội soi chẩn đoán bằng ống sơ mềm độ nét cao', durationMinutes: 30, specialtyId: 'spec-4', basePrice: 180000 },
   { id: 'srv-5', name: 'Khám Nha Khoa Tổng Quát', description: 'Kiểm tra răng miệng, tư vấn chăm sóc và cạo vôi răng', durationMinutes: 30, specialtyId: 'spec-5', basePrice: 150000 },
+  { id: 'srv-6', name: 'Khám & Tư Vấn Nội Thần Kinh - Cơ Xương Khớp - Huyết Học', description: 'Khám lâm sàng, chẩn đoán và tư vấn điều trị các bệnh lý thần kinh, cơ xương khớp và huyết học', durationMinutes: 30, specialtyId: 'spec-6', basePrice: 200000 },
 ];
 
 export const catalogApi = {

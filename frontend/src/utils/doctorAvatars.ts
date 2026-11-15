@@ -41,6 +41,12 @@ export const DOCTOR_AVATARS: DoctorAvatarInfo[] = [
     primaryUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80',
     localSvg: '/images/doctors/dr-minh.svg',
   },
+  {
+    code: 'DOC-GIST-01',
+    nameKey: 'đặng minh tuấn',
+    primaryUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=600&q=80',
+    localSvg: '/images/doctors/dr-tuan.svg',
+  },
 ];
 
 export const DEFAULT_DOCTOR_AVATAR = '/images/doctors/default-doctor.svg';
@@ -77,6 +83,7 @@ export function getDoctorAvatar(doctor?: {
   if (id === 'doc-3') return DOCTOR_AVATARS[2].primaryUrl;
   if (id === 'doc-4') return DOCTOR_AVATARS[3].primaryUrl;
   if (id === 'doc-5') return DOCTOR_AVATARS[4].primaryUrl;
+  if (id === 'doc-6') return DOCTOR_AVATARS[5].primaryUrl;
 
   // 4. Tra cứu theo tên
   if (name) {
@@ -85,6 +92,7 @@ export function getDoctorAvatar(doctor?: {
     if (name.includes('nam')) return DOCTOR_AVATARS[2].primaryUrl;
     if (name.includes('trang')) return DOCTOR_AVATARS[3].primaryUrl;
     if (name.includes('minh')) return DOCTOR_AVATARS[4].primaryUrl;
+    if (name.includes('tuấn') || name.includes('tuan')) return DOCTOR_AVATARS[5].primaryUrl;
   }
 
   // 5. Mặc định
@@ -115,6 +123,7 @@ export function getDoctorLocalFallback(doctor?: {
   if (id === 'doc-3' || name.includes('nam')) return DOCTOR_AVATARS[2].localSvg;
   if (id === 'doc-4' || name.includes('trang')) return DOCTOR_AVATARS[3].localSvg;
   if (id === 'doc-5' || name.includes('minh')) return DOCTOR_AVATARS[4].localSvg;
+  if (id === 'doc-6' || name.includes('tuấn') || name.includes('tuan')) return DOCTOR_AVATARS[5].localSvg;
 
   return DEFAULT_DOCTOR_AVATAR;
 }

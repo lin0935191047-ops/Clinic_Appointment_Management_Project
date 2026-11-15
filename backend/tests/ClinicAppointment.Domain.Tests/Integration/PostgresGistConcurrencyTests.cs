@@ -36,7 +36,7 @@ public class PostgresGistConcurrencyTests
         var specialty = await db.Specialties.FirstOrDefaultAsync(s => s.Code == "CONCURRENCY_SPEC");
         if (specialty == null)
         {
-            specialty = Specialty.Create("CONCURRENCY_SPEC", "Chuyên Khoa Kiểm Thử Đồng Thời", "chuyen-khoa-kiem-thu", "Mô tả kiểm thử");
+            specialty = Specialty.Create("CONCURRENCY_SPEC", "Khoa Nội Thần kinh - Cơ xương khớp - Huyết học lâm sàng", "noi-than-kinh-co-xuong-khop-huyet-hoc-lam-sang", "Chẩn đoán và điều trị chuyên sâu bệnh lý Nội thần kinh, Cơ xương khớp và Huyết học lâm sàng");
             db.Specialties.Add(specialty);
             await db.SaveChangesAsync();
         }
@@ -53,9 +53,9 @@ public class PostgresGistConcurrencyTests
                 userId: user.Id,
                 specialtyId: specialty.Id,
                 doctorCode: "DOC-GIST-01",
-                fullName: "BS. Concurrency Tester",
-                title: "ThS.BS",
-                roomNumber: "P.999");
+                fullName: "BS. CKII Đặng Minh Tuấn",
+                title: "Bác sĩ Chuyên khoa II",
+                roomNumber: "P.205");
             db.Doctors.Add(doctor);
             await db.SaveChangesAsync();
         }
@@ -67,10 +67,10 @@ public class PostgresGistConcurrencyTests
             service = Service.Create(
                 specialtyId: specialty.Id,
                 code: "SRV-GIST-01",
-                name: "Dịch Vụ Khám Đo Lường Đồng Thời",
+                name: "Khám & Tư Vấn Nội Thần Kinh - Cơ Xương Khớp - Huyết Học",
                 durationMinutes: 30,
                 price: 200_000m,
-                description: "Test service");
+                description: "Khám lâm sàng, chẩn đoán và tư vấn điều trị các bệnh lý thần kinh, cơ xương khớp và huyết học");
             db.Services.Add(service);
             await db.SaveChangesAsync();
         }
