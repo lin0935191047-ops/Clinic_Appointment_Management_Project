@@ -532,19 +532,18 @@ export const ReceptionistDashboardPage: React.FC = () => {
 
                     <td className="py-3.5 px-4">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-block ${
-                          apt.status === 'Confirmed'
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-block ${apt.status === 'Confirmed'
                             ? 'bg-blue-100 text-blue-800'
                             : apt.status === 'CheckedIn'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : apt.status === 'Completed'
-                            ? 'bg-purple-100 text-purple-800'
-                            : apt.status === 'Cancelled'
-                            ? 'bg-rose-100 text-rose-800'
-                            : apt.status === 'InProgress'
-                            ? 'bg-indigo-100 text-indigo-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : apt.status === 'Completed'
+                                ? 'bg-purple-100 text-purple-800'
+                                : apt.status === 'Cancelled'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : apt.status === 'InProgress'
+                                    ? 'bg-indigo-100 text-indigo-800'
+                                    : 'bg-amber-100 text-amber-800'
+                          }`}
                       >
                         {apt.status === 'PendingConfirmation' && 'Chờ Xác Nhận'}
                         {apt.status === 'Confirmed' && 'Đã Xác Nhận'}
