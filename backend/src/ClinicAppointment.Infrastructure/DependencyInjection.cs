@@ -22,9 +22,11 @@ public static class DependencyInjection
         this IServiceCollection services, 
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection") 
+        var rawConn = configuration.GetConnectionString("DefaultConnection") 
             ?? configuration["DB_CONNECTION_STRING"]
             ?? "Host=localhost;Port=5432;Database=ClinicAppointmentDb;Username=postgres;Password=postgres;";
+
+        var connectionString = ParseConnectionString(rawConn);
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
@@ -112,5 +114,31 @@ public static class DependencyInjection
         });
 
         return services;
+    }
+
+    private static string ParseConnectionString(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return raw;
+        raw = raw.Trim();
+        if (raw.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+            raw.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(raw);
+                var userInfo = uri.UserInfo.Split(':');
+                var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
+                var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+                var host = uri.Host;
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                var database = uri.AbsolutePath.TrimStart('/');
+                return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+            }
+            catch
+            {
+                return raw;
+            }
+        }
+        return raw;
     }
 }
