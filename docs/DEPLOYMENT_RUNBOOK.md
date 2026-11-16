@@ -229,3 +229,71 @@ curl -k https://localhost/health/ready
 - [x] Đã thiết lập Multi-stage Dockerfile tối ưu kích thước và chạy quyền non-root.
 - [x] Kịch bản sao lưu và phục hồi cơ sở dữ liệu đã được thử nghiệm và tài liệu hóa đầy đủ.
 - [x] Các probe `/health/live` và `/health/ready` hoạt động chính xác với Kubernetes / Docker.
+
+---
+
+## 8. Hướng Dẫn Triển Khai Hoàn Toàn Lên Cloud 24/7 (Vercel + Render / Azure + PostgreSQL Cloud)
+
+Mô hình triển khai Cloud 3 tầng độc lập giúp khách hàng và phòng khám truy cập hệ thống 24/7 mà **hoàn toàn không phụ thuộc vào máy tính cá nhân**:
+
+```
+[ Trình Duyệt Bệnh Nhân / Lễ Tân / Bác Sĩ Toàn Cầu ]
+                       │
+             (HTTPS / CDN Toàn Cầu)
+                       ▼
+ ┌───────────────────────────────────────────────┐
+ │        1. FRONTEND: VERCEL CLOUD (SPA)        │
+ │  - Domain: clinic-appointment-management-proje│
+ │    .vercel.app                                │
+ │  - Tự động build từ nhánh main GitHub        │
+ │  - Gọi API qua biến: VITE_API_BASE_URL        │
+ └───────────────────────┬───────────────────────┘
+                         │
+             (HTTPS RESTful API & CORS)
+                         ▼
+ ┌───────────────────────────────────────────────┐
+ │        2. BACKEND: RENDER (Hoặc AZURE)        │
+ │  - ASP.NET Core 8 Web API (Docker Linux)      │
+ │  - Tự động Migrate schema & Seed 6 Bác sĩ     │
+ │  - Cổng Kestrel Port 8080 (hoặc PORT)         │
+ │  - URL: https://clinic-backend-api.onrender   │
+ │    .com                                       │
+ └───────────────────────┬───────────────────────┘
+                         │
+             (Mã hóa SSL Port 5432)
+                         ▼
+ ┌───────────────────────────────────────────────┐
+ │    3. DATABASE: POSTGRESQL CLOUD (16/18)      │
+ │  - Render Postgres / Supabase / Neon          │
+ │  - Ràng buộc GiST (btree_gist) chống trùng ca │
+ │  - 15 bảng nghiệp vụ & Audit Logs             │
+ └───────────────────────────────────────────────┘
+```
+
+### Bước 1: Triển khai Database & Backend trên Render (Cách 1-Click nhanh nhất)
+1. Đăng nhập [dashboard.render.com](https://dashboard.render.com).
+2. Nhấn nút **New +** -> Chọn **Blueprint**.
+3. Chọn kho lưu trữ GitHub của dự án (`lin0935191047-ops/Clinic_Appointment_Management_Project`).
+4. Nhánh: `main`, Blueprint file: `render.yaml`.
+5. Nhấn **Apply**:
+   - Render sẽ tự động khởi tạo cơ sở dữ liệu `clinic-postgres` (PostgreSQL 16) tại Singapore.
+   - Render tự động build Dockerfile của Backend `.NET 8` và cấp phát một URL HTTPS công khai (ví dụ: `https://clinic-backend-api-xxxx.onrender.com`).
+   - Backend khi khởi động sẽ tự động kết nối cơ sở dữ liệu, chạy migration tạo 15 bảng và seed đầy đủ tài khoản & 6 bác sĩ chuyên khoa thực tế.
+
+*(Tùy chọn Miễn phí vĩnh viễn: Bạn có thể tạo database PostgreSQL miễn phí vĩnh viễn tại [Supabase.com](https://supabase.com) hoặc [Neon.tech](https://neon.tech), sau đó trong Render Web Service thêm biến môi trường `ConnectionStrings__DefaultConnection` trỏ về chuỗi kết nối của Supabase/Neon).*
+
+### Bước 2: Liên kết Frontend trên Vercel với Backend Cloud
+1. Đăng nhập [vercel.com](https://vercel.com) và vào Project `clinic-appointment-management-project`.
+2. Vào **Settings** -> mục **Environment Variables** (cột bên trái).
+3. Thêm biến môi trường mới:
+   - **Key:** `VITE_API_BASE_URL`
+   - **Value:** `https://clinic-backend-api-xxxx.onrender.com` *(Thay bằng URL Backend Render vừa tạo)*
+   - Đánh dấu chọn cả 3 môi trường: `Production`, `Preview`, `Development`.
+   - Nhấn **Save**.
+4. Vào tab **Deployments** trên Vercel -> Nhấn vào dấu 3 chấm `...` của lần deploy mới nhất -> Chọn **Redeploy**.
+5. Sau 20 giây, trang web Vercel `https://clinic-appointment-management-proje.vercel.app` sẽ kết nối trực tiếp 100% với Cloud Backend và Cloud Database.
+
+### Bước 3: Nghiệm thu truy cập độc lập
+- Mở điện thoại di động hoặc một trình duyệt khác (không bật localhost trên máy tính).
+- Truy cập `https://clinic-appointment-management-proje.vercel.app`.
+- Thử đặt lịch khám mới (Guest Booking), quét mã VietQR Techcombank chuyển khoản, hoặc đăng nhập vào Kênh Lễ tân / Bác sĩ. Mọi dữ liệu đều được lưu trữ trực tiếp trên Cloud.
