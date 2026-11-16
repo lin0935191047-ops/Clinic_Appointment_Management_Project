@@ -557,15 +557,37 @@ export const DoctorDashboardPage: React.FC = () => {
                 Phòng khám: <strong>{dashboardData?.roomNumber || 'P.101'}</strong>
               </span>
               <span>•</span>
-              <span className="flex items-center">
-                <Calendar className="w-3.5 h-3.5 mr-1 text-gray-400" />
-                Ngày làm việc:{' '}
+              <span className="flex items-center gap-1.5 flex-wrap">
+                <Calendar className="w-3.5 h-3.5 mr-0.5 text-gray-400" />
+                Ngày làm việc:
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="ml-1 px-2 py-0.5 border border-gray-300 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="px-2 py-0.5 border border-gray-300 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                  className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition ${
+                    selectedDate === new Date().toISOString().split('T')[0]
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Hôm nay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(new Date(Date.now() + 86400000).toISOString().split('T')[0])}
+                  className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition ${
+                    selectedDate === new Date(Date.now() + 86400000).toISOString().split('T')[0]
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Ngày mai
+                </button>
               </span>
             </p>
           </div>

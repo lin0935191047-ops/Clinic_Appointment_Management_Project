@@ -428,7 +428,42 @@ export const ReceptionistDashboardPage: React.FC = () => {
         {/* Thanh tìm kiếm & Bộ lọc */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-200">
           <div>
-            <label className="block text-[11px] font-bold text-gray-500 mb-1">Ngày khám</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold text-gray-500">Ngày khám</label>
+              <div className="flex gap-1 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setFilterDate(new Date(Date.now() + 7 * 3600000).toISOString().split('T')[0])}
+                  className={`px-1.5 py-0.5 rounded font-semibold transition ${
+                    filterDate === new Date(Date.now() + 7 * 3600000).toISOString().split('T')[0]
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                >
+                  Hôm nay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterDate(new Date(Date.now() + 7 * 3600000 + 86400000).toISOString().split('T')[0])}
+                  className={`px-1.5 py-0.5 rounded font-semibold transition ${
+                    filterDate === new Date(Date.now() + 7 * 3600000 + 86400000).toISOString().split('T')[0]
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                >
+                  Ngày mai
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterDate('')}
+                  className={`px-1.5 py-0.5 rounded font-semibold transition ${
+                    !filterDate ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                >
+                  Tất cả
+                </button>
+              </div>
+            </div>
             <input
               type="date"
               value={filterDate}
