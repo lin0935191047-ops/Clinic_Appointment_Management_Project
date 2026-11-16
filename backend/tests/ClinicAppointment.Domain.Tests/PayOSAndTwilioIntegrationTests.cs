@@ -25,6 +25,29 @@ public class PayOSAndTwilioIntegrationTests
     }
 
     [Fact]
+    public async Task SpeedSmsSender_WithUnconfiguredCredentials_ShouldFallbackGracefullyAndReturnTrue()
+    {
+        // Arrange
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["SpeedSMS:AccessToken"] = "",
+            ["SpeedSMS:SmsType"] = "2"
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+        var logger = NullLogger<SpeedSmsSender>.Instance;
+        var maskingService = new IdentifierMaskingService();
+
+        var httpClient = new HttpClient();
+        var speedSmsSender = new SpeedSmsSender(config, logger, maskingService, httpClient);
+
+        // Act
+        var result = await speedSmsSender.SendOtpAsync("0935191047", "123456", OtpPurpose.LOOKUP);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task TwilioSmsSender_WithUnconfiguredCredentials_ShouldFallbackGracefullyAndReturnTrue()
     {
         // Arrange

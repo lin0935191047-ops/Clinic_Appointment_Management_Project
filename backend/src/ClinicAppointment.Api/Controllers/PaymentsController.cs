@@ -41,7 +41,7 @@ public class PaymentsController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(result.Message ?? "Tạo liên kết thanh toán thất bại.", StatusCodes.Status400BadRequest));
         }
 
-        return Ok(ApiResponse<CreatePaymentLinkResult>.Ok(result, result.Message));
+        return Ok(ApiResponse<CreatePaymentLinkResult>.Ok(result, result.Message ?? "Tạo liên kết thanh toán thành công."));
     }
 
     /// <summary>

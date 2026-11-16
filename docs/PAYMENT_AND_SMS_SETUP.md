@@ -1,87 +1,96 @@
-# Hướng Dẫn Tích Hợp Thanh Toán VietQR (PayOS) & Gửi SMS OTP Thật (Twilio)
+# Hướng Dẫn Tích Hợp Cổng Thanh Toán Quét Mã QR Ngân Hàng & SMS Gateway SpeedSMS
 
 Tài liệu này hướng dẫn chi tiết từng bước dành cho người mới để cấu hình và kích hoạt:
-1. **Thanh toán thật tự động qua VietQR (PayOS)**: Quét mã QR bằng App ngân hàng bất kỳ, tiền chuyển thẳng vào tài khoản của bạn và hệ thống tự động xác nhận lịch hẹn.
-2. **Gửi mã OTP thật về điện thoại (Twilio)**: Khi khách tra cứu, đổi lịch hoặc hủy lịch, tin nhắn SMS chứa mã OTP 6 số sẽ được gửi trực tiếp vào số điện thoại của khách.
+1. **Thanh toán quét mã QR ngân hàng (VietQR / PayOS)**: Tạo mã QR ngân hàng chuẩn NAPAS 247, khách hàng mở App ngân hàng bất kỳ (Vietcombank, MB, Techcombank, VPBank, Agribank, MoMo...) quét mã chuyển tiền thẳng vào tài khoản của phòng khám.
+2. **Gửi mã OTP vào số điện thoại thật qua SpeedSMS Gateway (speedsms.vn)**: Khi khách tra cứu, đổi lịch hoặc hủy lịch, tin nhắn SMS OTP 6 chữ số sẽ được gửi trực tiếp tới điện thoại thật của khách.
 
 ---
 
-## 1. Cấu Hình Thanh Toán VietQR Tự Động (PayOS)
+## 1. Cấu Hình SMS Gateway SpeedSMS (Gửi SMS OTP Thật)
 
-[PayOS (payos.vn)](https://payos.vn) là giải pháp cổng thanh toán VietQR miễn phí và nhanh chóng nhất tại Việt Nam dành cho nhà phát triển và doanh nghiệp.
+[SpeedSMS (speedsms.vn)](https://speedsms.vn) là dịch vụ SMS Gateway hàng đầu tại Việt Nam, tối ưu hóa cho tin nhắn OTP và chăm sóc khách hàng.
 
-### Bước 1: Tạo tài khoản PayOS
-1. Truy cập [https://payos.vn](https://payos.vn) và đăng ký tài khoản miễn phí.
-2. Trong Dashboard, vào mục **Kênh thanh toán** -> **Tạo kênh thanh toán mới**.
-3. Điền thông tin tài khoản ngân hàng của bạn (Số tài khoản, Tên chủ tài khoản, Ngân hàng). Khi khách hàng quét mã VietQR, tiền sẽ chuyển thẳng vào tài khoản này.
+### Bước 1: Đăng ký tài khoản SpeedSMS
+1. Truy cập [https://connect.speedsms.vn](https://connect.speedsms.vn) và đăng ký tài khoản.
+2. Xác thực số điện thoại và email theo hướng dẫn.
 
-### Bước 2: Lấy thông tin kết nối API
-Trong trang chi tiết Kênh thanh toán vừa tạo, bạn sẽ thấy 3 thông số:
-- **Client ID**
-- **API Key**
-- **Checksum Key**
+### Bước 2: Lấy API Access Token
+1. Đăng nhập vào trang quản trị SpeedSMS Connect.
+2. Nhấn vào menu **Cài đặt (Settings)** -> **Thông tin tài khoản (Profile)** hoặc mục **API Access**.
+3. Copy chuỗi **API Access Token** của bạn.
 
 ### Bước 3: Cấu hình vào dự án
-Mở file `backend/src/ClinicAppointment.Api/appsettings.json` và thay thế vào mục `PayOS`:
+Mở file `backend/src/ClinicAppointment.Api/appsettings.json` và cập nhật mục `"SpeedSMS"`:
 
 ```json
-"PayOS": {
-  "ClientId": "điền_client_id_của_bạn",
-  "ApiKey": "điền_api_key_của_bạn",
-  "ChecksumKey": "điền_checksum_key_của_bạn",
-  "ReturnUrl": "http://localhost:5173/lookup",
-  "CancelUrl": "http://localhost:5173/lookup"
+"SpeedSMS": {
+  "AccessToken": "điền_access_token_của_bạn_ở_đây",
+  "SmsType": 2,
+  "Sender": ""
 }
 ```
 
-*(Hoặc trên Render / Production, bạn thêm 3 biến môi trường tương ứng: `PayOS__ClientId`, `PayOS__ApiKey`, `PayOS__ChecksumKey`)*.
+- `SmsType`: Mặc định là `2` (SMS Chăm sóc khách hàng / OTP đầu số cố định).
+- `Sender`: Brandname (nếu bạn đã đăng ký Brandname riêng trên SpeedSMS; nếu chưa có thì để trống `""`).
 
-### Bước 4: Cấu hình Webhook nhận tiền tự động
-1. Trong Dashboard PayOS, mục **Webhook**, nhập URL:
-   - Với Demo Online (Render/Cloudflare): `https://<tên-miền-của-bạn>/api/v1/payments/payos/webhook`
-2. Bấm **Lưu Webhook**. Hệ thống của bạn đã tích hợp sẵn cơ chế phản hồi tự động xác thực URL của PayOS.
-3. Khi khách quét mã chuyển tiền thành công, PayOS sẽ tự động bắn Webhook về Backend, cập nhật cuộc hẹn sang trạng thái `Confirmed` và ghi nhận `PaidAmount`!
+*(Hoặc trên Render / biến môi trường production: `SpeedSMS__AccessToken`)*.
 
 ---
 
-## 2. Cấu Hình Gửi SMS OTP Thật (Twilio)
+## 2. Cấu Hình Cổng Thanh Toán Quét Mã QR Ngân Hàng
 
-[Twilio (twilio.com)](https://twilio.com) là nhà cung cấp viễn thông toàn cầu hỗ trợ gửi tin nhắn SMS tới số điện thoại thật tại Việt Nam (+84).
+Hệ thống hỗ trợ 2 chế độ quét mã QR ngân hàng linh hoạt:
 
-### Bước 1: Tạo tài khoản Twilio
-1. Truy cập [https://twilio.com](https://twilio.com) và đăng ký tài khoản miễn phí (Twilio tặng sẵn ~$15 credit dùng thử).
-2. Xác minh số điện thoại cá nhân của bạn khi đăng ký.
-
-### Bước 2: Lấy số điện thoại gửi SMS và API Credentials
-1. Tại trang **Twilio Console Dashboard**:
-   - Nhấn **Get a phone number** để nhận 1 số điện thoại gửi SMS miễn phí (`Twilio Phone Number`).
-   - Copy 2 thông số:
-     - **Account SID**
-     - **Auth Token**
-
-### Bước 3: Cấu hình vào dự án
-Mở file `backend/src/ClinicAppointment.Api/appsettings.json` và thay thế vào mục `Twilio`:
+### Chế độ A: Quét mã QR trực tiếp về Tài Khoản Ngân Hàng của bạn (Direct VietQR)
+Bạn có thể nhận tiền trực tiếp vào bất kỳ tài khoản ngân hàng nào của bạn tại Việt Nam. Chỉ cần cấu hình trong `backend/src/ClinicAppointment.Api/appsettings.json` mục `"BankQR"`:
 
 ```json
-"Twilio": {
-  "AccountSid": "điền_account_sid_của_bạn",
-  "AuthToken": "điền_auth_token_của_bạn",
-  "FromPhoneNumber": "điền_số_twilio_của_bạn_ví_dụ_+1234567890"
+"BankQR": {
+  "BankId": "MB",
+  "AccountNumber": "0935191047",
+  "AccountName": "PHONG KHAM DA KHOA",
+  "Template": "compact2"
 }
 ```
 
-*(Hoặc trên Render / Production, bạn cấu hình 3 biến môi trường: `Twilio__AccountSid`, `Twilio__AuthToken`, `Twilio__FromPhoneNumber`)*.
+- `BankId`: Mã ngân hàng nhận tiền của bạn. Ví dụ:
+  - `MB`: Ngân hàng Quân Đội
+  - `VCB`: Vietcombank
+  - `TCB`: Techcombank
+  - `ICB`: VietinBank
+  - `BIDV`: BIDV
+  - `ACB`: Á Châu
+  - `VPB`: VPBank
+  - `TPB`: TPBank
+- `AccountNumber`: Số tài khoản ngân hàng của bạn.
+- `AccountName`: Tên chủ tài khoản (viết hoa không dấu).
 
-> [!NOTE]
-> Với tài khoản Twilio dùng thử (Trial), Twilio cho phép gửi tin nhắn tới các số điện thoại đã được thêm vào mục **Phone Numbers** -> **Manage** -> **Verified Caller IDs** trong Twilio Console. Khi nâng cấp tài khoản, bạn có thể gửi tới bất kỳ số điện thoại nào tại Việt Nam.
+Khi khách đặt lịch, hệ thống sẽ tự sinh mã QR chuẩn ngân hàng NAPAS 247. Khách quét mã thì App ngân hàng sẽ tự động điền:
+- Ngân hàng thụ hưởng & Số tài khoản của bạn
+- Số tiền khám chính xác (`ServicePriceSnapshot`)
+- Nội dung chuyển khoản chuẩn: `TT APT-YYYYMMDD-XXXXXX`
+
+### Chế độ B: Tự động xác nhận tiền về qua Cổng PayOS (Automated Webhook IPN)
+Nếu muốn hệ thống **tự động phát hiện khi khách vừa chuyển khoản xong** và tự động đổi trạng thái lịch hẹn sang `Confirmed` mà không cần kiểm tra thủ công:
+1. Đăng ký tại [https://payos.vn](https://payos.vn) và liên kết tài khoản ngân hàng.
+2. Lấy `ClientId`, `ApiKey`, `ChecksumKey` và điền vào mục `"PayOS"` trong `appsettings.json`:
+   ```json
+   "PayOS": {
+     "ClientId": "điền_client_id_của_bạn",
+     "ApiKey": "điền_api_key_của_bạn",
+     "ChecksumKey": "điền_checksum_key_của_bạn",
+     "ReturnUrl": "http://localhost:5173/lookup",
+     "CancelUrl": "http://localhost:5173/lookup"
+   }
+   ```
+3. Cài đặt Webhook URL trên PayOS: `https://<tên-miền-của-bạn>/api/v1/payments/payos/webhook`.
 
 ---
 
-## 3. Chế Độ Thử Nghiệm An Toàn (Built-in Demo Mode)
+## 3. Chế Độ Thử Nghiệm An Toàn (Built-in Fallback)
 
-Hệ thống được thiết kế thông minh:
-- Nếu bạn **chưa nhập keys** hoặc đang dùng key mẫu `YOUR_...`, hệ thống **vẫn hoạt động trơn tru 100%**:
-  - Tự động sinh mã VietQR mẫu chuẩn với số tài khoản và nội dung chuyển khoản tương ứng số tiền dịch vụ khám.
-  - Có sẵn nút **"[Chế độ Demo: Nhấn vào đây để mô phỏng quét mã thành công]"** để kiểm thử luồng xác nhận thanh toán ngay lập tức.
-  - Giả lập gửi OTP an toàn, ghi log thông tin rõ ràng và cho phép nhập mã `123456` để thử nghiệm.
-- Ngay khi bạn **nhập thông tin thật** vào `appsettings.json`, hệ thống sẽ tự động chuyển sang gọi trực tiếp API thật của PayOS và Twilio mà không cần phải viết lại bất kỳ dòng code nào.
+Nếu bạn chưa điền Access Token của SpeedSMS:
+- Hệ thống **tuyệt đối không bị lỗi hay dừng hoạt động**.
+- Backend tự động ghi log cảnh báo thân thiện và giả lập gửi OTP thành công.
+- Mã OTP thử nghiệm mặc định là `123456` để bạn có thể kiểm thử toàn bộ luồng đổi/hủy lịch trên Web ngay lập tức.
+- Ngay khi bạn nhập Access Token thật của SpeedSMS vào `appsettings.json`, tin nhắn SMS thật sẽ được gửi lập tức đến số điện thoại người dùng.
