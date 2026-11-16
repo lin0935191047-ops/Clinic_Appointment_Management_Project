@@ -32,60 +32,84 @@ public class PostgresGistConcurrencyTests
     {
         using var db = CreatePostgresDbContext();
 
-        // 1. Kiểm tra / Tạo chuyên khoa
+        // 1. Kiểm tra / Tạo chuyên khoa test (IsActive = false để không bao giờ xuất hiện trên web)
         var specialty = await db.Specialties.FirstOrDefaultAsync(s => s.Code == "CONCURRENCY_SPEC");
         if (specialty == null)
         {
-            specialty = Specialty.Create("CONCURRENCY_SPEC", "Khoa Nội Thần kinh - Cơ xương khớp - Huyết học lâm sàng", "noi-than-kinh-co-xuong-khop-huyet-hoc-lam-sang", "Chẩn đoán và điều trị chuyên sâu bệnh lý Nội thần kinh, Cơ xương khớp và Huyết học lâm sàng");
+            specialty = Specialty.Create(
+                code: "CONCURRENCY_SPEC",
+                name: "Khoa Thử Nghiệm Concurrency",
+                slug: "khoa-thu-nghiem-concurrency",
+                description: "Chuyên khoa ẩn dùng riêng cho unit test concurrency",
+                isActive: false);
             db.Specialties.Add(specialty);
             await db.SaveChangesAsync();
         }
 
-        // 2. Tạo Bác sĩ cô lập cho bài test concurrency để tránh trùng lặp khung giờ với DB thực tế
-        var testDocCode = $"DOC-GIST-{Guid.NewGuid():N}"[..20].ToUpperInvariant();
-        var user = User.Create($"doctor.gist.{Guid.NewGuid():N}@clinic.vn", "PasswordHash@123");
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
+        // 2. Kiểm tra / Tạo Bác sĩ test (IsActive = false để chống rò rỉ vào danh mục bác sĩ phòng khám)
+        var doctor = await db.Doctors.FirstOrDefaultAsync(d => d.DoctorCode == "DOC-GIST-TEST");
+        if (doctor == null)
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == "DOCTOR.TEST.CONCURRENCY@CLINIC.VN");
+            if (user == null)
+            {
+                user = User.Create("doctor.test.concurrency@clinic.vn", "PasswordHash@123");
+                db.Users.Add(user);
+                await db.SaveChangesAsync();
+            }
 
-        var doctor = Doctor.Create(
-            userId: user.Id,
-            specialtyId: specialty.Id,
-            doctorCode: testDocCode,
-            fullName: "BS. Thử Nghiệm Concurrency",
-            title: "Bác sĩ Thử Nghiệm",
-            roomNumber: "P.999");
-        db.Doctors.Add(doctor);
-        await db.SaveChangesAsync();
+            doctor = Doctor.Create(
+                userId: user.Id,
+                specialtyId: specialty.Id,
+                doctorCode: "DOC-GIST-TEST",
+                fullName: "BS. Thử Nghiệm Concurrency",
+                title: "Bác sĩ Thử Nghiệm",
+                roomNumber: "P.999");
+            doctor.SetStatus(false);
+            db.Doctors.Add(doctor);
+            await db.SaveChangesAsync();
+        }
 
-        // 3. Kiểm tra / Tạo Dịch vụ
-        var service = await db.Services.FirstOrDefaultAsync(s => s.Code == "SRV-GIST-01");
+        // 3. Kiểm tra / Tạo Dịch vụ test (IsActive = false)
+        var service = await db.Services.FirstOrDefaultAsync(s => s.Code == "SRV-GIST-TEST");
         if (service == null)
         {
             service = Service.Create(
                 specialtyId: specialty.Id,
-                code: "SRV-GIST-01",
-                name: "Khám & Tư Vấn Nội Thần Kinh - Cơ Xương Khớp - Huyết Học",
+                code: "SRV-GIST-TEST",
+                name: "Dịch Vụ Khám Đo Lường Đồng Thời",
                 durationMinutes: 30,
                 price: 200_000m,
-                description: "Khám lâm sàng, chẩn đoán và tư vấn điều trị các bệnh lý thần kinh, cơ xương khớp và huyết học");
+                description: "Dịch vụ test concurrency",
+                isActive: false);
             db.Services.Add(service);
             await db.SaveChangesAsync();
         }
 
-        // 4. Tạo 2 bệnh nhân độc lập
-        var patient1 = Patient.Create(
-            fullName: "Bệnh Nhân Concurrency Một",
-            phoneNumber: "0901112233",
-            dateOfBirth: new DateOnly(1990, 1, 1),
-            birthYear: 1990);
-        var patient2 = Patient.Create(
-            fullName: "Bệnh Nhân Concurrency Hai",
-            phoneNumber: "0904445566",
-            dateOfBirth: new DateOnly(1992, 2, 2),
-            birthYear: 1992);
+        // 4. Kiểm tra / Tạo 2 bệnh nhân test tái sử dụng
+        var patient1 = await db.Patients.FirstOrDefaultAsync(p => p.PhoneNumber == "0901112233");
+        if (patient1 == null)
+        {
+            patient1 = Patient.Create(
+                fullName: "Bệnh Nhân Concurrency Một",
+                phoneNumber: "0901112233",
+                dateOfBirth: new DateOnly(1990, 1, 1),
+                birthYear: 1990);
+            db.Patients.Add(patient1);
+            await db.SaveChangesAsync();
+        }
 
-        db.Patients.AddRange(patient1, patient2);
-        await db.SaveChangesAsync();
+        var patient2 = await db.Patients.FirstOrDefaultAsync(p => p.PhoneNumber == "0904445566");
+        if (patient2 == null)
+        {
+            patient2 = Patient.Create(
+                fullName: "Bệnh Nhân Concurrency Hai",
+                phoneNumber: "0904445566",
+                dateOfBirth: new DateOnly(1992, 2, 2),
+                birthYear: 1992);
+            db.Patients.Add(patient2);
+            await db.SaveChangesAsync();
+        }
 
         return (doctor.Id, patient1.Id, patient2.Id, service.Id);
     }
@@ -97,7 +121,7 @@ public class PostgresGistConcurrencyTests
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
         // Khung giờ khám: Ngày ngẫu nhiên ở tương lai xa để tránh trùng dữ liệu cũ
-        var baseDate = DateTime.UtcNow.Date.AddDays(1000 + (int)(DateTime.UtcNow.Ticks % 5000));
+        var baseDate = DateTime.UtcNow.Date.AddDays(100000 + Random.Shared.Next(1000, 900000));
         var startAtUtc = DateTime.SpecifyKind(baseDate.AddHours(9), DateTimeKind.Utc); // 09:00 UTC
         var endAtUtc = DateTime.SpecifyKind(baseDate.AddHours(9).AddMinutes(30), DateTimeKind.Utc); // 09:30 UTC
 
@@ -191,7 +215,7 @@ public class PostgresGistConcurrencyTests
         // Arrange
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
-        var baseDate = DateTime.UtcNow.Date.AddDays(6000 + (int)(DateTime.UtcNow.Ticks % 5000));
+        var baseDate = DateTime.UtcNow.Date.AddDays(200000 + Random.Shared.Next(1000, 900000));
         // Ca 1: 14:00 - 14:30
         var start1 = DateTime.SpecifyKind(baseDate.AddHours(14), DateTimeKind.Utc);
         // Ca 2: 14:15 - 14:45 (Bị overlap 15 phút với ca 1)
@@ -243,7 +267,7 @@ public class PostgresGistConcurrencyTests
         // Arrange: Tạo cuộc hẹn và sau đó hủy (Status = Cancelled)
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
-        var baseDate = DateTime.UtcNow.Date.AddDays(12000 + (int)(DateTime.UtcNow.Ticks % 5000));
+        var baseDate = DateTime.UtcNow.Date.AddDays(300000 + Random.Shared.Next(1000, 900000));
         var startUtc = DateTime.SpecifyKind(baseDate.AddHours(10), DateTimeKind.Utc); // 10:00
 
         using (var db1 = CreatePostgresDbContext())
@@ -293,7 +317,7 @@ public class PostgresGistConcurrencyTests
         // Arrange
         var (doctorId, patient1Id, patient2Id, serviceId) = await EnsureTestDataAsync();
 
-        var baseDate = DateTime.UtcNow.Date.AddDays(18000 + (int)(DateTime.UtcNow.Ticks % 5000));
+        var baseDate = DateTime.UtcNow.Date.AddDays(400000 + Random.Shared.Next(1000, 900000));
         var startUtc = DateTime.SpecifyKind(baseDate.AddHours(15), DateTimeKind.Utc);
 
         using (var setupDb = CreatePostgresDbContext())

@@ -149,7 +149,7 @@ export const DoctorsPage: React.FC = () => {
                       Giá khám:{' '}
                       <strong className="text-teal-700">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-                          doc.consultationFee
+                          doc.consultationFee || 150000
                         )}
                       </strong>
                     </span>
