@@ -531,16 +531,15 @@ export const DoctorDashboardPage: React.FC = () => {
               className="w-full h-full object-cover"
               loading="lazy"
               onError={(e) => {
-                const target = e.target as HTMLImageElement;
+                const target = e.currentTarget;
+                target.onerror = null;
                 const fallback = getDoctorLocalFallback({
                   fullName: dashboardData?.doctorName || currentUser?.fullName,
                   email: currentUser?.email,
                   specialtyName: dashboardData?.specialtyName,
                   id: dashboardData?.doctorId,
                 });
-                if (!target.src.endsWith(fallback)) {
-                  target.src = fallback;
-                }
+                target.src = fallback;
               }}
             />
           </div>

@@ -114,11 +114,10 @@ export const DoctorsPage: React.FC = () => {
                       className="w-full h-full object-cover"
                       loading="lazy"
                       onError={(e) => {
-                        const target = e.target as HTMLImageElement;
+                        const target = e.currentTarget;
+                        target.onerror = null;
                         const fallback = getDoctorLocalFallback(doc);
-                        if (!target.src.endsWith(fallback)) {
-                          target.src = fallback;
-                        }
+                        target.src = fallback;
                       }}
                     />
                   </div>

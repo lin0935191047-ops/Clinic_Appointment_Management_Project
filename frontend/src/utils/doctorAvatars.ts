@@ -6,8 +6,7 @@
 export interface DoctorAvatarInfo {
   code: string;
   nameKey: string;
-  primaryUrl: string; // Ảnh chân dung y tế chất lượng cao
-  localSvg: string;   // Ảnh SVG vector cục bộ (không bao giờ lỗi kể cả khi offline)
+  primaryUrl: string; // Ảnh chân dung y tế chuẩn (JPG)
 }
 
 export const DOCTOR_AVATARS: DoctorAvatarInfo[] = [
@@ -15,41 +14,35 @@ export const DOCTOR_AVATARS: DoctorAvatarInfo[] = [
     code: 'DOC-INT-01',
     nameKey: 'nguyễn văn an',
     primaryUrl: '/images/doctors/dr-an.jpg',
-    localSvg: '/images/doctors/dr-an.svg',
   },
   {
     code: 'DOC-PED-01',
     nameKey: 'trần thị mai',
     primaryUrl: '/images/doctors/dr-mai.jpg',
-    localSvg: '/images/doctors/dr-mai.svg',
   },
   {
     code: 'DOC-CARD-01',
     nameKey: 'lê hoàng nam',
     primaryUrl: '/images/doctors/dr-nam.jpg',
-    localSvg: '/images/doctors/dr-nam.svg',
   },
   {
     code: 'DOC-ENT-01',
     nameKey: 'phạm thu trang',
     primaryUrl: '/images/doctors/dr-trang.jpg',
-    localSvg: '/images/doctors/dr-trang.svg',
   },
   {
     code: 'DOC-DENT-01',
     nameKey: 'vũ đức minh',
     primaryUrl: '/images/doctors/dr-minh.jpg',
-    localSvg: '/images/doctors/dr-minh.svg',
   },
   {
     code: 'DOC-GIST-01',
     nameKey: 'đặng minh tuấn',
     primaryUrl: '/images/doctors/dr-tuan.jpg',
-    localSvg: '/images/doctors/dr-tuan.svg',
   },
 ];
 
-export const DEFAULT_DOCTOR_AVATAR = '/images/doctors/default-doctor.svg';
+export const DEFAULT_DOCTOR_AVATAR = '/images/doctors/default-doctor.jpg';
 
 export interface DoctorLookupParam {
   id?: string;
@@ -172,14 +165,14 @@ export function getDoctorAvatar(doctor?: DoctorLookupParam | null): string {
 }
 
 /**
- * Lấy ảnh SVG vector dự phòng khi trình duyệt gặp lỗi tải ảnh online (offline-first)
+ * Lấy ảnh JPG dự phòng khi trình duyệt gặp lỗi tải ảnh từ URL bên ngoài
  */
 export function getDoctorLocalFallback(doctor?: DoctorLookupParam | null): string {
   if (!doctor) return DEFAULT_DOCTOR_AVATAR;
 
   const idx = findDoctorIndex(doctor);
   if (idx >= 0 && idx < DOCTOR_AVATARS.length) {
-    return DOCTOR_AVATARS[idx].localSvg;
+    return DOCTOR_AVATARS[idx].primaryUrl;
   }
 
   return DEFAULT_DOCTOR_AVATAR;
