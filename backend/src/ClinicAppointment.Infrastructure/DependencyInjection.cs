@@ -81,7 +81,12 @@ public static class DependencyInjection
         // Abuse Protection & Rate Limiting
         services.AddMemoryCache();
         services.AddSingleton<IAbuseProtectionService, AbuseProtectionService>();
-        services.AddSingleton<ISmsSender, MockSmsSender>();
+
+        // Cổng thanh toán trực tuyến PayOS (VietQR) & SMS Gateway Twilio (SMS Thật)
+        services.AddHttpClient<TwilioSmsSender>();
+        services.AddHttpClient<PayOSPaymentService>();
+        services.AddScoped<ISmsSender, TwilioSmsSender>();
+        services.AddScoped<IPayOSPaymentService, PayOSPaymentService>();
 
         // Notification Services & Outbox Abstractions (TBD Providers)
         services.AddSingleton<INotificationSafetyGuard, NotificationSafetyGuard>();

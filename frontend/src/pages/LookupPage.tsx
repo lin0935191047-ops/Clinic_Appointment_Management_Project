@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { appointmentApi, catalogApi } from '../api/client';
-import { AppointmentDetail, AvailableSlot, RefundPreview } from '../types';
+import { appointmentApi, catalogApi, paymentApi } from '../api/client';
+import { AppointmentDetail, AvailableSlot, RefundPreview, CreatePaymentLinkResponse } from '../types';
 import {
   Search,
   KeyRound,
@@ -10,6 +10,8 @@ import {
   RefreshCw,
   XCircle,
   AlertTriangle,
+  CreditCard,
+  ExternalLink,
 } from 'lucide-react';
 
 export const LookupPage: React.FC = () => {
@@ -47,6 +49,59 @@ export const LookupPage: React.FC = () => {
   const [refundPreview, setRefundPreview] = useState<RefundPreview | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [cancelledSuccess, setCancelledSuccess] = useState<boolean>(false);
+
+  // PayOS Payment Modal state
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [paymentLink, setPaymentLink] = useState<CreatePaymentLinkResponse | null>(null);
+  const [loadingPayment, setLoadingPayment] = useState<boolean>(false);
+  const [checkingPayment, setCheckingPayment] = useState<boolean>(false);
+
+  const handleOpenPayment = async (appointmentId: string) => {
+    setShowPaymentModal(true);
+    if (!paymentLink) {
+      try {
+        setLoadingPayment(true);
+        const res = await paymentApi.createPayOSLink(appointmentId);
+        setPaymentLink(res);
+      } catch (err: any) {
+        alert(err.message || 'Lỗi tạo liên kết thanh toán');
+      } finally {
+        setLoadingPayment(false);
+      }
+    }
+  };
+
+  const handleCheckPaymentStatus = async (appointmentId: string) => {
+    try {
+      setCheckingPayment(true);
+      const status = await paymentApi.getPaymentStatus(appointmentId);
+      if (status.isPaid) {
+        alert('Giao dịch đã được ghi nhận thành công!');
+        setAppointment((prev) => prev ? { ...prev, paidAmount: status.paidAmount, status: 'Confirmed' } : null);
+        setShowPaymentModal(false);
+      } else {
+        alert('Hệ thống chưa ghi nhận tiền từ giao dịch chuyển khoản. Vui lòng thử lại sau vài giây.');
+      }
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  const handleMockConfirm = async (appointmentId: string) => {
+    try {
+      setCheckingPayment(true);
+      const status = await paymentApi.mockConfirmPayment(appointmentId);
+      setAppointment((prev) => prev ? { ...prev, paidAmount: status.paidAmount, status: 'Confirmed' } : null);
+      setShowPaymentModal(false);
+      alert('Mô phỏng thanh toán VietQR thành công!');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
 
   // Cooldown timer
   useEffect(() => {
@@ -388,6 +443,17 @@ export const LookupPage: React.FC = () => {
             {/* Action Bar */}
             {appointment.status !== 'Cancelled' && appointment.status !== 'Completed' && (
               <div className="p-6 bg-gray-50 border-t border-gray-200 flex flex-wrap gap-4 justify-end">
+                {appointment.paidAmount === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPayment(appointment.id)}
+                    className="inline-flex items-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Thanh Toán VietQR Ngay
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={handleOpenReschedule}
@@ -572,6 +638,84 @@ export const LookupPage: React.FC = () => {
                 Đồng Ý Hủy Lịch Khám
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: PAYOS VIETQR PAYMENT */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+            <div className="flex justify-between items-center border-b pb-3">
+              <div className="flex items-center space-x-2 text-teal-700">
+                <CreditCard className="w-5 h-5" />
+                <h3 className="text-lg font-bold text-gray-900">Thanh Toán VietQR (PayOS)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="text-gray-400 hover:text-gray-600 font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingPayment ? (
+              <div className="py-12 text-center text-xs text-gray-500 space-y-2">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-teal-600" />
+                <p>Đang khởi tạo mã VietQR từ cổng PayOS...</p>
+              </div>
+            ) : paymentLink ? (
+              <div className="space-y-4 text-center">
+                <div className="flex justify-center">
+                  <img
+                    src={paymentLink.qrCode?.startsWith('data:') || paymentLink.qrCode?.startsWith('http')
+                      ? paymentLink.qrCode
+                      : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(paymentLink.qrCode || '')}`}
+                    alt="VietQR PayOS"
+                    className="w-48 h-48 rounded-xl shadow border p-1 bg-white mx-auto"
+                  />
+                </div>
+
+                <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <p>Cuộc hẹn: <strong className="font-mono text-gray-900">{appointment?.bookingCode}</strong></p>
+                  <p>Nội dung CK: <strong className="font-mono text-gray-900">TT {appointment?.bookingCode}</strong></p>
+                  <p>Trạng thái: <span className="text-amber-700 font-bold">Chờ chuyển khoản</span></p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                  {paymentLink.checkoutUrl && !paymentLink.checkoutUrl.startsWith('/') && (
+                    <a
+                      href={paymentLink.checkoutUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition"
+                    >
+                      Mở Cổng PayOS <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    disabled={checkingPayment}
+                    onClick={() => appointment && handleCheckPaymentStatus(appointment.id)}
+                    className="inline-flex items-center justify-center px-4 py-2 border border-teal-600 text-teal-700 hover:bg-teal-50 rounded-xl text-xs font-bold transition"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1 ${checkingPayment ? 'animate-spin' : ''}`} />
+                    Kiểm tra kết quả
+                  </button>
+                </div>
+
+                <div className="pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => appointment && handleMockConfirm(appointment.id)}
+                    className="text-[11px] text-teal-600 hover:underline"
+                  >
+                    [Chế độ Demo: Bấm vào đây để mô phỏng quét mã thành công]
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

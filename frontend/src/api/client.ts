@@ -19,6 +19,8 @@ import {
   AdminDoctorItem,
   AdminServiceItem,
   AdminDoctorScheduleItem,
+  CreatePaymentLinkResponse,
+  PaymentStatusResponse,
 } from '../types';
 
 const resolveApiBaseUrl = (): string => {
@@ -861,6 +863,49 @@ export const adminApi = {
       `/admin/doctor-schedules/${id}`
     );
     return !!res.data.data;
+  },
+};
+
+export const paymentApi = {
+  createPayOSLink: async (appointmentId: string): Promise<CreatePaymentLinkResponse> => {
+    try {
+      const res = await apiClient.post<ApiResponse<CreatePaymentLinkResponse>>('/payments/payos/create-link', {
+        appointmentId,
+      });
+      if (!res.data.data) {
+        throw new Error(res.data.message || 'Không thể tạo liên kết thanh toán PayOS.');
+      }
+      return res.data.data;
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Không thể tạo liên kết thanh toán PayOS.';
+      throw new Error(errorMsg);
+    }
+  },
+
+  getPaymentStatus: async (appointmentId: string): Promise<PaymentStatusResponse> => {
+    try {
+      const res = await apiClient.get<ApiResponse<PaymentStatusResponse>>(`/payments/status/${appointmentId}`);
+      if (!res.data.data) {
+        throw new Error(res.data.message || 'Không thể lấy trạng thái thanh toán.');
+      }
+      return res.data.data;
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Không thể lấy trạng thái thanh toán.';
+      throw new Error(errorMsg);
+    }
+  },
+
+  mockConfirmPayment: async (appointmentId: string): Promise<PaymentStatusResponse> => {
+    try {
+      const res = await apiClient.post<ApiResponse<PaymentStatusResponse>>(`/payments/mock-confirm/${appointmentId}`);
+      if (!res.data.data) {
+        throw new Error(res.data.message || 'Không thể xác nhận thanh toán.');
+      }
+      return res.data.data;
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Không thể xác nhận thanh toán.';
+      throw new Error(errorMsg);
+    }
   },
 };
 

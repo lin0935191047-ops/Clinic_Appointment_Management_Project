@@ -89,6 +89,24 @@ export interface BookingConfirmation {
   fee: number;
 }
 
+export interface CreatePaymentLinkResponse {
+  success: boolean;
+  checkoutUrl?: string;
+  qrCode?: string;
+  orderCode?: number;
+  paymentLinkId?: string;
+  message?: string;
+}
+
+export interface PaymentStatusResponse {
+  appointmentId: string;
+  bookingCode: string;
+  servicePrice: number;
+  paidAmount: number;
+  status: string;
+  isPaid: boolean;
+}
+
 export interface AppointmentDetail {
   id: string;
   bookingCode: string;

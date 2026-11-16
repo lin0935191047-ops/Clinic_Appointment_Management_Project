@@ -72,8 +72,8 @@ public class AvailabilityCalculationTests
         await db.SaveChangesAsync();
 
         var service = new AvailabilityService(db);
-        // Ngày 16/11/2026 là Thứ Hai
-        var monday = new DateOnly(2026, 11, 16);
+        // Ngày Thứ Hai trong tương lai
+        var monday = new DateOnly(2026, 11, 23);
 
         // Act
         var result = await service.GetDoctorAvailabilityAsync(doctor.Id, monday);

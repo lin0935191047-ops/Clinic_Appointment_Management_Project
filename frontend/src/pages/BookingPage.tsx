@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   catalogApi,
   appointmentApi,
+  paymentApi,
   mockSpecialties,
   mockDoctors,
   mockServices,
@@ -14,6 +15,7 @@ import {
   AvailableSlot,
   GuestBookingRequest,
   BookingConfirmation,
+  CreatePaymentLinkResponse,
 } from '../types';
 import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
 import {
@@ -24,6 +26,10 @@ import {
   Info,
   ShieldCheck,
   Copy,
+  CreditCard,
+  QrCode,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 
 export const BookingPage: React.FC = () => {
@@ -68,6 +74,52 @@ export const BookingPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
+
+  // PayOS Payment state
+  const [paymentLink, setPaymentLink] = useState<CreatePaymentLinkResponse | null>(null);
+  const [loadingPayment, setLoadingPayment] = useState<boolean>(false);
+  const [isPaid, setIsPaid] = useState<boolean>(false);
+  const [checkingPayment, setCheckingPayment] = useState<boolean>(false);
+
+  const handleCreatePayment = async (appointmentId: string) => {
+    try {
+      setLoadingPayment(true);
+      const res = await paymentApi.createPayOSLink(appointmentId);
+      setPaymentLink(res);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khởi tạo thanh toán PayOS');
+    } finally {
+      setLoadingPayment(false);
+    }
+  };
+
+  const handleCheckPayment = async (appointmentId: string) => {
+    try {
+      setCheckingPayment(true);
+      const status = await paymentApi.getPaymentStatus(appointmentId);
+      if (status.isPaid) {
+        setIsPaid(true);
+      } else {
+        alert('Hệ thống chưa nhận được tiền từ giao dịch chuyển khoản. Nếu bạn đã quét mã, vui lòng đợi vài giây rồi bấm kiểm tra lại nhé.');
+      }
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  const handleMockConfirm = async (appointmentId: string) => {
+    try {
+      setCheckingPayment(true);
+      await paymentApi.mockConfirmPayment(appointmentId);
+      setIsPaid(true);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
 
   // Load catalogs
   useEffect(() => {
@@ -737,6 +789,99 @@ export const BookingPage: React.FC = () => {
                 )}
               </span>
             </div>
+          </div>
+
+          {/* PayOS VietQR Payment Box */}
+          <div className="max-w-md mx-auto bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-300 rounded-3xl p-6 space-y-4 text-left shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <CreditCard className="w-5 h-5 text-teal-700" />
+                <h3 className="text-sm font-bold text-gray-900">Thanh Toán Trực Tuyến VietQR (PayOS)</h3>
+              </div>
+              {isPaid ? (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" /> Đã thanh toán
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                  Chưa thanh toán
+                </span>
+              )}
+            </div>
+
+            {isPaid ? (
+              <div className="p-4 bg-emerald-100/70 border border-emerald-300 rounded-2xl text-xs text-emerald-900 space-y-1">
+                <p className="font-bold">✓ Giao dịch thanh toán thành công!</p>
+                <p>Hệ thống đã tự động xác nhận lịch hẹn của bạn sang trạng thái <strong>Confirmed</strong>. Khi đến khám, bạn chỉ cần đọc mã đặt lịch.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-gray-600">
+                  Bạn có thể thanh toán trước bằng cách quét mã VietQR tự động qua bất kỳ ứng dụng ngân hàng nào (Vietcombank, MB, Techcombank, VPBank, MoMo,...).
+                </p>
+
+                {paymentLink && paymentLink.qrCode ? (
+                  <div className="bg-white p-4 rounded-2xl border border-teal-200 text-center space-y-3">
+                    <p className="text-xs font-bold text-teal-800">Mã VietQR Chuyển Khoản Tự Động</p>
+                    <div className="flex justify-center">
+                      <img
+                        src={paymentLink.qrCode.startsWith('data:') || paymentLink.qrCode.startsWith('http') 
+                          ? paymentLink.qrCode 
+                          : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(paymentLink.qrCode)}`}
+                        alt="VietQR PayOS"
+                        className="w-48 h-48 rounded-xl shadow border p-1 bg-white"
+                      />
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <p>Số tiền: <strong className="text-teal-700">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(confirmation.fee)}</strong></p>
+                      <p>Nội dung CK: <strong className="font-mono text-gray-900">TT {confirmation.bookingCode}</strong></p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                      {paymentLink.checkoutUrl && !paymentLink.checkoutUrl.startsWith('/') && (
+                        <a
+                          href={paymentLink.checkoutUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition"
+                        >
+                          Mở Cổng PayOS <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        disabled={checkingPayment}
+                        onClick={() => handleCheckPayment(confirmation.appointmentId)}
+                        className="inline-flex items-center justify-center px-4 py-2 border border-teal-600 text-teal-700 hover:bg-teal-50 rounded-xl text-xs font-bold transition"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 mr-1 ${checkingPayment ? 'animate-spin' : ''}`} />
+                        Kiểm tra kết quả thanh toán
+                      </button>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => handleMockConfirm(confirmation.appointmentId)}
+                        className="text-[11px] text-teal-600 hover:underline"
+                      >
+                        [Chế độ Demo: Nhấn vào đây để mô phỏng quét mã thành công]
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={loadingPayment}
+                    onClick={() => handleCreatePayment(confirmation.appointmentId)}
+                    className="w-full inline-flex items-center justify-center px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
+                  >
+                    <QrCode className="w-4 h-4 mr-2" />
+                    {loadingPayment ? 'Đang tạo mã VietQR...' : 'Tạo Mã VietQR Thanh Toán Ngay'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
