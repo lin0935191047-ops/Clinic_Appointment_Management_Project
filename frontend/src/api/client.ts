@@ -25,14 +25,7 @@ import {
 
 const resolveApiBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (!envUrl) {
-    // Khi chạy local dev, dùng relative URL để Vite proxy chuyển tiếp tới http://localhost:5000
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return '/api/v1';
-    }
-    // Khi chạy trên Cloud / Vercel mà chưa cấu hình biến môi trường, fallback sang URL Backend Render
-    return 'https://clinic-backend-api.onrender.com/api/v1';
-  }
+  if (!envUrl) return '/api/v1';
   let url = String(envUrl).trim();
   if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
     url = `https://${url}`;
