@@ -1,12 +1,12 @@
 # Project Progress
 
 - Baseline: 13/11/2026
-- Last updated: 14/11/2026
-- Overall status: Completed (FEAT-001 through FEAT-055 Completed) - 55/55 features (100% COMPLETE)
-- Current phase: Project Handover Complete
+- Last updated: 16/11/2026
+- Overall status: Completed (55 Baseline Features + 4 Major Extensions = 59 Features Completed, 100%)
+- Current phase: Production & Cloud Ready (522 Backend Tests PASS, 16 Frontend Tests PASS)
 
 ## Summary
-Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến độ lập trình từ việc tạo tài liệu.
+Nguồn trạng thái Feature là `feature_list.json` và hồ sơ nghiệm thu thực tế. Không suy ra tiến độ lập trình từ việc tạo tài liệu. Toàn bộ tính năng đều có mã nguồn thực thi, kiểm thử tự động hai lớp và bằng chứng vận hành.
 
 ## Features Completed (FEAT-001 -> FEAT-055)
 - `FEAT-001` (Repository & Harness baseline): AGENTS.md, rules, skills, HARNESS_AUDIT 14/14 PASS.
@@ -67,9 +67,17 @@ Nguồn trạng thái Feature là `feature_list.json`. Không suy ra tiến đ�
 
 - `FEAT-055` (Final documentation and handover): Tổng hợp tài liệu bàn giao, xác minh toàn bộ lệnh vận hành, kiểm tra bằng chứng nghiệm thu và ghi nhận các thành phần TBD (Module Documentation); (1) Báo cáo bàn giao và nghiệm thu dự án chi tiết docs/HANDOVER.md bao phủ toàn diện 55/55 tính năng, ma trận Feature Matrix, thống kê bằng chứng kiểm thử 517 backend tests + 9 frontend tests, bảng tài khoản mẫu phân quyền, danh mục hạn chế đã biết và thành phần TBD (SMS provider, Payment gateway, SMTP email), hướng dẫn bảo trì và quy trình kiểm tra toàn vẹn cơ sở dữ liệu; (2) Nâng cấp toàn diện README.md tại thư mục gốc với đầy đủ hướng dẫn kiến trúc Clean Architecture, quy trình cài đặt và chạy môi trường dev (.NET 8 Kestrel port 5000, Vite port 5173, PostgreSQL 18 port 5432), lệnh kiểm thử tự động, bảng tài khoản demo có nút bấm nhanh, triển khai Docker Compose production an toàn Zero Trust, và liên kết tài liệu kỹ thuật; (3) Xây dựng và thực thi bộ kiểm thử tự động HandoverVerificationTests.cs kiểm chứng tính đầy đủ và tính chính xác của tài liệu bàn giao, số lượng 55 tính năng trong feature_list.json, và các lệnh vận hành hệ thống; 3/3 tests FEAT-055 PASS 100%, 517/517 backend tests toàn solution PASS 100%, 9/9 frontend tests PASS 100%, Vite production build thành công 100%.
 
+- `FEAT-056` (Online VietQR Payment Gateway Integration): Tích hợp cổng thanh toán trực tuyến quét mã VietQR tự động qua ngân hàng bằng PayOS (Module Finance & Payments); (1) Backend tích hợp PayOS SDK và dịch vụ `IPaymentGatewayService` / `PayOsPaymentGatewayService` sinh mã VietQR chuyển khoản NAPAS 24/7 động theo từng ca khám; (2) Webhook IPN controller xử lý nhận thông báo thanh toán thành công từ ngân hàng kèm xác thực chữ ký an toàn HMAC-SHA256, tự động cập nhật trạng thái ca khám sang Confirmed; (3) Tích hợp hiển thị mã QR VietQR tự động trên Frontend React tại màn hình hoàn tất đặt lịch (`BookingPage.tsx`) và màn hình tra cứu lịch hẹn (`LookupPage.tsx`) cho phép bệnh nhân thanh toán tức thì qua mọi ứng dụng ngân hàng và ví điện tử; (4) Xây dựng tài liệu hướng dẫn cấu hình chi tiết `docs/PAYMENT_AND_SMS_SETUP.md`.
+
+- `FEAT-057` (Real SMS Gateway Integration - SpeedSMS): Tích hợp dịch vụ SMS Gateway SpeedSMS gửi mã OTP thật vào số điện thoại bệnh nhân (Module Notification & Security); (1) Backend triển khai adapter `SpeedSmsSender` thực thi interface `ISmsSender` gọi trực tiếp HTTP API của SpeedSMS; (2) Hỗ trợ gửi tin nhắn xác thực mã OTP 6 chữ số và tin nhắn thông báo lịch hẹn CSKH Brandname; (3) Quản lý bảo mật thông tin xác thực (`SPEEDSMS_ACCESS_TOKEN`, `SPEEDSMS_SENDER_ID`, `SPEEDSMS_SMS_TYPE`) qua cấu hình an toàn, hỗ trợ chuyển đổi mượt mà với `DevStubSmsChannel` trong môi trường thử nghiệm; (4) Tuân thủ triệt để quy tắc bảo mật không ghi log mã OTP thô.
+
+- `FEAT-058` (Doctor Catalog Standardization & 100% JPG Portrait Avatars): Chuẩn hóa toàn diện danh mục 6 bác sĩ chuyên khoa thực tế và chuyển đổi 100% ảnh đại diện sang định dạng JPG chất lượng cao (Module Catalog & Doctor); (1) Đồng bộ đầy đủ 6 bác sĩ chuyên khoa trong database và seeder (`dr.an@clinic.vn` P.101, `dr.mai@clinic.vn` P.105, `dr.nam@clinic.vn` P.201, `dr.trang@clinic.vn` P.204, `dr.minh@clinic.vn` P.301, `dr.tuan@clinic.vn` P.205); (2) Dọn dẹp triệt để dữ liệu rác/thử nghiệm concurrency khỏi cơ sở dữ liệu, cách ly `PostgresGistConcurrencyTests` với cờ `isActive: false` để bảo vệ danh mục công khai; (3) Loại bỏ toàn bộ 7 file vector SVG, chuẩn hóa 100% ảnh chân dung y tế định dạng JPG (`dr-*.jpg` và `default-doctor.jpg`); (4) Nâng cấp thuật toán nhận diện ảnh bác sĩ đa tiêu chí trong `doctorAvatars.ts` (`doctorCode` -> `email` -> `id` -> exact name regex -> specialty) khắc phục triệt để lỗi gán nhầm ảnh; (5) Bổ sung tài khoản mẫu đăng nhập nhanh cho cả 6 bác sĩ tại trang `/doctor`; (6) Bổ sung 7 unit tests tự động mới `DoctorAvatarsResolution.test.ts`, nâng tổng số frontend test lên 16/16 tests PASS 100%.
+
+- `FEAT-059` (Cloud Deployment Blueprint - Render): Xây dựng cấu hình triển khai đám mây tự động đa dịch vụ bằng Render Blueprint (Module Deployment & Cloud); (1) Tạo tệp cấu hình `render.yaml` chuẩn hóa triển khai multi-service: Web Service Backend ASP.NET Core (.NET 8 SDK build -> Kestrel port 8080), Static Site Frontend React SPA (Node 20 build -> dist static serving), và Managed PostgreSQL Database; (2) Tích hợp biến môi trường và kết nối an toàn giữa các dịch vụ trên Cloud; (3) Cập nhật cẩm nang vận hành chi tiết trong `docs/DEPLOYMENT_RUNBOOK.md`.
+
 ## Next steps
-1. Toàn bộ 55/55 tính năng của dự án đã hoàn thành 100%.
-2. Sẵn sàng cho giai đoạn Kiểm thử Chấp nhận Người dùng (UAT) và Triển khai Production.
+1. Toàn bộ 55 tính năng cốt lõi và 4 tính năng mở rộng thực tế đã hoàn thành và kiểm thử 100%.
+2. Hệ thống sẵn sàng vận hành thực tế (Production) và triển khai Cloud (Render).
 
 ## Rules
 Không tạo Database/Migration hoặc đánh dấu Feature completed chỉ vì đã sinh tài liệu. `completed` yêu cầu acceptance criteria và test evidence thực tế.

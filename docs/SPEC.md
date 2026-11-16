@@ -230,7 +230,7 @@ Mọi state transition phải kiểm tra actor/state ở Backend và ghi history
 ## 12. TBD register
 - **TBD-01:** Một phòng khám hay nhiều chi nhánh.
 - **TBD-02:** OTP ngay lúc booking hay chỉ lookup/change/cancel (baseline hiện tại: chỉ lookup/change/cancel).
-- **TBD-03:** Nhà cung cấp SMS/OTP, email, payment gateway.
+- **TBD-03:** Nhà cung cấp SMS/OTP, email, payment gateway (Đã tích hợp: SMS/OTP qua SpeedSMS API, Cổng thanh toán quét mã VietQR tự động qua PayOS; Email duy trì IEmailSender dev stub).
 - **TBD-04:** Thanh toán một phần và thu phí còn thiếu khi hủy.
 - **TBD-05:** Cách xử lý khi phòng khám/bác sĩ hủy lịch đã thanh toán.
 - **TBD-06:** Policy NoShow và phí NoShow.

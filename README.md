@@ -3,9 +3,9 @@
 > **Hệ thống Quản lý và Đặt lịch khám bệnh phòng khám**  
 > Kiến trúc phân tầng **Clean Architecture** trên nền tảng **ASP.NET Core Web API (.NET 8)**, giao diện **React 18 SPA (Vite + TypeScript + Tailwind CSS)** và cơ sở dữ liệu **PostgreSQL 18** bảo vệ chống trùng ca bằng **GiST Exclusion Constraint**.
 
-[![Backend Tests](https://img.shields.io/badge/Backend%20Tests-514%2F514%20PASS-brightgreen.svg)](#hướng-dẫn-chạy-kiểm-thử-tự-động)
-[![Frontend Tests](https://img.shields.io/badge/Frontend%20Tests-9%2F9%20PASS-brightgreen.svg)](#hướng-dẫn-chạy-kiểm-thử-tự-động)
-[![Status](https://img.shields.io/badge/Project%20Status-55%2F55%20Features%20Completed-success.svg)](#danh-sách-và-trạng-thái-tính-năng)
+[![Backend Tests](https://img.shields.io/badge/Backend%20Tests-522%2F522%20PASS-brightgreen.svg)](#hướng-dẫn-chạy-kiểm-thử-tự-động)
+[![Frontend Tests](https://img.shields.io/badge/Frontend%20Tests-16%2F16%20PASS-brightgreen.svg)](#hướng-dẫn-chạy-kiểm-thử-tự-động)
+[![Status](https://img.shields.io/badge/Project%20Status-55%2F55%20Features%20Completed%20%2B%20Extensions-success.svg)](#danh-sách-và-trạng-thái-tính-năng)
 [![Security](https://img.shields.io/badge/Security-PII%20Redaction%20%7C%20HTTPS%20HSTS-blue.svg)](#bảo-mật-và-quyền-riêng-tư)
 
 ---
@@ -15,6 +15,9 @@
 Hệ thống phục vụ việc quản lý phòng khám đa khoa hiện đại, tối ưu hóa trải nghiệm của bệnh nhân từ khâu đặt lịch trực tuyến đến tiếp đón, khám bệnh và quản trị đối soát tài chính:
 
 - **Khách vãng lai (Guest Booking):** Tìm kiếm và đặt lịch khám trong 4 bước đơn giản **hoàn toàn không bắt buộc đăng nhập hoặc tạo tài khoản**.
+- **Cổng thanh toán Quét mã VietQR Ngân hàng (PayOS / VietQR):** Tự động sinh mã VietQR chuẩn NAPAS 24/7 trực tiếp trên màn hình đặt lịch và tra cứu; bệnh nhân quét mã tức thời qua bất kỳ ứng dụng ngân hàng hoặc ví điện tử nào (Vietcombank, MB, Techcombank, VPBank, MoMo,...); xử lý webhook xác thực chữ ký SHA-256 an toàn và tự động cập nhật trạng thái ca khám sang `Confirmed`.
+- **Dịch vụ gửi SMS OTP thật (SpeedSMS Gateway):** Tích hợp dịch vụ SMS Brandname/OTP SpeedSMS gửi trực tiếp mã OTP 6 số đến số điện thoại thật của bệnh nhân; hỗ trợ chuyển đổi linh hoạt với DevStub SMS cho môi trường thử nghiệm.
+- **Đội ngũ 6 Bác sĩ Chuyên khoa Thực tế & Ảnh chân dung 100% JPG:** Đồng bộ 6 bác sĩ chuyên khoa với đầy đủ thông tin phòng khám, tiểu sử, giá khám; loại bỏ toàn bộ ảnh vector SVG, chuyển sang 100% ảnh chân dung y tế định dạng JPG chất lượng cao với thuật toán nhận diện bác sĩ đa tiêu chí thông minh.
 - **Xác thực bảo mật OTP (Purpose-bound & Scoped Grant):** Tra cứu, đổi lịch và hủy lịch được bảo vệ bằng mã OTP 6 chữ số gửi qua số điện thoại; cấp Scoped Grant Token dùng 1 lần (One-time use) với TTL 15 phút.
 - **Bảo toàn hồ sơ bệnh nhân (Strictly NO Auto-merge):** Hồ sơ bệnh nhân độc lập với tài khoản người dùng; không bao giờ tự động gộp hồ sơ khi trùng Tên + Ngày sinh/Năm sinh; mở ca đối soát tại quầy Lễ tân.
 - **Chính sách hoàn phí minh bạch:**
@@ -23,7 +26,7 @@ Hệ thống phục vụ việc quản lý phòng khám đa khoa hiện đại, 
   - Tại hoặc sau giờ hẹn: Chặn tự hủy.
 - **Chống trùng ca tuyệt đối (Zero Double Booking):** Bảo vệ tầng ứng dụng kết hợp ràng buộc vật lý **PostgreSQL GiST Exclusion Constraint** (`tstzrange` nửa khoảng `[)`) ngăn chặn triệt để race condition khi có nhiều giao dịch đặt cùng một bác sĩ trong cùng khung giờ.
 - **Bảo mật và Quyền riêng tư y tế:** Che giấu PII (số điện thoại `091***678`, CCCD `[REDACTED_CCCD]`, BHYT `[REDACTED_BHYT]`, OTP `[REDACTED_OTP]`, Password `[REDACTED]`), không bao giờ log thông tin nhạy cảm; phân quyền nghiêm ngặt RBAC và Anti-IDOR.
-- **Triển khai Production Ready:** Multi-stage Docker Compose, Nginx Reverse Proxy tự động chuyển hướng 301 sang HTTPS, HSTS 1 năm, Health Checks theo dõi trạng thái cơ sở dữ liệu.
+- **Triển khai Production Ready & Cloud Ready:** Hỗ trợ Multi-stage Docker Compose (Nginx Reverse Proxy HTTPS 301, HSTS 1 năm, Health Checks) và cấu hình Cloud Blueprint `render.yaml` triển khai trực tiếp lên Render.
 
 ---
 
@@ -34,9 +37,11 @@ Hệ thống phục vụ việc quản lý phòng khám đa khoa hiện đại, 
 | **Backend API** | C#, ASP.NET Core 8 | Clean Architecture (Domain, Application, Infrastructure, Api), MediatR CQRS, FluentValidation |
 | **Data Access & ORM** | Entity Framework Core 8 | Npgsql, Npgsql.EntityFrameworkCore.PostgreSQL, Migrations, Idempotent Seeder |
 | **Database** | PostgreSQL 18 / 16 | PostgreSQL `btree_gist` extension, GiST exclusion constraints, B-Tree indexes, JSONB audit snapshots |
-| **Frontend SPA** | React 18, TypeScript, Vite 6 | Tailwind CSS, Lucide React, Axios API Client, Responsive Design |
-| **Testing** | xUnit, Vitest, JSDOM, RTL | 514 Backend Tests (Unit, State Machine, PII Redaction, Real Postgres GiST Concurrency), 9 Frontend Journey Tests |
-| **Deployment** | Docker, Nginx 1.27 Alpine | Multi-stage Dockerfiles, Docker Compose, Nginx HTTPS Reverse Proxy, HSTS, Security Headers |
+| **Payment Gateway** | PayOS SDK & VietQR | Tự động sinh mã VietQR ngân hàng, xác thực webhook HMAC-SHA256, đối soát thanh toán tự động |
+| **SMS Gateway** | SpeedSMS API | Tích hợp gửi mã OTP thật vào số điện thoại bệnh nhân, hỗ trợ Brandname/Verify OTP |
+| **Frontend SPA** | React 18, TypeScript, Vite 6 | Tailwind CSS, Lucide React, Axios API Client, 100% JPG Doctor Portrait Avatars |
+| **Testing** | xUnit, Vitest, JSDOM, RTL | 522 Backend Tests (Unit, State Machine, PII Redaction, Real Postgres GiST Concurrency), 16 Frontend Journey & Avatar Tests |
+| **Deployment** | Docker, Nginx 1.27, Render | Multi-stage Dockerfiles, Docker Compose, Nginx HTTPS Reverse Proxy, HSTS, Render Cloud Blueprint |
 
 ---
 
@@ -48,16 +53,55 @@ Clinic_Appointment_Management_Project/
 │   ├── src/
 │   │   ├── ClinicAppointment.Domain/         # Thực thể cốt lõi, Enums, State Machine, Policies
 │   │   ├── ClinicAppointment.Application/    # Commands/Queries MediatR, DTOs, Validators, Interfaces
-│   │   ├── ClinicAppointment.Infrastructure/ # EF Core DbContext, Npgsql, PII Encryption, Logging, Health
-│   │   └── ClinicAppointment.Api/            # Controllers RESTful v1, Middlewares, Program.cs
+│   │   ├── ClinicAppointment.Infrastructure/ # EF Core DbContext, Npgsql, PII Encryption, PayOS, SpeedSMS
+│   │   └── ClinicAppointment.Api/            # Controllers RESTful v1, Webhook PayOS, Middlewares, Program.cs
 │   ├── tests/
-│   │   ├── ClinicAppointment.Domain.Tests/   # 501 Unit & Real DB Concurrency Tests
+│   │   ├── ClinicAppointment.Domain.Tests/   # 509 Unit, State Machine, Real DB Concurrency & Avatar Tests
 │   │   └── ClinicAppointment.Integration.Tests/ # 13 API Integration Tests (WebApplicationFactory)
 │   ├── Dockerfile                        # Multi-stage SDK build -> non-root appuser runtime
 │   └── ClinicAppointment.sln             # Visual Studio Solution
 ├── frontend/                             # Mã nguồn Frontend React SPA (Vite + TS)
+│   ├── public/
+│   │   └── images/doctors/               # 100% ảnh chân dung y tế định dạng JPG (dr-*.jpg, default-doctor.jpg)
 │   ├── src/
 │   │   ├── api/                              # apiClient, Axios interceptors, JWT handling
+│   │   ├── components/layout/                # Navbar, Footer, Modal, ProtectedRoute
+│   │   ├── pages/                            # Guest Booking (VietQR), Lookup, Reception, Doctor, Admin
+│   │   ├── utils/doctorAvatars.ts            # Thuật toán nhận diện ảnh bác sĩ đa tiêu chí (100% JPG)
+│   │   ├── types/                            # TypeScript interfaces & enums
+│   │   └── test/                             # 16 Vitest + RTL User Journeys & Doctor Avatar Tests
+│   ├── Dockerfile                        # Multi-stage Node build -> Nginx alpine static serving
+│   ├── nginx.conf                        # Frontend SPA routing fallback (try_files)
+│   └── package.json
+├── deployment/                           # Cấu hình Gateway Reverse Proxy
+│   └── nginx/
+│       ├── nginx.conf                        # Nginx main config
+│       └── conf.d/clinic.conf                # Port 80 -> 443 SSL 301 Redirect, HSTS, Upstream
+├── database/                             # Tài liệu DB, Migrations SQL & Thư mục sao lưu
+│   ├── migrations/20261114_initial_schema.sql
+│   └── backups/
+├── scripts/                              # Kịch bản tự động hóa sao lưu và phục hồi DB
+│   ├── backup-database.ps1 / .sh         # Kịch bản sao lưu nén nhị phân pg_dump
+│   ├── restore-database.ps1 / .sh        # Kịch bản phục hồi pg_restore kèm kiểm tra tính toàn vẹn
+│   └── start-online-demo.ps1             # Kịch bản chạy demo song song frontend + backend
+├── docs/                                 # Tài liệu kỹ thuật, kiến trúc, đặc tả, runbook & handover
+│   ├── HANDOVER.md                       # Báo cáo bàn giao và nghiệm thu 55/55 tính năng
+│   ├── DEPLOYMENT_RUNBOOK.md             # Tài liệu vận hành triển khai Docker & Cloud Render Blueprint
+│   ├── PAYMENT_AND_SMS_SETUP.md          # Hướng dẫn cấu hình Cổng thanh toán VietQR PayOS & SpeedSMS
+│   ├── SPEC.md                           # Đặc tả yêu cầu phần mềm (SRS v1.2)
+│   ├── BUSINESS_RULES.md                 # Quy tắc nghiệp vụ bất biến
+│   ├── ARCHITECTURE.md                   # Tài liệu thiết kế kiến trúc hệ thống
+│   ├── DATABASE_DESIGN.md                # Thiết kế cơ sở dữ liệu logic v1.2
+│   └── API_SPECIFICATION.md              # Đặc tả giao diện lập trình ứng dụng RESTful
+├── planning/                             # Kế hoạch và nhật ký tiến độ dự án
+│   ├── feature_list.json                 # Danh sách features, tiêu chí nghiệm thu và bằng chứng
+│   ├── progress.md                       # Báo cáo tiến độ tổng thể
+│   └── implementation_log.md             # Nhật ký chi tiết triển khai từng feature
+├── render.yaml                           # Cloud Deployment Blueprint (Backend + Frontend + Postgres)
+├── docker-compose.prod.yml               # Cấu hình khởi chạy Production an toàn (Zero Trust DB)
+├── .env.example                          # Tệp cấu hình biến môi trường mẫu
+└── README.md                             # Tài liệu giới thiệu và hướng dẫn tổng quan
+```
 │   │   ├── components/layout/                # Navbar, Footer, Modal, ProtectedRoute
 │   │   ├── pages/                            # Guest Booking, Lookup, Reception, Doctor, Admin Dashboards
 │   │   ├── types/                            # TypeScript interfaces & enums
@@ -154,12 +198,16 @@ Hệ thống cung cấp sẵn các tài khoản demo đại diện cho mọi vai
 
 | Vai trò | Email đăng nhập | Mật khẩu mặc định | Chức năng truy cập |
 | :--- | :--- | :--- | :--- |
-| **ADMIN** | `admin@clinic.com` | `Admin@123456` | Dashboard tổng quan, Đối soát tài chính, Quản lý Chuyên khoa, Bác sĩ, Dịch vụ & Lịch làm việc. |
-| **RECEPTIONIST** | `receptionist@clinic.com` | `Reception@123456` | Bàn Lễ tân, Xác nhận ca khám mới, Duyệt/Từ chối đổi lịch, Check-in, Xử lý hồ sơ nghi trùng. |
-| **DOCTOR** (Nội khoa) | `doctor.an@clinic.com` | `Doctor@123456` | Bác sĩ Nguyễn Văn An: Lịch khám hôm nay, Tiếp nhận khám, Ghi bệnh án lâm sàng, Khóa bệnh án. |
-| **DOCTOR** (Tim mạch) | `doctor.binh@clinic.com` | `Doctor@123456` | Bác sĩ Trần Thị Bình: Lịch khám được phân công, Quy trình khám bệnh. |
+| **ADMIN** | `admin@clinic.vn` *(alias `admin@clinic.com`)* | `Admin@123` / `Admin@123456` | Dashboard tổng quan, Đối soát tài chính, Quản lý Chuyên khoa, Bác sĩ, Dịch vụ & Lịch làm việc. |
+| **RECEPTIONIST** | `receptionist@clinic.vn` *(alias `receptionist@clinic.com`)* | `Reception@123` / `Reception@123456` | Bàn Lễ tân, Xác nhận ca khám mới, Duyệt/Từ chối đổi lịch, Check-in, Xử lý hồ sơ nghi trùng. |
+| **DOCTOR (Nội Tổng Quát)** | `dr.an@clinic.vn` *(alias `doctor.an@clinic.com`)* | `Doctor@123` / `Doctor@123456` | BS. CKI Nguyễn Văn An (P.101): Lịch khám hôm nay, Tiếp nhận khám, Bệnh án lâm sàng. |
+| **DOCTOR (Nhi Khoa)** | `dr.mai@clinic.vn` | `Doctor@123` | ThS. BS Trần Thị Mai (P.105): Tiếp nhận và khám bệnh chuyên khoa Nhi. |
+| **DOCTOR (Tim Mạch)** | `dr.nam@clinic.vn` *(alias `doctor.binh@clinic.com`)* | `Doctor@123` / `Doctor@123456` | TS. BS Lê Hoàng Nam (P.201): Tiếp nhận và khám bệnh chuyên khoa Tim Mạch. |
+| **DOCTOR (Tai Mũi Họng)** | `dr.trang@clinic.vn` | `Doctor@123` | BS. CKI Phạm Thu Trang (P.204): Khám nội soi tai mũi họng & xử trí viêm xoang. |
+| **DOCTOR (Răng Hàm Mặt)** | `dr.minh@clinic.vn` | `Doctor@123` | BS. Vũ Đức Minh (P.301): Khám răng miệng & nha khoa thẩm mỹ. |
+| **DOCTOR (Nội TK - CXK)** | `dr.tuan@clinic.vn` | `Doctor@123` | BS. CKII Đặng Minh Tuấn (P.205): Khám Nội thần kinh, Cơ xương khớp & Huyết học. |
 | **PATIENT** | `patient.hoa@gmail.com` | `Patient@123456` | Bệnh nhân có tài khoản: Tra cứu và quản lý lịch khám cá nhân. |
-| **GUEST** | *(Không cần đăng nhập)* | *(Không cần mật khẩu)* | Khách vãng lai: Đặt lịch 4 bước, tra cứu/đổi/hủy lịch qua mã xác thực OTP gửi về điện thoại. |
+| **GUEST** | *(Không cần đăng nhập)* | *(Không cần mật khẩu)* | Khách vãng lai: Đặt lịch 4 bước, thanh toán VietQR, tra cứu/đổi/hủy lịch qua OTP. |
 
 ---
 
@@ -169,7 +217,7 @@ Hệ thống được trang bị bộ kiểm thử tự động toàn diện, x�
 
 ### Kiểm thử Backend (xUnit)
 ```powershell
-# Chạy toàn bộ 514 backend tests (100% PASS)
+# Chạy toàn bộ 522 backend tests (100% PASS)
 dotnet test backend/ClinicAppointment.sln
 
 # Hoặc dùng đường dẫn đầy đủ:
@@ -184,7 +232,7 @@ dotnet test backend/ClinicAppointment.sln
 
 ### Kiểm thử Frontend (Vitest & RTL)
 ```powershell
-# Chạy toàn bộ 9 frontend journey tests (100% PASS)
+# Chạy toàn bộ 16 frontend journey & doctor avatar tests (100% PASS)
 npm --prefix d:\Clinic_Appointment_Management_Project\frontend test
 
 # Kiểm tra build bundle tĩnh của Frontend (0 errors)
@@ -193,12 +241,13 @@ npm --prefix d:\Clinic_Appointment_Management_Project\frontend run build
 
 ---
 
-## 7. Triển khai môi trường Production (Docker Compose)
+## 7. Triển khai môi trường Production (Docker Compose & Cloud Render)
 
 Hệ thống hỗ trợ triển khai sẵn sàng bằng Docker Compose với mô hình bảo mật cô lập:
 - PostgreSQL không mở cổng ra ngoài máy chủ (Zero Trust).
 - Backend Kestrel chạy dưới tài khoản không đặc quyền `appuser` (non-root UID 1000).
 - Nginx Reverse Proxy Gateway chuyển hướng 301 toàn bộ HTTP cổng 80 sang HTTPS cổng 443, áp dụng HSTS 1 năm và bộ tiêu đề bảo mật.
+- Sẵn sàng triển khai Cloud qua Blueprint `render.yaml` trên Render Platform.
 
 ```powershell
 cd d:\Clinic_Appointment_Management_Project
@@ -244,11 +293,11 @@ Dự án cung cấp sẵn kịch bản PowerShell (`.ps1`) và Bash (`.sh`) tự
 Theo quy định kiến trúc trong `AGENTS.md`, các dịch vụ phụ thuộc vào đối tác bên thứ ba được trừu tượng hóa và có sẵn Dev Stubs:
 
 1. **SMS Gateway Provider (TBD):**
-   - *Hiện trạng:* Đang sử dụng abstraction `ISmsSender` và `DevStubSmsChannel`. Mã OTP và tin nhắn gửi lịch khám được in ra log môi trường phát triển (được mask an toàn) và trả về trong phản hồi API ở môi trường dev để dễ dàng thử nghiệm.
-   - *Khi go-live:* Thay thế bằng adapter của nhà mạng viễn thông (eSMS, VNPT, Viettel, Twilio) trong `DependencyInjection.cs`.
+   - *Hiện trạng & Tích hợp thực tế:* Đã tích hợp thành công nhà cung cấp dịch vụ SMS Gateway **SpeedSMS** (`SpeedSmsSender`) gửi trực tiếp mã OTP thật vào số điện thoại bệnh nhân. Hệ thống duy trì song song adapter `DevStubSmsChannel` trong môi trường dev/test khi chưa cấu hình token.
+   - *Khi go-live:* Cấu hình `SPEEDSMS_ACCESS_TOKEN` và `SPEEDSMS_SENDER_ID` trong biến môi trường hoặc `appsettings.Production.json` (xem [docs/PAYMENT_AND_SMS_SETUP.md](file:///d:/Clinic_Appointment_Management_Project/docs/PAYMENT_AND_SMS_SETUP.md)).
 2. **Cổng thanh toán trực tuyến (TBD):**
-   - *Hiện trạng:* Hệ thống quản lý snapshot chi phí `ServicePriceSnapshot` và đối soát hoàn tiền độc lập tại quầy thông qua bảng `refunds` (`/api/v1/reception/refunds/{id}/process`).
-   - *Khi go-live:* Bổ sung webhook IPN cho các cổng thanh toán trực tuyến như VNPay, MoMo, VietQR.
+   - *Hiện trạng & Tích hợp thực tế:* Đã tích hợp thành công Cổng thanh toán quét mã **VietQR (PayOS)** tự động sinh mã VietQR chuẩn ngân hàng khi đặt lịch hoặc tra cứu, đồng thời duy trì đối soát hoàn tiền độc lập tại quầy thông qua bảng `refunds` (`/api/v1/reception/refunds/{id}/process`).
+   - *Khi go-live:* Cấu hình thông số PayOS (`PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`) theo hướng dẫn chi tiết trong [docs/PAYMENT_AND_SMS_SETUP.md](file:///d:/Clinic_Appointment_Management_Project/docs/PAYMENT_AND_SMS_SETUP.md).
 3. **Email SMTP Provider (TBD):**
    - *Hiện trạng:* Đang sử dụng `IEmailSender` và `DevStubEmailChannel`.
    - *Khi go-live:* Cấu hình thông số máy chủ SMTP (SendGrid, Amazon SES, Google Workspace) trong `appsettings.Production.json`.
@@ -258,6 +307,7 @@ Theo quy định kiến trúc trong `AGENTS.md`, các dịch vụ phụ thuộc 
 ## 10. Tài liệu kỹ thuật chi tiết
 
 - [Báo cáo bàn giao và nghiệm thu dự án (docs/HANDOVER.md)](file:///d:/Clinic_Appointment_Management_Project/docs/HANDOVER.md)
+- [Hướng dẫn tích hợp Cổng thanh toán VietQR PayOS và SpeedSMS (docs/PAYMENT_AND_SMS_SETUP.md)](file:///d:/Clinic_Appointment_Management_Project/docs/PAYMENT_AND_SMS_SETUP.md)
 - [Tài liệu vận hành triển khai và xử lý sự cố (docs/DEPLOYMENT_RUNBOOK.md)](file:///d:/Clinic_Appointment_Management_Project/docs/DEPLOYMENT_RUNBOOK.md)
 - [Đặc tả yêu cầu phần mềm SRS v1.2 (docs/SPEC.md)](file:///d:/Clinic_Appointment_Management_Project/docs/SPEC.md)
 - [Quy tắc nghiệp vụ phòng khám (docs/BUSINESS_RULES.md)](file:///d:/Clinic_Appointment_Management_Project/docs/BUSINESS_RULES.md)

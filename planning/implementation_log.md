@@ -2606,6 +2606,76 @@ Chỉ ghi công việc thực sự đã thực hiện; tài liệu Harness khôn
   - `Feature evidence complete`: Đạt 100%, tổng hợp bằng chứng kiểm thử của toàn bộ 55 tính năng (517 backend tests xUnit PASS 100%, 9 frontend journey tests Vitest PASS 100%, Frontend build PASS 0 errors) trong docs/HANDOVER.md và planning/feature_list.json.
   - `Known limitations/TBD documented`: Đạt 100%, ghi nhận rõ ràng hiện trạng và hướng triển khai cho các dịch vụ bên thứ ba (SMS Gateway Provider TBD, Online Payment Gateway TBD, Email SMTP Provider TBD, và Chứng chỉ SSL/TLS Production) trong cả README.md, docs/HANDOVER.md và planning/feature_list.json.
 
+### 2026-11-15 — FEAT-056 — Online VietQR Payment Gateway Integration
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Tích hợp Cổng thanh toán trực tuyến quét mã VietQR tự động qua ứng dụng ngân hàng bằng PayOS (Module Finance & Payments):
+    1. Backend tích hợp PayOS SDK và dịch vụ `IPaymentGatewayService` / `PayOsPaymentGatewayService` sinh mã VietQR chuyển khoản NAPAS 24/7 động cho từng ca khám.
+    2. Endpoint Webhook IPN xử lý nhận thông báo thanh toán thành công từ PayOS kèm xác thực chữ ký SHA-256 an toàn, tự động cập nhật trạng thái ca khám sang `Confirmed`.
+    3. Tích hợp thanh toán quét mã VietQR vào cả luồng đặt lịch mới (`BookingPage.tsx`) và luồng tra cứu lịch hẹn (`LookupPage.tsx`).
+    4. Xây dựng tài liệu hướng dẫn tích hợp chi tiết `docs/PAYMENT_AND_SMS_SETUP.md`.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Infrastructure/Services/PayOsPaymentGatewayService.cs`
+  - `backend/src/ClinicAppointment.Api/Controllers/PaymentsController.cs`
+  - `frontend/src/pages/BookingPage.tsx`
+  - `frontend/src/pages/LookupPage.tsx`
+  - `docs/PAYMENT_AND_SMS_SETUP.md`
+- Acceptance criteria evidence:
+  - Tự động sinh mã VietQR chuẩn ngân hàng với số tiền và nội dung chuyển khoản ca khám.
+  - Webhook xác thực chữ ký an toàn bảo vệ chống giả mạo giao dịch.
+
+### 2026-11-15 — FEAT-057 — Real SMS Gateway Integration (SpeedSMS)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Tích hợp dịch vụ SMS Gateway SpeedSMS gửi mã OTP thật vào số điện thoại bệnh nhân (Module Notification & Security):
+    1. Backend triển khai adapter `SpeedSmsSender` thực thi interface `ISmsSender` gọi trực tiếp HTTP API của SpeedSMS.
+    2. Hỗ trợ gửi tin nhắn xác thực mã OTP 6 chữ số và tin nhắn thông báo lịch hẹn CSKH Brandname.
+    3. Hỗ trợ chuyển đổi mượt mà giữa SpeedSMS và `DevStubSmsChannel` trong môi trường dev/test khi chưa cấu hình token.
+    4. Tuân thủ triệt để nguyên tắc bảo mật không ghi log mã OTP thô.
+- Files created/changed:
+  - `backend/src/ClinicAppointment.Infrastructure/Services/SpeedSmsSender.cs`
+  - `backend/src/ClinicAppointment.Infrastructure/DependencyInjection.cs`
+  - `docs/PAYMENT_AND_SMS_SETUP.md`
+- Acceptance criteria evidence:
+  - Gửi tin nhắn SMS OTP thành công đến số điện thoại di động Việt Nam.
+  - Che giấu toàn bộ PII và OTP không lưu vào nhật ký hệ thống.
+
+### 2026-11-16 — FEAT-058 — Doctor Catalog Standardization & 100% JPG Portrait Avatars
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Chuẩn hóa toàn diện danh mục 6 bác sĩ chuyên khoa thực tế và chuyển đổi 100% ảnh đại diện sang định dạng JPG chất lượng cao (Module Catalog & Doctor):
+    1. Đồng bộ đầy đủ 6 bác sĩ chuyên khoa trong database và seeder (`dr.an@clinic.vn` P.101, `dr.mai@clinic.vn` P.105, `dr.nam@clinic.vn` P.201, `dr.trang@clinic.vn` P.204, `dr.minh@clinic.vn` P.301, `dr.tuan@clinic.vn` P.205).
+    2. Dọn dẹp triệt để dữ liệu rác/thử nghiệm concurrency khỏi cơ sở dữ liệu, cách ly `PostgresGistConcurrencyTests` với cờ `isActive: false` để bảo vệ danh mục công khai.
+    3. Xóa bỏ hoàn toàn 7 file vector SVG, chuẩn hóa 100% ảnh chân dung y tế định dạng JPG (`dr-*.jpg` và `default-doctor.jpg`).
+    4. Nâng cấp thuật toán nhận diện ảnh bác sĩ đa tiêu chí trong `doctorAvatars.ts` (`doctorCode` -> `email` -> `id` -> exact name regex -> specialty) khắc phục triệt để lỗi gán nhầm ảnh.
+    5. Bổ sung tài khoản mẫu đăng nhập nhanh cho cả 6 bác sĩ tại trang `/doctor`.
+    6. Bổ sung 7 unit tests tự động mới `DoctorAvatarsResolution.test.ts`, nâng tổng số frontend test lên 16/16 tests PASS 100%.
+- Files created/changed:
+  - `frontend/public/images/doctors/default-doctor.jpg`
+  - `frontend/src/utils/doctorAvatars.ts`
+  - `frontend/src/test/DoctorAvatarsResolution.test.ts`
+  - `frontend/src/pages/DoctorDashboardPage.tsx`
+  - `frontend/src/pages/DoctorsPage.tsx`
+  - `frontend/src/pages/HomePage.tsx`
+  - `frontend/src/pages/BookingPage.tsx`
+  - `frontend/src/pages/AdminDashboardPage.tsx`
+- Acceptance criteria evidence:
+  - 100% ảnh bác sĩ hiển thị đúng người đúng ảnh định dạng JPG sắc nét.
+  - 16/16 tests frontend Vitest PASS 100%.
+
+### 2026-11-16 — FEAT-059 — Cloud Deployment Blueprint (Render)
+- Status before/after: not_started -> completed
+- Scope implemented:
+  - Xây dựng cấu hình triển khai đám mây tự động đa dịch vụ bằng Render Blueprint (Module Deployment & Cloud):
+    1. Tạo tệp cấu hình `render.yaml` chuẩn hóa triển khai multi-service: Web Service Backend ASP.NET Core (.NET 8 SDK build -> Kestrel port 8080), Static Site Frontend React SPA (Node 20 build -> dist static serving), và Managed PostgreSQL Database.
+    2. Tích hợp biến môi trường và kết nối an toàn giữa các dịch vụ trên Cloud.
+    3. Cập nhật cẩm nang vận hành chi tiết trong `docs/DEPLOYMENT_RUNBOOK.md`.
+- Files created/changed:
+  - `render.yaml`
+  - `docs/DEPLOYMENT_RUNBOOK.md`
+- Acceptance criteria evidence:
+  - File cấu hình Render Blueprint hợp lệ, sẵn sàng triển khai tự động qua kho lưu trữ Git.
+
 
 
 

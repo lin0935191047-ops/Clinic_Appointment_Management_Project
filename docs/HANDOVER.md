@@ -112,6 +112,10 @@ Dự án đã hoàn thành toàn diện 100% tính năng trong `planning/feature
 | **Operations** | `FEAT-053` | Logging, audit & health checks | High | **Completed** | Structured Logging, PII Redaction, DB Health, 505 tests |
 | **Deployment** | `FEAT-054` | Deployment & environment config | Medium | **Completed** | Docker Compose, HTTPS Nginx 301, HSTS, Backup/Restore, 514 tests |
 | **Documentation**| `FEAT-055`| Final documentation & handover | Medium | **Completed** | README, Handover doc, Runbook, Verified commands, Evidence |
+| **Payment** | `FEAT-056` | Online VietQR Payment Gateway | High | **Completed** | Cổng PayOS quét mã VietQR tự động, Webhook HMAC-SHA256, 522 tests |
+| **Notification**| `FEAT-057` | Real SMS Gateway (SpeedSMS) | High | **Completed** | Gửi SMS OTP thật qua SpeedSMS API, Không log OTP thô, 522 tests |
+| **Doctor** | `FEAT-058` | Doctor Catalog & 100% JPG Avatars | High | **Completed** | Đồng bộ 6 BS, Dọn test data, 100% ảnh JPG (bỏ SVG), 16 Vitest tests |
+| **Cloud** | `FEAT-059` | Render Cloud Deployment Blueprint | Medium | **Completed** | render.yaml đa dịch vụ Web + Frontend + Postgres, Runbook hướng dẫn |
 
 ---
 

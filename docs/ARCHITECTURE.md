@@ -13,19 +13,22 @@ Version 1.0 | Proposed baseline — duyệt trước khi scaffold code
 ## 2. High-level architecture
 ```text
 Browser / React.js SPA
-  Public + Guest Booking | Patient | Reception | Doctor | Admin
+  Public + Guest Booking (VietQR) | Patient | Reception | Doctor | Admin
                   | HTTPS / JSON
                   v
 ASP.NET Core Web API — Modular Monolith
-  Presentation: Controllers, DTOs, Middleware
+  Presentation: Controllers, DTOs, Middleware, Webhook PayOS
   Application: Use cases, Services, Validators, Policies
   Domain: Entities, Value Objects, State Transitions
-  Infrastructure: EF Core, PostgreSQL, external adapters
+  Infrastructure: EF Core, PostgreSQL, External Adapters
                   |
                   v
              PostgreSQL
 
-External adapters (TBD): SMS/OTP, Email, Payment/Refund
+External adapters:
+  - SMS/OTP: SpeedSMS API (gửi số điện thoại thật) & DevStubSmsChannel
+  - Payment: PayOS VietQR SDK (quét mã QR ngân hàng) & Quầy Lễ tân
+  - Email: IEmailSender / DevStubEmailChannel
 ```
 
 ## 3. Style and modules
@@ -34,36 +37,36 @@ External adapters (TBD): SMS/OTP, Email, Payment/Refund
 ## 4. Technology stack
 | Layer | Tech | Decision |
 |---|---|---|
-| Frontend | React.js | Required |
-| Language | TypeScript | Recommended; confirm before scaffold |
+| Frontend | React.js 18 + Vite 6 | Required |
+| Language | TypeScript | Required |
 | State | Redux Toolkit | Required per project direction |
-| Router | React Router | Recommended |
-| UI | Tailwind CSS | Recommended |
-| Backend | C# / ASP.NET Core Web API | Required |
+| Router | React Router 6 | Recommended |
+| UI | Tailwind CSS + Lucide Icons | Recommended |
+| Backend | C# / ASP.NET Core Web API (.NET 8) | Required |
 | ORM | Entity Framework Core + Npgsql | Required |
-| DB | PostgreSQL | Required; TablePlus is GUI client |
+| DB | PostgreSQL 16/18 + `btree_gist` extension | Required |
+| Payment Gateway | PayOS SDK & VietQR NAPAS 24/7 | Integrated |
+| SMS Gateway | SpeedSMS API (CSKH Brandname / Verify OTP) | Integrated |
 | API docs | OpenAPI/Swagger | Required |
-| Backend tests | xUnit + integration tests | Proposed |
-| Frontend tests | Vitest + React Testing Library | Proposed |
+| Backend tests | xUnit + integration tests (522 tests PASS) | Required |
+| Frontend tests | Vitest + React Testing Library (16 tests PASS) | Required |
+| Deployment | Docker Compose + Render Cloud Blueprint | Production & Cloud |
 
 Chọn .NET LTS và package versions tương thích tại thời điểm scaffold, ghi vào README. Không pin phiên bản cũ theo ví dụ lỗi thời.
 
 ## 5. Frontend target structure
 ```text
-frontend/src/
-  app/                 # bootstrap, router, store
-  components/          # reusable UI
-  features/
-    auth/
-    public-catalog/
-    guest-booking/
-    appointment-lookup/
-    patient/
-    reception/
-    doctor/
-    admin/
-  services/            # API client
-  hooks/ layouts/ pages/ utils/ types/
+frontend/
+  public/
+    images/doctors/    # 100% ảnh chân dung y tế JPG (dr-*.jpg, default-doctor.jpg)
+  src/
+    api/               # apiClient, Axios interceptors, JWT handling
+    components/        # Reusable UI, Layout, Navbar, Modal, ProtectedRoute
+    pages/             # Guest Booking (VietQR), Lookup, Reception, Doctor, Admin Dashboards
+    utils/
+      doctorAvatars.ts # Thuật toán phân giải bác sĩ đa tiêu chí (100% JPG, không dùng SVG)
+    hooks/ layouts/ types/
+    test/              # Vitest journey & doctor avatar tests
 ```
 Rules: shared API client; Guest booking không redirect login; UI route guards chỉ phục vụ UX; Backend enforce permission; không lưu OTP/full identifier/health notes vào localStorage.
 
@@ -113,14 +116,15 @@ Nếu multi-project làm người mới quá tải, có thể bắt đầu một
 - Đề xuất mặc định ban đầu TTL 5 phút, tối đa 5 lần thử, resend cooldown 60 giây; security review trước production.
 - OTP cryptographically random, one-time, hash at rest, không log.
 - Verify tạo scoped short-lived grant theo booking/purpose; không tạo User login session.
-- SMS provider TBD; dùng interface `ISmsSender`.
+- SMS provider: Tích hợp dịch vụ SMS Gateway **SpeedSMS** (`SpeedSmsSender`) gửi mã OTP thật vào điện thoại; duy trì `DevStubSmsChannel` cho môi trường dev/test khi chưa cấu hình token.
 
 ## 11. Cancellation/refund architecture
 - Lưu service fee snapshot, payment record và cancellation calculation snapshot.
 - Server time determines policy: >=60 phút => 100%; <60 và >0 => 50%; <=0 => self-cancel denied.
 - Store minutes-before, rate, fee retained, expected refund, policy version và timestamp.
 - Refund record tách khỏi Appointment status.
-- Gateway chưa chọn; có thể manual processing adapter. Không báo đã hoàn khi status Pending.
+- Payment Gateway: Đã tích hợp Cổng thanh toán quét mã **VietQR (PayOS)** tự động sinh mã VietQR chuẩn ngân hàng khi đặt lịch hoặc tra cứu, đồng thời duy trì đối soát hoàn tiền độc lập tại quầy thông qua bảng `refunds` (`/api/v1/reception/refunds/{id}/process`).
+- Webhook PayOS xử lý xác thực chữ ký HMAC-SHA256 tự động cập nhật ca khám sang `Confirmed`.
 - Partial/unpaid-fee collection TBD.
 
 ## 12. Security and observability
@@ -141,7 +145,9 @@ Nếu multi-project làm người mới quá tải, có thể bắt đầu một
 - E2E: guest booking → OTP lookup → reschedule approval → cancellation.
 
 ## 14. Deployment
-Local: React dev server, ASP.NET Core API, PostgreSQL local. Production: frontend/API/DB separated, HTTPS, secrets manager, backups, monitoring. Hosting/provider/domain TBD.
+- **Local Development:** React dev server (port 5173), ASP.NET Core API (port 5000), PostgreSQL local (port 5432).
+- **Production (Docker Compose):** Frontend/API/DB separated, Nginx Gateway Reverse Proxy chuyển hướng HTTPS 301, HSTS 1 năm, Zero Trust isolated database network, tự động hóa sao lưu và phục hồi qua scripts (`backup-database.ps1`, `restore-database.ps1`).
+- **Cloud Deployment (Render Blueprint):** Tệp cấu hình `render.yaml` chuẩn hóa triển khai multi-service: Web Service Backend ASP.NET Core (.NET 8 SDK build), Static Site Frontend React SPA (Vite production build), và Managed PostgreSQL Database. Chi tiết hướng dẫn trong `docs/DEPLOYMENT_RUNBOOK.md`.
 
 ## 15. Architecture Decision Records
 Quyết định kiến trúc đáng kể phải ghi trong `docs/adr/` và cập nhật docs/Feature dependencies.
