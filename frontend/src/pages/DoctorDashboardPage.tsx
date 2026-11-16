@@ -18,7 +18,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { doctorApi, authApi } from '../api/client';
-import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
+import { getDoctorAvatar } from '../utils/doctorAvatars';
 import {
   DoctorDashboardData,
   DoctorDashboardAppointmentItem,
@@ -481,9 +481,10 @@ export const DoctorDashboardPage: React.FC = () => {
               loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                const fallback = getDoctorLocalFallback({ fullName: dashboardData?.doctorName || currentUser?.fullName });
-                if (!target.src.endsWith(fallback)) {
-                  target.src = fallback;
+                if (!target.src.includes('default-doctor.svg')) {
+                  target.src = '/images/doctors/default-doctor.svg';
+                } else if (!target.src.includes('dr-an.jpg')) {
+                  target.src = '/images/doctors/dr-an.jpg';
                 }
               }}
             />
