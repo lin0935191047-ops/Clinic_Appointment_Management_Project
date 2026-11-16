@@ -71,17 +71,22 @@ public class PayOSPaymentService : IPayOSPaymentService
             description = description[..25];
         }
 
-        // Nếu chưa cấu hình PayOS thật, tạo VietQR tương thích thực tế để kiểm thử mượt mà
+        var bankId = _configuration["BankQR:BankId"] ?? "MB";
+        var accountNumber = _configuration["BankQR:AccountNumber"] ?? "0935191047";
+        var accountName = _configuration["BankQR:AccountName"] ?? "PHONG KHAM DA KHOA";
+        var template = _configuration["BankQR:Template"] ?? "compact2";
+
+        // Nếu chưa cấu hình PayOS thật, tạo VietQR ngân hàng trực tiếp theo cấu hình BankQR của phòng khám
         if (string.IsNullOrWhiteSpace(clientId) ||
             string.IsNullOrWhiteSpace(apiKey) ||
             string.IsNullOrWhiteSpace(checksumKey) ||
             clientId.Contains("YOUR_"))
         {
             _logger.LogInformation(
-                "[PayOS Demo] Chưa nhập credentials PayOS trong appsettings.json. Sinh mã VietQR mẫu cho cuộc hẹn {BookingCode} với số tiền {Amount} VND.",
-                appointment.BookingCode, amount);
+                "[VietQR Ngân hàng] Tạo mã VietQR cho lịch {BookingCode} tới TK {BankId} - {AccountNumber} ({AccountName}) với số tiền {Amount} VND.",
+                appointment.BookingCode, bankId, accountNumber, accountName, amount);
 
-            var vietQrImage = $"https://img.vietqr.io/image/970422-0935191047-compact2.png?amount={amount}&addInfo={Uri.EscapeDataString(description)}&accountName=PHONG%20KHAM%20DA%20KHOA";
+            var vietQrImage = $"https://img.vietqr.io/image/{bankId}-{accountNumber}-{template}.png?amount={amount}&addInfo={Uri.EscapeDataString(description)}&accountName={Uri.EscapeDataString(accountName)}";
             var mockCheckoutUrl = $"/checkout-demo?bookingCode={appointment.BookingCode}&amount={amount}&orderCode={orderCode}";
 
             return new CreatePaymentLinkResult(
@@ -89,8 +94,8 @@ public class PayOSPaymentService : IPayOSPaymentService
                 mockCheckoutUrl,
                 vietQrImage,
                 orderCode,
-                $"PAYOS-MOCK-{orderCode}",
-                "Mã VietQR thanh toán đã được khởi tạo (Chế độ VietQR Demo / Cấu hình PayOS để kích hoạt link thật)."
+                $"VIETQR-DIRECT-{orderCode}",
+                $"Mã VietQR quét App ngân hàng ({bankId} - {accountNumber}) đã sẵn sàng."
             );
         }
 
