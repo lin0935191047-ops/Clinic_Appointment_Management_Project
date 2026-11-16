@@ -37,7 +37,7 @@ databases:
   # 2. Managed PostgreSQL Database (Render Free Tier)
   - name: clinic-postgres
     databaseName: clinicappointmentdb
-    user: postgres
+    user: clinicuser
     plan: free
     region: singapore
     postgresMajorVersion: 16
