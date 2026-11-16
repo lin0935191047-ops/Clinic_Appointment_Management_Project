@@ -14,35 +14,30 @@ services:
         value: "true"
       - key: ENABLE_SWAGGER
         value: "true"
+      - key: PORT
+        value: "8080"
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ConnectionStrings__DefaultConnection
         fromDatabase:
           name: clinic-postgres
           property: connectionString
-
-  # 2. Frontend React SPA (Static Site)
-  - type: web
-    name: clinic-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: clinic-backend-api
-          property: host
+      - key: BankQR__BankId
+        value: TCB
+      - key: BankQR__AccountNumber
+        value: "19038779759014"
+      - key: BankQR__AccountName
+        value: "LE HUYNH PHUONG ANH"
+      - key: BankQR__Template
+        value: compact2
+      - key: BankQR__StaticQrUrl
+        value: "/images/qr/techcombank-qr-clean.png"
 
 databases:
-  # 3. PostgreSQL Database
+  # 2. Managed PostgreSQL Database (Render Free Tier)
   - name: clinic-postgres
     databaseName: clinicappointmentdb
     user: postgres
     plan: free
     region: singapore
+    postgresMajorVersion: 16
