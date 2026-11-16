@@ -2,6 +2,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Copy Directory.Build.props (chứa TargetFramework net8.0 cho toàn bộ project)
+COPY ["backend/Directory.Build.props", "backend/"]
+
 # Copy file sln và các file csproj để restore dependencies (tận dụng layer cache)
 COPY ["backend/ClinicAppointment.sln", "backend/"]
 COPY ["backend/src/ClinicAppointment.Domain/ClinicAppointment.Domain.csproj", "backend/src/ClinicAppointment.Domain/"]

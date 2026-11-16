@@ -1,0 +1,17 @@
+**/.git
+**/.vs
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/TestResults
+**/node_modules
+frontend/dist
+**/*.user
+**/*.dump
+**/*.backup
+**/*.sql.gz
+appsettings.Development.json
+appsettings.Production.json
+.env
+.env.*
