@@ -1,8 +1,12 @@
 # Clinic Appointment Management System
 
 > **Hệ thống Quản lý và Đặt lịch khám bệnh phòng khám**  
-> Kiến trúc phân tầng **Clean Architecture** trên nền tảng **ASP.NET Core Web API (.NET 8)**, giao diện **React 18 SPA (Vite + TypeScript + Tailwind CSS)** và cơ sở dữ liệu **PostgreSQL 18** bảo vệ chống trùng ca bằng **GiST Exclusion Constraint**.
+> Kiến trúc phân tầng **Clean Architecture** trên nền tảng **ASP.NET Core Web API (.NET 8)**, giao diện **React 18 SPA (Vite + TypeScript + Tailwind CSS)** và cơ sở dữ liệu **PostgreSQL 18** bảo vệ chống trùng ca bằng **GiST Exclusion Constraint**.  
+>  
+> 🔗 **Đường dẫn ứng dụng trực tuyến duy nhất (Live Demo 24/7):**  
+> 👉 **[https://clinic-appointment-management-proje.vercel.app](https://clinic-appointment-management-proje.vercel.app)**
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel%20Production%20Active-success.svg)](https://clinic-appointment-management-proje.vercel.app)
 [![Backend Tests](https://img.shields.io/badge/Backend%20Tests-522%2F522%20PASS-brightgreen.svg)](#hướng-dẫn-chạy-kiểm-thử-tự-động)
 [![Frontend Tests](https://img.shields.io/badge/Frontend%20Tests-16%2F16%20PASS-brightgreen.svg)](#hướng-dẫn-chạy-kiểm-thử-tự-động)
 [![Status](https://img.shields.io/badge/Project%20Status-55%2F55%20Features%20Completed%20%2B%20Extensions-success.svg)](#danh-sách-và-trạng-thái-tính-năng)
