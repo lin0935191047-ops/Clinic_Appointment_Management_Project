@@ -41,24 +41,21 @@ public class PostgresGistConcurrencyTests
             await db.SaveChangesAsync();
         }
 
-        // 2. Kiểm tra / Tạo Bác sĩ
-        var doctor = await db.Doctors.FirstOrDefaultAsync(d => d.DoctorCode == "DOC-GIST-01");
-        if (doctor == null)
-        {
-            var user = User.Create($"doctor.gist.{Guid.NewGuid():N}@clinic.vn", "PasswordHash@123");
-            db.Users.Add(user);
-            await db.SaveChangesAsync();
+        // 2. Tạo Bác sĩ cô lập cho bài test concurrency để tránh trùng lặp khung giờ với DB thực tế
+        var testDocCode = $"DOC-GIST-{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+        var user = User.Create($"doctor.gist.{Guid.NewGuid():N}@clinic.vn", "PasswordHash@123");
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
 
-            doctor = Doctor.Create(
-                userId: user.Id,
-                specialtyId: specialty.Id,
-                doctorCode: "DOC-GIST-01",
-                fullName: "BS. CKII Đặng Minh Tuấn",
-                title: "Bác sĩ Chuyên khoa II",
-                roomNumber: "P.205");
-            db.Doctors.Add(doctor);
-            await db.SaveChangesAsync();
-        }
+        var doctor = Doctor.Create(
+            userId: user.Id,
+            specialtyId: specialty.Id,
+            doctorCode: testDocCode,
+            fullName: "BS. Thử Nghiệm Concurrency",
+            title: "Bác sĩ Thử Nghiệm",
+            roomNumber: "P.999");
+        db.Doctors.Add(doctor);
+        await db.SaveChangesAsync();
 
         // 3. Kiểm tra / Tạo Dịch vụ
         var service = await db.Services.FirstOrDefaultAsync(s => s.Code == "SRV-GIST-01");

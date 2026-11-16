@@ -346,9 +346,75 @@ export const DoctorDashboardPage: React.FC = () => {
 
   // VIEW 1: LOGIN FORM (If not authenticated)
   if (!token || !isAuthorizedDoctorOrAdmin) {
+    const demoDoctorAccounts = [
+      {
+        name: 'BS. CKI Nguyễn Văn An',
+        specialty: 'Nội Tổng Quát (P.101)',
+        email: 'dr.an@clinic.vn',
+        password: 'Doctor@123',
+        icon: '🩺',
+        colorClasses: 'bg-blue-50/80 hover:bg-blue-100 text-blue-900 border-blue-200',
+        badgeClasses: 'text-blue-700 bg-blue-100',
+      },
+      {
+        name: 'ThS. BS Trần Thị Mai',
+        specialty: 'Nhi Khoa (P.105)',
+        email: 'dr.mai@clinic.vn',
+        password: 'Doctor@123',
+        icon: '🩺',
+        colorClasses: 'bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 border-emerald-200',
+        badgeClasses: 'text-emerald-700 bg-emerald-100',
+      },
+      {
+        name: 'TS. BS Lê Hoàng Nam',
+        specialty: 'Tim Mạch (P.201)',
+        email: 'dr.nam@clinic.vn',
+        password: 'Doctor@123',
+        icon: '🩺',
+        colorClasses: 'bg-rose-50/80 hover:bg-rose-100 text-rose-900 border-rose-200',
+        badgeClasses: 'text-rose-700 bg-rose-100',
+      },
+      {
+        name: 'BS. CKI Phạm Thu Trang',
+        specialty: 'Tai Mũi Họng (P.204)',
+        email: 'dr.trang@clinic.vn',
+        password: 'Doctor@123',
+        icon: '🩺',
+        colorClasses: 'bg-amber-50/80 hover:bg-amber-100 text-amber-900 border-amber-200',
+        badgeClasses: 'text-amber-700 bg-amber-100',
+      },
+      {
+        name: 'BS. Vũ Đức Minh',
+        specialty: 'Răng Hàm Mặt (P.301)',
+        email: 'dr.minh@clinic.vn',
+        password: 'Doctor@123',
+        icon: '🩺',
+        colorClasses: 'bg-cyan-50/80 hover:bg-cyan-100 text-cyan-900 border-cyan-200',
+        badgeClasses: 'text-cyan-700 bg-cyan-100',
+      },
+      {
+        name: 'BS. CKII Đặng Minh Tuấn',
+        specialty: 'Nội Thần Kinh - CXK (P.205)',
+        email: 'dr.tuan@clinic.vn',
+        password: 'Doctor@123',
+        icon: '🩺',
+        colorClasses: 'bg-purple-50/80 hover:bg-purple-100 text-purple-900 border-purple-200',
+        badgeClasses: 'text-purple-700 bg-purple-100',
+      },
+      {
+        name: 'Quản Trị Viên (Full Access)',
+        specialty: 'Quản Trị & Xem Mọi Bác Sĩ',
+        email: 'admin@clinic.vn',
+        password: 'Admin@Clinic2026!',
+        icon: '🛡️',
+        colorClasses: 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-300',
+        badgeClasses: 'text-gray-700 bg-gray-200',
+      },
+    ];
+
     return (
       <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+        <div className="max-w-lg w-full space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
           <div className="text-center">
             <div className="mx-auto h-16 w-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
               <Stethoscope className="h-8 w-8" />
@@ -411,55 +477,35 @@ export const DoctorDashboardPage: React.FC = () => {
           </form>
 
           {/* Quick Demo Login Buttons */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
+          <div className="mt-6 pt-5 border-t border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-center mb-3">
               Tài Khoản Mẫu Để Đăng Nhập Nhanh
             </p>
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                type="button"
-                onClick={() => handleLogin(undefined, 'dr.an@clinic.vn', 'Doctor@123')}
-                disabled={loginLoading}
-                className="w-full text-left px-3 py-2 text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg border border-blue-200 transition flex items-center justify-between"
-              >
-                <span>
-                  🩺 <strong>BS. Nguyễn Văn An</strong> (Tim Mạch)
-                </span>
-                <span className="text-blue-600 font-mono text-[10px]">dr.an@clinic.vn</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLogin(undefined, 'dr.binh@clinic.vn', 'Doctor@123')}
-                disabled={loginLoading}
-                className="w-full text-left px-3 py-2 text-xs font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 transition flex items-center justify-between"
-              >
-                <span>
-                  🩺 <strong>BS. Trần Thị Bình</strong> (Da Liễu)
-                </span>
-                <span className="text-emerald-600 font-mono text-[10px]">dr.binh@clinic.vn</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLogin(undefined, 'dr.chi@clinic.vn', 'Doctor@123')}
-                disabled={loginLoading}
-                className="w-full text-left px-3 py-2 text-xs font-medium bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-lg border border-purple-200 transition flex items-center justify-between"
-              >
-                <span>
-                  🩺 <strong>BS. Lê Hoàng Chi</strong> (Nhi Khoa)
-                </span>
-                <span className="text-purple-600 font-mono text-[10px]">dr.chi@clinic.vn</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLogin(undefined, 'admin@clinic.vn', 'Admin@Clinic2026!')}
-                disabled={loginLoading}
-                className="w-full text-left px-3 py-2 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg border border-gray-300 transition flex items-center justify-between"
-              >
-                <span>
-                  🛡️ <strong>Quản Trị Viên</strong> (Full Access)
-                </span>
-                <span className="text-gray-600 font-mono text-[10px]">admin@clinic.vn</span>
-              </button>
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {demoDoctorAccounts.map((doc) => (
+                <button
+                  key={doc.email}
+                  type="button"
+                  onClick={() => handleLogin(undefined, doc.email, doc.password)}
+                  disabled={loginLoading}
+                  className={`w-full text-left px-3.5 py-2.5 text-xs font-medium rounded-xl border transition flex items-center justify-between group shadow-sm ${doc.colorClasses}`}
+                >
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <span className="text-base flex-shrink-0">{doc.icon}</span>
+                    <div className="truncate">
+                      <div className="font-bold text-gray-900 group-hover:text-blue-700 transition">
+                        {doc.name}
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        {doc.specialty}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-semibold ml-2 flex-shrink-0 border ${doc.badgeClasses}`}>
+                    {doc.email}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
