@@ -84,7 +84,11 @@ export const BookingPage: React.FC = () => {
   const handleCreatePayment = async (appointmentId: string) => {
     try {
       setLoadingPayment(true);
-      const res = await paymentApi.createPayOSLink(appointmentId);
+      const res = await paymentApi.createPayOSLink(
+        appointmentId,
+        confirmation?.fee,
+        confirmation?.bookingCode
+      );
       setPaymentLink(res);
     } catch (err: any) {
       alert(err.message || 'Lỗi khởi tạo thanh toán PayOS');

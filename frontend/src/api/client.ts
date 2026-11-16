@@ -1639,7 +1639,11 @@ export const adminApi = {
 
 // ----------------- PAYMENT API -----------------
 export const paymentApi = {
-  createPayOSLink: async (appointmentId: string): Promise<CreatePaymentLinkResponse> => {
+  createPayOSLink: async (
+    appointmentId: string,
+    amount?: number,
+    bookingCode?: string
+  ): Promise<CreatePaymentLinkResponse> => {
     try {
       const res = await apiClient.post<ApiResponse<CreatePaymentLinkResponse>>('/payments/payos/create-link', {
         appointmentId,
@@ -1652,10 +1656,16 @@ export const paymentApi = {
       if (err.response?.status === 400) {
         throw new Error(err.response?.data?.message || err.message);
       }
+      const db = getMockDb();
+      const targetApt = db.appointments.find((a) => a.id === appointmentId);
+      const effectiveAmount = amount || targetApt?.servicePrice || 150000;
+      const effectiveCode = bookingCode || targetApt?.bookingCode || 'APT-ONLINE';
+      const vietQrUrl = `https://img.vietqr.io/image/TCB-19038779759014-compact2.png?amount=${effectiveAmount}&addInfo=${encodeURIComponent(`TT ${effectiveCode}`)}&accountName=${encodeURIComponent('LE HUYNH PHUONG ANH')}`;
+
       return {
         success: true,
         checkoutUrl: 'https://pay.payos.vn/web/mock',
-        qrCode: '/images/qr/techcombank-qr-clean.png',
+        qrCode: vietQrUrl,
         orderCode: Number(Date.now().toString().slice(-6)),
         paymentLinkId: 'mock-link-' + appointmentId,
         message: 'Khởi tạo mã thanh toán VietQR Techcombank thành công.',

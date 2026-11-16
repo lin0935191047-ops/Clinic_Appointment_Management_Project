@@ -123,6 +123,7 @@ export interface AppointmentDetail {
   endTime: string;
   status: AppointmentStatus;
   paidAmount: number;
+  servicePrice?: number;
   notes?: string;
   createdAt: string;
 }

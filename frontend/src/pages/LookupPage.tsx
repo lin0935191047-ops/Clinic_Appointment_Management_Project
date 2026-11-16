@@ -61,7 +61,11 @@ export const LookupPage: React.FC = () => {
     if (!paymentLink) {
       try {
         setLoadingPayment(true);
-        const res = await paymentApi.createPayOSLink(appointmentId);
+        const res = await paymentApi.createPayOSLink(
+          appointmentId,
+          appointment?.servicePrice,
+          appointment?.bookingCode
+        );
         setPaymentLink(res);
       } catch (err: any) {
         alert(err.message || 'Lỗi tạo liên kết thanh toán');
@@ -681,6 +685,7 @@ export const LookupPage: React.FC = () => {
                   <p>Ngân hàng: <strong className="text-gray-900">{paymentLink.bankName || 'Techcombank'}</strong></p>
                   <p>Chủ tài khoản: <strong className="text-gray-900">{paymentLink.accountName || 'LE HUYNH PHUONG ANH'}</strong></p>
                   <p>Số tài khoản: <strong className="font-mono text-teal-700 font-bold">{paymentLink.accountNumber || '1903 8779 7590 14'}</strong></p>
+                  <p>Số tiền: <strong className="text-teal-700 font-bold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(appointment?.servicePrice || 150000)}</strong></p>
                   <p>Cuộc hẹn: <strong className="font-mono text-gray-900">{appointment?.bookingCode}</strong></p>
                   <p>Nội dung CK: <strong className="font-mono text-gray-900">TT {appointment?.bookingCode}</strong></p>
                   <p>Trạng thái: <span className="text-amber-700 font-bold">Chờ chuyển khoản</span></p>

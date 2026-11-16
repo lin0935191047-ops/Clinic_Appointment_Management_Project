@@ -75,7 +75,6 @@ public class PayOSPaymentService : IPayOSPaymentService
         var accountNumber = _configuration["BankQR:AccountNumber"] ?? "19038779759014";
         var accountName = _configuration["BankQR:AccountName"] ?? "LE HUYNH PHUONG ANH";
         var template = _configuration["BankQR:Template"] ?? "compact2";
-        var staticQrUrl = _configuration["BankQR:StaticQrUrl"] ?? "/images/qr/techcombank-qr-clean.png";
 
         // Nếu chưa cấu hình PayOS thật, tạo VietQR ngân hàng trực tiếp theo cấu hình BankQR của phòng khám
         if (string.IsNullOrWhiteSpace(clientId) ||
@@ -87,9 +86,7 @@ public class PayOSPaymentService : IPayOSPaymentService
                 "[VietQR Ngân hàng] Tạo mã VietQR cho lịch {BookingCode} tới TK {BankId} - {AccountNumber} ({AccountName}) với số tiền {Amount} VND.",
                 appointment.BookingCode, bankId, accountNumber, accountName, amount);
 
-            var vietQrImage = !string.IsNullOrWhiteSpace(staticQrUrl)
-                ? staticQrUrl
-                : $"https://img.vietqr.io/image/{bankId}-{accountNumber}-{template}.png?amount={amount}&addInfo={Uri.EscapeDataString(description)}&accountName={Uri.EscapeDataString(accountName)}";
+            var vietQrImage = $"https://img.vietqr.io/image/{bankId}-{accountNumber}-{template}.png?amount={amount}&addInfo={Uri.EscapeDataString(description)}&accountName={Uri.EscapeDataString(accountName)}";
             var mockCheckoutUrl = $"/checkout-demo?bookingCode={appointment.BookingCode}&amount={amount}&orderCode={orderCode}";
 
             return new CreatePaymentLinkResult(
@@ -98,7 +95,7 @@ public class PayOSPaymentService : IPayOSPaymentService
                 vietQrImage,
                 orderCode,
                 $"VIETQR-DIRECT-{orderCode}",
-                $"Mã VietQR Techcombank ({accountName} - {accountNumber}) đã sẵn sàng.",
+                $"Mã VietQR Techcombank ({accountName} - {accountNumber}) với số tiền {amount:N0} đ đã sẵn sàng.",
                 "Techcombank",
                 accountNumber,
                 accountName
