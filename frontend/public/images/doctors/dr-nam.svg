@@ -1,37 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0284c7" />
-      <stop offset="100%" stop-color="#0369a1" />
+    <linearGradient id="bg-nam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1e3a8a" />
     </linearGradient>
-    <linearGradient id="coat" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f8fafc" />
-      <stop offset="100%" stop-color="#e2e8f0" />
+    <linearGradient id="skin-nam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fed7aa" />
+      <stop offset="100%" stop-color="#fba866" />
     </linearGradient>
   </defs>
   <!-- Background Circle -->
-  <circle cx="60" cy="60" r="58" fill="url(#bg)" />
-  <!-- Body / Doctor White Coat -->
-  <path d="M 24 108 C 24 84, 40 76, 60 76 C 80 76, 96 84, 96 108 Z" fill="url(#coat)" />
-  <!-- Shirt / Tie -->
-  <polygon points="54,76 66,76 63,94 60,96 57,94" fill="#0284c7" />
-  <!-- Collar -->
-  <polygon points="44,76 60,88 52,76" fill="#cbd5e1" />
-  <polygon points="76,76 60,88 68,76" fill="#cbd5e1" />
-  <!-- Head -->
-  <circle cx="60" cy="48" r="22" fill="#fed7aa" />
-  <!-- Hair -->
-  <path d="M 40 46 C 40 28, 80 28, 80 46 C 74 36, 46 36, 40 46 Z" fill="#334155" />
-  <!-- Stethoscope around neck -->
-  <path d="M 46 76 C 46 92, 74 92, 74 76" fill="none" stroke="#64748b" stroke-width="4" stroke-linecap="round" />
-  <path d="M 60 92 L 60 98" fill="none" stroke="#64748b" stroke-width="3" />
-  <circle cx="60" cy="101" r="5" fill="#94a3b8" stroke="#475569" stroke-width="2" />
-  <!-- Eyes & Smile -->
-  <circle cx="53" cy="48" r="2.5" fill="#1e293b" />
-  <circle cx="67" cy="48" r="2.5" fill="#1e293b" />
-  <path d="M 54 57 C 57 60, 63 60, 66 57" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" />
-  <!-- Medical Cross Badge -->
-  <circle cx="94" cy="94" r="14" fill="#ef4444" stroke="#ffffff" stroke-width="2" />
-  <rect x="91" y="86" width="6" height="16" rx="1.5" fill="#ffffff" />
-  <rect x="86" y="91" width="16" height="6" rx="1.5" fill="#ffffff" />
+  <circle cx="100" cy="100" r="100" fill="url(#bg-nam)" />
+  <!-- Shoulders & Coat -->
+  <path d="M40 200 C40 152 70 140 100 140 C130 140 160 152 160 200 Z" fill="#ffffff" />
+  <!-- Inner shirt & Red Cardiology Tie -->
+  <path d="M88 140 L100 172 L112 140 Z" fill="#f8fafc" />
+  <path d="M96 150 L100 188 L104 150 Z" fill="#dc2626" />
+  <!-- Neck -->
+  <rect x="88" y="115" width="24" height="28" rx="4" fill="url(#skin-nam)" />
+  <!-- Stethoscope (Professional Cardiology) -->
+  <path d="M70 140 C70 175 88 186 100 186 C112 186 130 175 130 140" fill="none" stroke="#334155" stroke-width="4.5" stroke-linecap="round" />
+  <circle cx="100" cy="188" r="6.5" fill="#e2e8f0" stroke="#0f172a" stroke-width="2.5" />
+  <!-- Head & Ears -->
+  <circle cx="67" cy="85" r="9" fill="url(#skin-nam)" />
+  <circle cx="133" cy="85" r="9" fill="url(#skin-nam)" />
+  <ellipse cx="100" cy="85" rx="33" ry="38" fill="url(#skin-nam)" />
+  <!-- Hair (Distinguished Graying/Side-part) -->
+  <path d="M67 76 C67 44 80 38 100 38 C120 38 133 44 133 76 C124 54 114 48 98 48 C82 48 74 54 67 76 Z" fill="#334155" />
+  <path d="M72 58 C85 50 110 50 128 58" fill="none" stroke="#94a3b8" stroke-width="2" />
+  <!-- Eyebrows -->
+  <path d="M78 70 Q86 68 94 71" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M106 71 Q114 68 122 70" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" />
+  <!-- Glasses (Doctor Specialist) -->
+  <rect x="76" y="74" width="20" height="15" rx="4" fill="none" stroke="#1e293b" stroke-width="2.2" />
+  <rect x="104" y="74" width="20" height="15" rx="4" fill="none" stroke="#1e293b" stroke-width="2.2" />
+  <path d="M96 80 L104 80" stroke="#1e293b" stroke-width="2" />
+  <path d="M68 78 L76 78" stroke="#1e293b" stroke-width="2" />
+  <path d="M124 78 L132 78" stroke="#1e293b" stroke-width="2" />
+  <!-- Eyes behind glasses -->
+  <circle cx="86" cy="82" r="3" fill="#0f172a" />
+  <circle cx="114" cy="82" r="3" fill="#0f172a" />
+  <!-- Nose -->
+  <path d="M100 80 L98 94 L104 94" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" />
+  <!-- Confident Smile -->
+  <path d="M91 105 Q100 113 109 105" fill="none" stroke="#9a3412" stroke-width="2.5" stroke-linecap="round" />
+  <!-- Coat Collar -->
+  <path d="M68 140 L88 172 L100 140 L112 172 L132 140" fill="none" stroke="#cbd5e1" stroke-width="2" />
 </svg>
