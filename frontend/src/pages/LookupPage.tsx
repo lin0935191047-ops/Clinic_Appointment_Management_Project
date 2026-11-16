@@ -669,15 +669,18 @@ export const LookupPage: React.FC = () => {
               <div className="space-y-4 text-center">
                 <div className="flex justify-center">
                   <img
-                    src={paymentLink.qrCode?.startsWith('data:') || paymentLink.qrCode?.startsWith('http')
+                    src={paymentLink.qrCode?.startsWith('data:') || paymentLink.qrCode?.startsWith('http') || paymentLink.qrCode?.startsWith('/')
                       ? paymentLink.qrCode
                       : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(paymentLink.qrCode || '')}`}
-                    alt="VietQR PayOS"
-                    className="w-48 h-48 rounded-xl shadow border p-1 bg-white mx-auto"
+                    alt="VietQR Techcombank"
+                    className="w-56 h-auto max-w-full rounded-xl shadow border p-1 bg-white mx-auto object-contain"
                   />
                 </div>
 
-                <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-100 text-left">
+                  <p>Ngân hàng: <strong className="text-gray-900">{paymentLink.bankName || 'Techcombank'}</strong></p>
+                  <p>Chủ tài khoản: <strong className="text-gray-900">{paymentLink.accountName || 'LE HUYNH PHUONG ANH'}</strong></p>
+                  <p>Số tài khoản: <strong className="font-mono text-teal-700 font-bold">{paymentLink.accountNumber || '1903 8779 7590 14'}</strong></p>
                   <p>Cuộc hẹn: <strong className="font-mono text-gray-900">{appointment?.bookingCode}</strong></p>
                   <p>Nội dung CK: <strong className="font-mono text-gray-900">TT {appointment?.bookingCode}</strong></p>
                   <p>Trạng thái: <span className="text-amber-700 font-bold">Chờ chuyển khoản</span></p>

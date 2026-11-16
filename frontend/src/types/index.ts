@@ -96,6 +96,9 @@ export interface CreatePaymentLinkResponse {
   orderCode?: number;
   paymentLinkId?: string;
   message?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
 }
 
 export interface PaymentStatusResponse {

@@ -6,7 +6,10 @@ public record CreatePaymentLinkResult(
     string? QrCode,
     long? OrderCode,
     string? PaymentLinkId,
-    string? Message
+    string? Message,
+    string? BankName = null,
+    string? AccountNumber = null,
+    string? AccountName = null
 );
 
 public record PaymentStatusResult(

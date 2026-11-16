@@ -105,7 +105,7 @@ public class PayOSAndTwilioIntegrationTests
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue(result.Message);
-        result.QrCode.Should().Contain("vietqr.io");
+        result.QrCode.Should().NotBeNullOrEmpty();
         result.OrderCode.Should().NotBeNull();
     }
 
