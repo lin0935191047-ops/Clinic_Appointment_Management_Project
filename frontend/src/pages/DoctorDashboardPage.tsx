@@ -18,7 +18,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { doctorApi, authApi } from '../api/client';
-import { getDoctorAvatar } from '../utils/doctorAvatars';
+import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
 import {
   DoctorDashboardData,
   DoctorDashboardAppointmentItem,
@@ -521,16 +521,25 @@ export const DoctorDashboardPage: React.FC = () => {
         <div className="flex items-center space-x-4">
           <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-blue-50 border-2 border-blue-200 flex items-center justify-center shadow-md flex-shrink-0">
             <img
-              src={getDoctorAvatar({ fullName: dashboardData?.doctorName || currentUser?.fullName })}
+              src={getDoctorAvatar({
+                fullName: dashboardData?.doctorName || currentUser?.fullName,
+                email: currentUser?.email,
+                specialtyName: dashboardData?.specialtyName,
+                id: dashboardData?.doctorId,
+              })}
               alt="Bác sĩ"
               className="w-full h-full object-cover"
               loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                if (!target.src.includes('default-doctor.svg')) {
-                  target.src = '/images/doctors/default-doctor.svg';
-                } else if (!target.src.includes('dr-an.jpg')) {
-                  target.src = '/images/doctors/dr-an.jpg';
+                const fallback = getDoctorLocalFallback({
+                  fullName: dashboardData?.doctorName || currentUser?.fullName,
+                  email: currentUser?.email,
+                  specialtyName: dashboardData?.specialtyName,
+                  id: dashboardData?.doctorId,
+                });
+                if (!target.src.endsWith(fallback)) {
+                  target.src = fallback;
                 }
               }}
             />

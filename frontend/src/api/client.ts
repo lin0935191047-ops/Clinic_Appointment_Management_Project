@@ -97,7 +97,7 @@ export const mockDoctors: Doctor[] = [
     specialtyName: 'Nhi Khoa',
     consultationFee: 200000,
     roomNumber: 'P.105',
-    avatarUrl: '/images/doctors/dr-mai.jpg?v=2',
+    avatarUrl: '/images/doctors/dr-mai.jpg',
     bio: 'Chuyên gia Nhi khoa giàu kinh nghiệm, tận tâm, thân thiện với các bé.'
   },
   {
