@@ -701,7 +701,7 @@ export const appointmentApi = {
     } catch {
       return {
         challengeId: 'mock-challenge-' + Date.now(),
-        message: 'Mã xác thực OTP (thử nghiệm: 123456) đã được gửi tới số điện thoại của bạn.',
+        message: 'Mã xác thực OTP đã được gửi tới số điện thoại của bạn.',
       };
     }
   },

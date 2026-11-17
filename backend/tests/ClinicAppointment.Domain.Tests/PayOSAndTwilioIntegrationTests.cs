@@ -72,6 +72,31 @@ public class PayOSAndTwilioIntegrationTests
     }
 
     [Fact]
+    public async Task SmartSmsSender_WhenUnconfigured_ShouldFallbackGracefullyAndReturnTrue()
+    {
+        // Arrange
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["Twilio:AccountSid"] = "",
+            ["Twilio:AuthToken"] = "",
+            ["SpeedSMS:AccessToken"] = ""
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+        var maskingService = new IdentifierMaskingService();
+        var httpClient = new HttpClient();
+
+        var twilioSender = new TwilioSmsSender(config, NullLogger<TwilioSmsSender>.Instance, maskingService, httpClient);
+        var speedSender = new SpeedSmsSender(config, NullLogger<SpeedSmsSender>.Instance, maskingService, httpClient);
+        var smartSender = new SmartSmsSender(twilioSender, speedSender, config, NullLogger<SmartSmsSender>.Instance);
+
+        // Act
+        var result = await smartSender.SendOtpAsync("0935191047", "654321", OtpPurpose.LOOKUP);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task PayOSPaymentService_CreatePaymentLink_WhenUnconfigured_ShouldReturnMockVietQr()
     {
         // Arrange

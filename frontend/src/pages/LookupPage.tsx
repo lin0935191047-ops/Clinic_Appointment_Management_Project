@@ -318,7 +318,7 @@ export const LookupPage: React.FC = () => {
                 type="text"
                 required
                 maxLength={6}
-                placeholder="Nhập 6 số OTP (Demo: 123456)"
+                placeholder="Nhập 6 số OTP"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value)}
                 className="w-full px-4 py-3 text-center border border-gray-300 rounded-xl text-lg font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-teal-500"
