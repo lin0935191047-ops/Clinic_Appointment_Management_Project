@@ -42,14 +42,22 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 8000,
+  timeout: 30000,
 });
 
 // Tự động gắn Bearer Token nếu người dùng đã đăng nhập (Staff / Doctor / Admin)
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    if (token.startsWith('mock-jwt-token-') && config.baseURL && !config.baseURL.startsWith('/api')) {
+      // Đang kết nối Backend thật nhưng token trong máy là mock token cũ -> dọn dẹp để lấy token thật
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
+      return config;
+    }
+    if (config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -947,8 +955,16 @@ export const receptionApi = {
     pageSize?: number;
   }): Promise<ReceptionAppointmentItem[]> => {
     try {
+      const queryParams: Record<string, any> = {};
+      if (params?.date) queryParams.date = params.date;
+      if (params?.doctorId) queryParams.doctorId = params.doctorId;
+      if (params?.status && params.status !== 'ALL') queryParams.status = params.status;
+      if (params?.search) queryParams.keyword = params.search.trim();
+      if (params?.page) queryParams.pageNumber = params.page;
+      if (params?.pageSize) queryParams.pageSize = params.pageSize;
+
       const res = await apiClient.get<ApiResponse<any>>('/reception/appointments', {
-        params,
+        params: queryParams,
       });
       const data = res.data.data;
       if (Array.isArray(data)) {
@@ -982,7 +998,12 @@ export const receptionApi = {
         }));
       }
       throw new Error('Dữ liệu không đúng định dạng');
-    } catch {
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        throw err;
+      }
       const db = getMockDb();
       let list = [...db.appointments];
       if (params?.status && params.status !== 'ALL') {
@@ -1181,7 +1202,12 @@ export const doctorApi = {
         return res.data.data;
       }
       throw new Error(res.data.message || 'Không thể tải dữ liệu ca khám của bác sĩ.');
-    } catch {
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        throw err;
+      }
       return mockDoctorDashboard(date, doctorId);
     }
   },
