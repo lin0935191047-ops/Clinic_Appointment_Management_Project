@@ -32,10 +32,8 @@ export const ReceptionistDashboardPage: React.FC = () => {
   const [reschedules, setReschedules] = useState<RescheduleRequestItem[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(false);
 
-  // 3. Bộ lọc hàng đợi
-  const [filterDate, setFilterDate] = useState<string>(
-    new Date(Date.now() + 7 * 3600000).toISOString().split('T')[0]
-  );
+  // 3. Bộ lọc hàng đợi (Mặc định hiển thị Tất Cả ca khám để không bị sót lịch hẹn)
+  const [filterDate, setFilterDate] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
@@ -323,85 +321,7 @@ export const ReceptionistDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* PHẦN 1: YÊU CẦU ĐỔI LỊCH CHỜ DUYỆT (RESCHEDULE APPROVALS) */}
-      <section className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-blue-100 text-blue-700">
-              <RefreshCw className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">
-                Yêu Cầu Đổi Lịch Chờ Duyệt (Reschedule Requests)
-              </h2>
-              <p className="text-xs text-gray-500">
-                Lịch cũ được bảo lưu 100% đến khi duyệt; hệ thống tự động kiểm tra slot mới chống xung đột.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
-            {reschedules.length} yêu cầu
-          </span>
-        </div>
-
-        {reschedules.length === 0 ? (
-          <div className="text-center py-8 text-xs text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            Hiện không có yêu cầu đổi lịch nào đang chờ phê duyệt.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {reschedules.map((r) => (
-              <div
-                key={r.requestId}
-                className="p-5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-blue-50/30 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-              >
-                <div className="space-y-1.5 text-xs flex-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                      {r.bookingCode}
-                    </span>
-                    <span className="font-bold text-gray-900 text-sm">{r.patientFullName}</span>
-                    <span className="text-gray-400">({r.patientPhoneNumber})</span>
-                  </div>
-                  <p className="text-gray-600">
-                    Dịch vụ: <strong>{r.serviceName}</strong> • Bác sĩ hiện tại: <strong>{r.currentDoctorFullName}</strong>
-                  </p>
-                  <p className="text-gray-600">
-                    Lịch cũ: <span className="line-through text-gray-400 font-semibold">{formatDateTimeVn(r.currentStartAtUtc)}</span>{' '}
-                    <span className="text-blue-700 font-bold ml-1">
-                      ➔ Đề xuất mới: {formatDateTimeVn(r.proposedStartAtUtc)} (BS. {r.requestedDoctorFullName})
-                    </span>
-                  </p>
-                  {r.reason && (
-                    <p className="text-gray-500 italic bg-white p-2 rounded-lg border border-gray-200 inline-block">
-                      Lý do bệnh nhân đề xuất: "{r.reason}"
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center space-x-2 flex-shrink-0">
-                  <button
-                    onClick={() => handleApproveReschedule(r.requestId)}
-                    disabled={actionLoading}
-                    className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1.5" /> Duyệt Đổi Lịch
-                  </button>
-                  <button
-                    onClick={() => openRejectModal(r.requestId)}
-                    disabled={actionLoading}
-                    className="inline-flex items-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
-                  >
-                    <XCircle className="w-4 h-4 mr-1.5" /> Từ Chối
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* PHẦN 2: HÀNG ĐỢI LỊCH KHÁM & TIẾP ĐÓN CHECK-IN */}
+      {/* PHẦN 1: HÀNG ĐỢI LỊCH KHÁM & TIẾP ĐÓN CHECK-IN */}
       <section className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center space-x-3">
@@ -623,6 +543,84 @@ export const ReceptionistDashboardPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* PHẦN 2: YÊU CẦU ĐỔI LỊCH CHỜ DUYỆT (RESCHEDULE APPROVALS) */}
+      <section className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 rounded-xl bg-blue-100 text-blue-700">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">
+                Yêu Cầu Đổi Lịch Chờ Duyệt (Reschedule Requests)
+              </h2>
+              <p className="text-xs text-gray-500">
+                Lịch cũ được bảo lưu 100% đến khi duyệt; hệ thống tự động kiểm tra slot mới chống xung đột.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
+            {reschedules.length} yêu cầu
+          </span>
+        </div>
+
+        {reschedules.length === 0 ? (
+          <div className="text-center py-8 text-xs text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            Hiện không có yêu cầu đổi lịch nào đang chờ phê duyệt.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reschedules.map((r) => (
+              <div
+                key={r.requestId}
+                className="p-5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-blue-50/30 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+              >
+                <div className="space-y-1.5 text-xs flex-1">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                      {r.bookingCode}
+                    </span>
+                    <span className="font-bold text-gray-900 text-sm">{r.patientFullName}</span>
+                    <span className="text-gray-400">({r.patientPhoneNumber})</span>
+                  </div>
+                  <p className="text-gray-600">
+                    Dịch vụ: <strong>{r.serviceName}</strong> • Bác sĩ hiện tại: <strong>{r.currentDoctorFullName}</strong>
+                  </p>
+                  <p className="text-gray-600">
+                    Lịch cũ: <span className="line-through text-gray-400 font-semibold">{formatDateTimeVn(r.currentStartAtUtc)}</span>{' '}
+                    <span className="text-blue-700 font-bold ml-1">
+                      ➔ Đề xuất mới: {formatDateTimeVn(r.proposedStartAtUtc)} (BS. {r.requestedDoctorFullName})
+                    </span>
+                  </p>
+                  {r.reason && (
+                    <p className="text-gray-500 italic bg-white p-2 rounded-lg border border-gray-200 inline-block">
+                      Lý do bệnh nhân đề xuất: "{r.reason}"
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleApproveReschedule(r.requestId)}
+                    disabled={actionLoading}
+                    className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1.5" /> Duyệt Đổi Lịch
+                  </button>
+                  <button
+                    onClick={() => openRejectModal(r.requestId)}
+                    disabled={actionLoading}
+                    className="inline-flex items-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
+                  >
+                    <XCircle className="w-4 h-4 mr-1.5" /> Từ Chối
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* MODAL TỪ CHỐI ĐỔI LỊCH (REJECT MODAL) */}

@@ -16,8 +16,13 @@ import {
   ToggleLeft,
   ToggleRight,
   Trash2,
+  UserCheck,
+  Search,
+  ArrowRight,
+  Clock,
 } from 'lucide-react';
-import { adminApi, authApi } from '../api/client';
+import { Link } from 'react-router-dom';
+import { adminApi, authApi, receptionApi, ReceptionAppointmentItem } from '../api/client';
 import { getDoctorAvatar, getDoctorLocalFallback } from '../utils/doctorAvatars';
 import {
   AdminDashboardReport,
@@ -38,13 +43,19 @@ export const AdminDashboardPage: React.FC = () => {
 
   // Main navigation tabs
   const [activeTab, setActiveTab] = useState<
-    'reports' | 'specialties' | 'doctors' | 'services' | 'schedules'
-  >('reports');
+    'appointments' | 'reports' | 'specialties' | 'doctors' | 'services' | 'schedules'
+  >('appointments');
 
   // Loading & notification states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // TAB 0: APPOINTMENTS STATE
+  const [appointmentsList, setAppointmentsList] = useState<ReceptionAppointmentItem[]>([]);
+  const [aptFilterDate, setAptFilterDate] = useState<string>('');
+  const [aptFilterStatus, setAptFilterStatus] = useState<string>('');
+  const [aptSearch, setAptSearch] = useState<string>('');
 
   // TAB 1: REPORTS & DASHBOARD STATE
   const todayStr = new Date().toISOString().split('T')[0];
@@ -113,6 +124,23 @@ export const AdminDashboardPage: React.FC = () => {
     currentUser.roles?.includes('ADMIN');
 
   // DATA FETCHING FUNCTIONS
+  const fetchAppointments = useCallback(async () => {
+    if (!token || !isAuthorizedAdmin) return;
+    setLoading(true);
+    try {
+      const list = await receptionApi.getQueue({
+        date: aptFilterDate || undefined,
+        status: aptFilterStatus || undefined,
+        search: aptSearch || undefined,
+      });
+      setAppointmentsList(list);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải danh sách ca khám.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, isAuthorizedAdmin, aptFilterDate, aptFilterStatus, aptSearch]);
+
   const fetchReports = useCallback(async () => {
     if (!token || !isAuthorizedAdmin) return;
     setLoading(true);
@@ -199,16 +227,18 @@ export const AdminDashboardPage: React.FC = () => {
   // Initial load
   useEffect(() => {
     if (token && isAuthorizedAdmin) {
+      fetchAppointments();
       fetchReports();
       fetchSpecialties();
       fetchDoctors();
       fetchServices();
     }
-  }, [token, isAuthorizedAdmin, fetchReports, fetchSpecialties, fetchDoctors, fetchServices]);
+  }, [token, isAuthorizedAdmin, fetchAppointments, fetchReports, fetchSpecialties, fetchDoctors, fetchServices]);
 
   // Tab change trigger
   useEffect(() => {
     if (token && isAuthorizedAdmin) {
+      if (activeTab === 'appointments') fetchAppointments();
       if (activeTab === 'reports') fetchReports();
       if (activeTab === 'specialties') fetchSpecialties();
       if (activeTab === 'doctors') fetchDoctors();
@@ -219,6 +249,7 @@ export const AdminDashboardPage: React.FC = () => {
     activeTab,
     token,
     isAuthorizedAdmin,
+    fetchAppointments,
     fetchReports,
     fetchSpecialties,
     fetchDoctors,
@@ -448,6 +479,39 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  const formatDateTimeVn = (utcString?: string) => {
+    if (!utcString) return '--:--';
+    const date = new Date(utcString);
+    const vn = new Date(date.getTime() + 7 * 3600000);
+    return `${vn.toISOString().substring(11, 16)} (${vn.getDate().toString().padStart(2, '0')}/${(vn.getMonth() + 1).toString().padStart(2, '0')}/${vn.getFullYear()})`;
+  };
+
+  const handleConfirmAppointment = async (appointmentId: string) => {
+    try {
+      setLoading(true);
+      await receptionApi.confirmAppointment(appointmentId);
+      setSuccessMessage('Đã xác nhận lịch hẹn thành công!');
+      fetchAppointments();
+    } catch (err: any) {
+      setError(err.message || 'Không thể xác nhận lịch hẹn.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckIn = async (appointmentId: string) => {
+    try {
+      setLoading(true);
+      await receptionApi.checkInAppointment(appointmentId);
+      setSuccessMessage('Đã tiếp đón (check-in) bệnh nhân thành công!');
+      fetchAppointments();
+    } catch (err: any) {
+      setError(err.message || 'Không thể check-in bệnh nhân.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatVnd = (amount?: number) => {
     if (amount === undefined || amount === null) return '0 ₫';
     return `${amount.toLocaleString('vi-VN')} ₫`;
@@ -573,6 +637,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="flex items-center space-x-3 self-end md:self-auto">
           <button
             onClick={() => {
+              if (activeTab === 'appointments') fetchAppointments();
               if (activeTab === 'reports') fetchReports();
               if (activeTab === 'specialties') fetchSpecialties();
               if (activeTab === 'doctors') fetchDoctors();
@@ -627,11 +692,12 @@ export const AdminDashboardPage: React.FC = () => {
       {/* Navigation Tabs */}
       <div className="flex space-x-2 border-b border-gray-200 overflow-x-auto pb-2">
         {[
+          { id: 'appointments', label: 'Quản Lý Lịch Hẹn', icon: Calendar },
           { id: 'reports', label: 'Báo Cáo & Doanh Thu', icon: TrendingUp },
           { id: 'specialties', label: 'Chuyên Khoa', icon: Layers },
           { id: 'doctors', label: 'Bác Sĩ', icon: Stethoscope },
           { id: 'services', label: 'Dịch Vụ Khám', icon: Briefcase },
-          { id: 'schedules', label: 'Lịch Làm Việc Định Kỳ', icon: Calendar },
+          { id: 'schedules', label: 'Lịch Làm Việc Định Kỳ', icon: Clock },
         ].map((t) => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
@@ -652,6 +718,253 @@ export const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* ========================================== */}
+      {/* TAB 0: APPOINTMENTS MANAGEMENT             */}
+      {/* ========================================== */}
+      {activeTab === 'appointments' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden space-y-4 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-200">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">
+                  Thời Gian Thực
+                </span>
+                <h2 className="text-lg font-bold text-gray-900">Danh Sách Ca Khám Toàn Hệ Thống</h2>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Theo dõi tất cả lịch hẹn của bệnh nhân từ link đăng ký trực tuyến và tiếp đón tại phòng khám.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/receptionist"
+                className="inline-flex items-center px-3.5 py-2 bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100 rounded-xl text-xs font-bold transition shadow-sm"
+              >
+                <span>Mở Bàn Lễ Tân Check-in</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-bold text-gray-500">Ngày khám</label>
+                <div className="flex gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = new Date(Date.now() + 7 * 3600000).toISOString().split('T')[0];
+                      setAptFilterDate(today);
+                    }}
+                    className={`px-1.5 py-0.5 rounded font-semibold transition ${
+                      aptFilterDate === new Date(Date.now() + 7 * 3600000).toISOString().split('T')[0]
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    Hôm nay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tomorrow = new Date(Date.now() + 7 * 3600000 + 86400000).toISOString().split('T')[0];
+                      setAptFilterDate(tomorrow);
+                    }}
+                    className={`px-1.5 py-0.5 rounded font-semibold transition ${
+                      aptFilterDate === new Date(Date.now() + 7 * 3600000 + 86400000).toISOString().split('T')[0]
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    Ngày mai
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAptFilterDate('')}
+                    className={`px-1.5 py-0.5 rounded font-semibold transition ${
+                      !aptFilterDate ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    Tất cả
+                  </button>
+                </div>
+              </div>
+              <input
+                type="date"
+                value={aptFilterDate}
+                onChange={(e) => setAptFilterDate(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-purple-500 bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">Trạng thái</label>
+              <select
+                value={aptFilterStatus}
+                onChange={(e) => setAptFilterStatus(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-purple-500 bg-white"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="PendingConfirmation">Chờ Xác Nhận</option>
+                <option value="Confirmed">Đã Xác Nhận</option>
+                <option value="CheckedIn">Đã Tiếp Đón</option>
+                <option value="InProgress">Đang Khám</option>
+                <option value="Completed">Hoàn Tất</option>
+                <option value="Cancelled">Đã Hủy</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">Tìm kiếm</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={aptSearch}
+                  onChange={(e) => setAptSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchAppointments()}
+                  placeholder="Tên, số điện thoại, mã booking..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-purple-500 bg-white"
+                />
+                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider bg-gray-50/50">
+                  <th className="py-3 px-4">STT</th>
+                  <th className="py-3 px-4">Mã / Bệnh Nhân</th>
+                  <th className="py-3 px-4">Liên Hệ</th>
+                  <th className="py-3 px-4">Bác Sĩ / Phòng</th>
+                  <th className="py-3 px-4">Dịch Vụ Khám</th>
+                  <th className="py-3 px-4">Giờ Khám (VN)</th>
+                  <th className="py-3 px-4">Trạng Thái</th>
+                  <th className="py-3 px-4 text-right">Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {appointmentsList.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-xs text-gray-400 italic">
+                      Không có ca khám nào phù hợp với bộ lọc hiện tại.
+                    </td>
+                  </tr>
+                ) : (
+                  appointmentsList.map((apt, idx) => (
+                    <tr key={apt.id} className="hover:bg-purple-50/20 transition">
+                      <td className="py-3.5 px-4 font-mono font-bold text-gray-400">
+                        #{apt.queueNumber || idx + 1}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono font-bold text-teal-700 block">{apt.bookingCode}</span>
+                        <span className="font-bold text-gray-900">{apt.patientName}</span>
+                        {apt.isGuest && (
+                          <span className="text-[10px] bg-gray-100 text-gray-600 px-1 py-0.5 rounded ml-1">
+                            Guest
+                          </span>
+                        )}
+                        {apt.reasonForVisit && (
+                          <p className="text-[11px] text-gray-500 italic mt-0.5">
+                            "{apt.reasonForVisit}"
+                          </p>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-gray-600">
+                        <div>{apt.maskedPhoneNumber || '--'}</div>
+                        <div className="text-[11px] text-gray-400">
+                          {apt.dateOfBirth || (apt.birthYear ? `Năm sinh: ${apt.birthYear}` : '')}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-gray-600">
+                        <div className="font-medium text-gray-900">{apt.doctorName}</div>
+                        <div className="text-gray-400">{apt.roomNumber || 'Phòng khám'}</div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-gray-600">
+                        <div className="font-medium">{apt.serviceName}</div>
+                        <div className="text-purple-700 font-bold">{formatVnd(apt.servicePrice)}</div>
+                      </td>
+
+                      <td className="py-3.5 px-4 font-semibold text-gray-800">
+                        {formatDateTimeVn(apt.startAt)}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-block ${
+                            apt.status === 'Confirmed'
+                              ? 'bg-blue-100 text-blue-800'
+                              : apt.status === 'CheckedIn'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : apt.status === 'Completed'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : apt.status === 'Cancelled'
+                                    ? 'bg-rose-100 text-rose-800'
+                                    : apt.status === 'InProgress'
+                                      ? 'bg-indigo-100 text-indigo-800'
+                                      : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {apt.status === 'PendingConfirmation' && 'Chờ Xác Nhận'}
+                          {apt.status === 'Confirmed' && 'Đã Xác Nhận'}
+                          {apt.status === 'CheckedIn' && 'Đã Tiếp Đón'}
+                          {apt.status === 'InProgress' && 'Đang Khám'}
+                          {apt.status === 'Completed' && 'Đã Hoàn Tất'}
+                          {apt.status === 'Cancelled' && 'Đã Hủy'}
+                          {apt.status === 'NoShow' && 'Vắng Mặt'}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right space-x-2">
+                        {apt.status === 'PendingConfirmation' && (
+                          <button
+                            onClick={() => handleConfirmAppointment(apt.id)}
+                            disabled={loading}
+                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-xs transition shadow-sm disabled:opacity-50"
+                          >
+                            Xác Nhận
+                          </button>
+                        )}
+
+                        {apt.status === 'Confirmed' && (
+                          <button
+                            onClick={() => handleCheckIn(apt.id)}
+                            disabled={loading}
+                            className="inline-flex items-center px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition shadow-sm disabled:opacity-50"
+                          >
+                            <UserCheck className="w-3.5 h-3.5 mr-1" /> Check-in
+                          </button>
+                        )}
+
+                        {apt.status === 'CheckedIn' && (
+                          <span className="text-xs text-emerald-600 font-semibold flex items-center justify-end">
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Chờ khám
+                          </span>
+                        )}
+
+                        {apt.status === 'Completed' && (
+                          <span className="text-xs text-purple-600 font-semibold flex items-center justify-end">
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Hoàn tất
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+            {/* ========================================== */}
       {/* TAB 1: REPORTS & FINANCIAL DASHBOARD      */}
       {/* ========================================== */}
       {activeTab === 'reports' && (
